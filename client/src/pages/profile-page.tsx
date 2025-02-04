@@ -133,15 +133,9 @@ export default function ProfilePage() {
     <div className="container py-10">
       <Form {...form}>
         <form 
-          onSubmit={async (e) => {
-            e.preventDefault();
-            const formData = await form.getValues();
-            try {
-              await mutation.mutateAsync(formData);
-            } catch (error) {
-              console.error('Form submission error:', error);
-            }
-          }} 
+          onSubmit={form.handleSubmit((data) => {
+            mutation.mutate(data);
+          })} 
           className="space-y-6"
         >
           <Tabs defaultValue="personal" className="w-full">
