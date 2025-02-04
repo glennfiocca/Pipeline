@@ -16,7 +16,7 @@ import { useEffect } from 'react';
 
 export default function ProfilePage() {
   const { toast } = useToast();
-  const { data: profile } = useQuery<Profile>({
+  const { data: profile, isLoading } = useQuery<Profile>({
     queryKey: ["/api/profiles/1"],
   });
 
@@ -74,23 +74,13 @@ export default function ProfilePage() {
 
   async function onSubmit(values: InsertProfile) {
     try {
-      console.log("Form values before submission:", values);
-
-      // Ensure all array fields are initialized
-      const formData = {
-        ...values,
-        education: values.education || [],
-        experience: values.experience || [],
-        skills: values.skills || [],
-        certifications: values.certifications || [],
-        languages: values.languages || [],
-        publications: values.publications || [],
-        projects: values.projects || [],
-        referenceList: values.referenceList || [],
-        preferredLocations: values.preferredLocations || []
-      };
-
-      console.log("Processed form data:", formData);
+      // Only submit the fields that are actually filled out
+      const formData = Object.fromEntries(
+        Object.entries(values).map(([key, value]) => [
+          key,
+          Array.isArray(value) ? value.filter(Boolean) : value
+        ])
+      ) as InsertProfile;
 
       const response = await apiRequest(
         profile?.id ? "PATCH" : "POST",
@@ -99,7 +89,6 @@ export default function ProfilePage() {
       );
 
       const responseData = await response.json();
-      console.log("Server response:", responseData);
 
       if (!response.ok) {
         throw new Error(responseData.message || "Failed to save profile");
@@ -126,8 +115,6 @@ export default function ProfilePage() {
   // Update form when profile data is loaded
   useEffect(() => {
     if (profile) {
-      console.log("Updating form with profile:", profile);
-
       const formData = {
         ...profile,
         education: profile.education || [],
@@ -141,9 +128,7 @@ export default function ProfilePage() {
         workAuthorization: profile.workAuthorization || "US Citizen",
         availability: profile.availability || "2 Weeks"
       };
-
-      console.log("Form reset data:", formData);
-      form.reset(formData);
+      form.reset(formData as InsertProfile);
     }
   }, [profile, form]);
 

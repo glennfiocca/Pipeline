@@ -48,9 +48,21 @@ export class DatabaseStorage implements IStorage {
 
   async createProfile(insertProfile: InsertProfile): Promise<Profile> {
     try {
-      console.log('Creating profile with data:', insertProfile);
-      const [profile] = await db.insert(profiles).values(insertProfile).returning();
-      console.log('Created profile:', profile);
+      // Ensure all arrays are properly initialized
+      const profileData = {
+        ...insertProfile,
+        education: insertProfile.education || [],
+        experience: insertProfile.experience || [],
+        skills: insertProfile.skills || [],
+        certifications: insertProfile.certifications || [],
+        languages: insertProfile.languages || [],
+        publications: insertProfile.publications || [],
+        projects: insertProfile.projects || [],
+        referenceList: insertProfile.referenceList || [],
+        preferredLocations: insertProfile.preferredLocations || []
+      };
+
+      const [profile] = await db.insert(profiles).values(profileData).returning();
       return profile;
     } catch (error) {
       console.error('Error creating profile:', error);
@@ -60,17 +72,15 @@ export class DatabaseStorage implements IStorage {
 
   async updateProfile(id: number, updateProfile: Partial<InsertProfile>): Promise<Profile> {
     try {
-      console.log('Updating profile:', id, 'with data:', updateProfile);
-
-      // Ensure arrays are properly handled
+      // Clean up the update data to handle arrays properly
       const updateData = Object.fromEntries(
-        Object.entries(updateProfile).map(([key, value]) => [
-          key,
-          Array.isArray(value) ? value : value
-        ])
+        Object.entries(updateProfile)
+          .filter(([_, value]) => value !== undefined)
+          .map(([key, value]) => [
+            key,
+            Array.isArray(value) ? value.filter(Boolean) : value
+          ])
       ) as Partial<InsertProfile>;
-
-      console.log('Processed update data:', updateData);
 
       const [profile] = await db.update(profiles)
         .set(updateData)
@@ -81,7 +91,6 @@ export class DatabaseStorage implements IStorage {
         throw new Error('Profile not found');
       }
 
-      console.log('Updated profile:', profile);
       return profile;
     } catch (error) {
       console.error('Error updating profile:', error);
