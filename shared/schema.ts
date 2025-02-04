@@ -12,7 +12,7 @@ export const jobs = pgTable("jobs", {
   requirements: text("requirements").notNull(),
   source: text("source").notNull(),
   sourceUrl: text("source_url").notNull(),
-  type: text("type").notNull(), // STEM, Finance, etc
+  type: text("type").notNull(),
   published: boolean("published").default(true)
 });
 
@@ -24,13 +24,13 @@ export const profiles = pgTable("profiles", {
   title: text("title").notNull(),
   bio: text("bio").notNull(),
   location: text("location").notNull(),
-  education: jsonb("education").$type<Education[]>().notNull().default([]),
-  experience: jsonb("experience").$type<Experience[]>().notNull().default([]),
+  education: jsonb("education").notNull().default([]),
+  experience: jsonb("experience").notNull().default([]),
   skills: text("skills").array().notNull().default([]),
-  certifications: jsonb("certifications").$type<Certification[]>().notNull().default([]),
-  languages: jsonb("languages").$type<Language[]>().notNull().default([]),
-  publications: jsonb("publications").$type<Publication[]>().default([]),
-  projects: jsonb("projects").$type<Project[]>().default([]),
+  certifications: jsonb("certifications").notNull().default([]),
+  languages: jsonb("languages").notNull().default([]),
+  publications: jsonb("publications").default([]),
+  projects: jsonb("projects").default([]),
   resumeUrl: text("resume_url"),
   transcriptUrl: text("transcript_url"),
   linkedinUrl: text("linkedin_url"),
@@ -51,7 +51,7 @@ export const profiles = pgTable("profiles", {
   veteranStatus: text("veteran_status"),
   militaryBranch: text("military_branch"),
   militaryServiceDates: text("military_service_dates"),
-  referenceList: jsonb("reference_list").$type<Reference[]>().default([]),
+  referenceList: jsonb("reference_list").default([]),
   securityClearance: text("security_clearance"),
   clearanceType: text("clearance_type"),
   clearanceExpiry: text("clearance_expiry")
@@ -61,10 +61,10 @@ export const applications = pgTable("applications", {
   id: serial("id").primaryKey(),
   jobId: integer("job_id").notNull(),
   profileId: integer("profile_id").notNull(),
-  status: text("status").notNull(), // applied, interviewing, rejected, accepted
+  status: text("status").notNull(),
   appliedAt: text("applied_at").notNull(),
   coverLetter: text("cover_letter"),
-  applicationData: jsonb("application_data").notNull() // Store form data submitted
+  applicationData: jsonb("application_data").notNull()
 });
 
 const educationSchema = z.object({
@@ -105,7 +105,7 @@ const certificationSchema = z.object({
 
 const languageSchema = z.object({
   name: z.string(),
-  proficiency: z.enum(['Basic', 'Intermediate', 'Advanced', 'Native']),
+  proficiency: z.enum(["Basic", "Intermediate", "Advanced", "Native"]),
   certifications: z.array(z.string()).optional()
 });
 
@@ -128,6 +128,15 @@ const projectSchema = z.object({
   achievements: z.array(z.string())
 });
 
+const referenceSchema = z.object({
+  name: z.string(),
+  title: z.string(),
+  company: z.string(),
+  email: z.string().email(),
+  phone: z.string(),
+  relationship: z.string()
+});
+
 export const insertProfileSchema = createInsertSchema(profiles).extend({
   education: z.array(educationSchema),
   experience: z.array(experienceSchema),
@@ -135,16 +144,9 @@ export const insertProfileSchema = createInsertSchema(profiles).extend({
   languages: z.array(languageSchema),
   publications: z.array(publicationSchema).optional(),
   projects: z.array(projectSchema).optional(),
-  workAuthorization: z.enum(['US Citizen', 'Green Card', 'H1B', 'Other']),
-  availability: z.enum(['Immediate', '2 Weeks', '1 Month', 'Other']),
-  referenceList: z.array(z.object({
-    name: z.string(),
-    title: z.string(),
-    company: z.string(),
-    email: z.string().email(),
-    phone: z.string(),
-    relationship: z.string()
-  })).optional()
+  workAuthorization: z.enum(["US Citizen", "Green Card", "H1B", "Other"]),
+  availability: z.enum(["Immediate", "2 Weeks", "1 Month", "Other"]),
+  referenceList: z.array(referenceSchema).optional()
 });
 
 export const insertJobSchema = createInsertSchema(jobs).omit({ id: true });
@@ -163,12 +165,4 @@ export type Certification = z.infer<typeof certificationSchema>;
 export type Language = z.infer<typeof languageSchema>;
 export type Publication = z.infer<typeof publicationSchema>;
 export type Project = z.infer<typeof projectSchema>;
-
-type Reference = {
-    name: string;
-    title: string;
-    company: string;
-    email: string;
-    phone: string;
-    relationship: string;
-}
+export type Reference = z.infer<typeof referenceSchema>;

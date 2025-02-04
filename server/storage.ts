@@ -48,9 +48,9 @@ export class DatabaseStorage implements IStorage {
 
   async createProfile(insertProfile: InsertProfile): Promise<Profile> {
     try {
-      const [profile] = await db.insert(profiles)
-        .values(insertProfile)
-        .returning();
+      console.log('Creating profile with data:', insertProfile);
+      const [profile] = await db.insert(profiles).values(insertProfile).returning();
+      console.log('Created profile:', profile);
       return profile;
     } catch (error) {
       console.error('Error creating profile:', error);
@@ -60,8 +60,20 @@ export class DatabaseStorage implements IStorage {
 
   async updateProfile(id: number, updateProfile: Partial<InsertProfile>): Promise<Profile> {
     try {
+      console.log('Updating profile:', id, 'with data:', updateProfile);
+
+      // Ensure arrays are properly handled
+      const updateData = Object.fromEntries(
+        Object.entries(updateProfile).map(([key, value]) => [
+          key,
+          Array.isArray(value) ? value : value
+        ])
+      ) as Partial<InsertProfile>;
+
+      console.log('Processed update data:', updateData);
+
       const [profile] = await db.update(profiles)
-        .set(updateProfile)
+        .set(updateData)
         .where(eq(profiles.id, id))
         .returning();
 
@@ -69,6 +81,7 @@ export class DatabaseStorage implements IStorage {
         throw new Error('Profile not found');
       }
 
+      console.log('Updated profile:', profile);
       return profile;
     } catch (error) {
       console.error('Error updating profile:', error);

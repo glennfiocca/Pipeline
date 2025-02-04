@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Profile, insertProfileSchema, type InsertProfile, type Education, type Experience, type Language, type Certification } from "@shared/schema";
+import { Profile, insertProfileSchema, type InsertProfile } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2, Plus, X } from "lucide-react";
@@ -16,8 +16,7 @@ import { useEffect } from 'react';
 
 export default function ProfilePage() {
   const { toast } = useToast();
-
-  const { data: profile, isLoading } = useQuery<Profile>({
+  const { data: profile } = useQuery<Profile>({
     queryKey: ["/api/profiles/1"],
   });
 
@@ -75,15 +74,35 @@ export default function ProfilePage() {
 
   async function onSubmit(values: InsertProfile) {
     try {
+      console.log("Form values before submission:", values);
+
+      // Ensure all array fields are initialized
+      const formData = {
+        ...values,
+        education: values.education || [],
+        experience: values.experience || [],
+        skills: values.skills || [],
+        certifications: values.certifications || [],
+        languages: values.languages || [],
+        publications: values.publications || [],
+        projects: values.projects || [],
+        referenceList: values.referenceList || [],
+        preferredLocations: values.preferredLocations || []
+      };
+
+      console.log("Processed form data:", formData);
+
       const response = await apiRequest(
-        "PATCH",
-        `/api/profiles/${profile?.id || 1}`,
-        values
+        profile?.id ? "PATCH" : "POST",
+        profile?.id ? `/api/profiles/${profile.id}` : "/api/profiles",
+        formData
       );
 
+      const responseData = await response.json();
+      console.log("Server response:", responseData);
+
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || "Failed to save profile");
+        throw new Error(responseData.message || "Failed to save profile");
       }
 
       await queryClient.invalidateQueries({ queryKey: ["/api/profiles"] });
@@ -104,9 +123,12 @@ export default function ProfilePage() {
     }
   }
 
+  // Update form when profile data is loaded
   useEffect(() => {
     if (profile) {
-      form.reset({
+      console.log("Updating form with profile:", profile);
+
+      const formData = {
         ...profile,
         education: profile.education || [],
         experience: profile.experience || [],
@@ -118,7 +140,10 @@ export default function ProfilePage() {
         referenceList: profile.referenceList || [],
         workAuthorization: profile.workAuthorization || "US Citizen",
         availability: profile.availability || "2 Weeks"
-      });
+      };
+
+      console.log("Form reset data:", formData);
+      form.reset(formData);
     }
   }, [profile, form]);
 
