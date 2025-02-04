@@ -41,6 +41,11 @@ export default function JobsPage() {
     queryKey: ["/api/applications"],
   });
 
+  // Get the first profile ID for now - in a real app, this would come from auth context
+  const { data: profiles = [] } = useQuery({
+    queryKey: ["/api/profiles"],
+  });
+
   const parseSalary = (salaryStr: string): [number, number] => {
     const matches = salaryStr.match(/\$(\d{1,3}(?:,\d{3})*)/g);
     if (!matches || matches.length !== 2) return [0, 0];
@@ -49,10 +54,17 @@ export default function JobsPage() {
 
   const applyMutation = useMutation({
     mutationFn: async (jobId: number) => {
+      if (!profiles.length) {
+        throw new Error("Please create a profile before applying to jobs");
+      }
+
       const application: InsertApplication = {
         jobId,
+        profileId: profiles[0].id,
         status: "applied",
         appliedAt: new Date().toISOString(),
+        applicationData: {}, // Empty object for now
+        coverLetter: null // Optional field
       };
 
       const res = await apiRequest("POST", "/api/applications", application);
