@@ -76,19 +76,9 @@ export default function ProfilePage() {
   async function onSubmit(values: InsertProfile) {
     try {
       const response = await apiRequest(
-        "PATCH", 
-        `/api/profiles/${profile?.id || 1}`, 
-        {
-          ...values,
-          education: values.education || [],
-          experience: values.experience || [],
-          skills: values.skills || [],
-          certifications: values.certifications || [],
-          languages: values.languages || [],
-          publications: values.publications || [],
-          projects: values.projects || [],
-          referenceList: values.referenceList || []
-        }
+        "PATCH",
+        `/api/profiles/${profile?.id || 1}`,
+        values
       );
 
       if (!response.ok) {
@@ -96,14 +86,13 @@ export default function ProfilePage() {
         throw new Error(error.message || "Failed to save profile");
       }
 
-      queryClient.invalidateQueries({ queryKey: ["/api/profiles"] });
+      await queryClient.invalidateQueries({ queryKey: ["/api/profiles"] });
 
       toast({
         title: "Success!",
         description: "Your profile has been saved successfully.",
         duration: 5000,
       });
-
     } catch (error) {
       console.error("Form submission error:", error);
       toast({
@@ -119,11 +108,11 @@ export default function ProfilePage() {
     if (profile) {
       form.reset({
         ...profile,
-        education: profile.education as Education[],
-        experience: profile.experience as Experience[],
+        education: profile.education || [],
+        experience: profile.experience || [],
         skills: profile.skills || [],
-        certifications: profile.certifications as Certification[],
-        languages: profile.languages as Language[],
+        certifications: profile.certifications || [],
+        languages: profile.languages || [],
         publications: profile.publications || [],
         projects: profile.projects || [],
         referenceList: profile.referenceList || [],

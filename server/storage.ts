@@ -13,7 +13,7 @@ export interface IStorage {
   getProfiles(): Promise<Profile[]>;
   getProfile(id: number): Promise<Profile | undefined>;
   createProfile(profile: InsertProfile): Promise<Profile>;
-  updateProfile(id: number, profile: InsertProfile): Promise<Profile>;
+  updateProfile(id: number, profile: Partial<InsertProfile>): Promise<Profile>;
 
   // Applications
   getApplications(): Promise<Application[]>;
@@ -47,37 +47,21 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createProfile(insertProfile: InsertProfile): Promise<Profile> {
-    const [profile] = await db.insert(profiles)
-      .values({
-        ...insertProfile,
-        education: insertProfile.education,
-        experience: insertProfile.experience,
-        skills: insertProfile.skills || [],
-        certifications: insertProfile.certifications,
-        languages: insertProfile.languages,
-        publications: insertProfile.publications || [],
-        projects: insertProfile.projects || [],
-        referenceList: insertProfile.referenceList || []
-      })
-      .returning();
-
-    return profile;
+    try {
+      const [profile] = await db.insert(profiles)
+        .values(insertProfile)
+        .returning();
+      return profile;
+    } catch (error) {
+      console.error('Error creating profile:', error);
+      throw error;
+    }
   }
 
-  async updateProfile(id: number, updateProfile: InsertProfile): Promise<Profile> {
+  async updateProfile(id: number, updateProfile: Partial<InsertProfile>): Promise<Profile> {
     try {
       const [profile] = await db.update(profiles)
-        .set({
-          ...updateProfile,
-          education: updateProfile.education,
-          experience: updateProfile.experience,
-          skills: updateProfile.skills || [],
-          certifications: updateProfile.certifications,
-          languages: updateProfile.languages,
-          publications: updateProfile.publications || [],
-          projects: updateProfile.projects || [],
-          referenceList: updateProfile.referenceList || []
-        })
+        .set(updateProfile)
         .where(eq(profiles.id, id))
         .returning();
 

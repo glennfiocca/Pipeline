@@ -24,13 +24,13 @@ export const profiles = pgTable("profiles", {
   title: text("title").notNull(),
   bio: text("bio").notNull(),
   location: text("location").notNull(),
-  education: jsonb("education").array().notNull(),
-  experience: jsonb("experience").array().notNull(),
-  skills: text("skills").array().notNull(),
-  certifications: jsonb("certifications").array().notNull(),
-  languages: jsonb("languages").array().notNull(),
-  publications: jsonb("publications").array(),
-  projects: jsonb("projects").array(),
+  education: jsonb("education").$type<Education[]>().notNull().default([]),
+  experience: jsonb("experience").$type<Experience[]>().notNull().default([]),
+  skills: text("skills").array().notNull().default([]),
+  certifications: jsonb("certifications").$type<Certification[]>().notNull().default([]),
+  languages: jsonb("languages").$type<Language[]>().notNull().default([]),
+  publications: jsonb("publications").$type<Publication[]>().default([]),
+  projects: jsonb("projects").$type<Project[]>().default([]),
   resumeUrl: text("resume_url"),
   transcriptUrl: text("transcript_url"),
   linkedinUrl: text("linkedin_url"),
@@ -40,7 +40,7 @@ export const profiles = pgTable("profiles", {
   workAuthorization: text("work_authorization").notNull(),
   visaSponsorship: boolean("visa_sponsorship").default(false),
   willingToRelocate: boolean("willing_to_relocate").default(false),
-  preferredLocations: text("preferred_locations").array(),
+  preferredLocations: text("preferred_locations").array().default([]),
   salaryExpectation: text("salary_expectation"),
   address: text("address").notNull(),
   city: text("city").notNull(),
@@ -51,7 +51,7 @@ export const profiles = pgTable("profiles", {
   veteranStatus: text("veteran_status"),
   militaryBranch: text("military_branch"),
   militaryServiceDates: text("military_service_dates"),
-  referenceList: jsonb("reference_list").array(),
+  referenceList: jsonb("reference_list").$type<Reference[]>().default([]),
   securityClearance: text("security_clearance"),
   clearanceType: text("clearance_type"),
   clearanceExpiry: text("clearance_expiry")
@@ -163,3 +163,12 @@ export type Certification = z.infer<typeof certificationSchema>;
 export type Language = z.infer<typeof languageSchema>;
 export type Publication = z.infer<typeof publicationSchema>;
 export type Project = z.infer<typeof projectSchema>;
+
+type Reference = {
+    name: string;
+    title: string;
+    company: string;
+    email: string;
+    phone: string;
+    relationship: string;
+}
