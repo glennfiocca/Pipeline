@@ -24,23 +24,37 @@ export const profiles = pgTable("profiles", {
   title: text("title").notNull(),
   bio: text("bio").notNull(),
   location: text("location").notNull(),
-  education: jsonb("education").array().notNull(), // Array of education history
-  experience: jsonb("experience").array().notNull(), // Array of work experience
+  education: jsonb("education").array().notNull(),
+  experience: jsonb("experience").array().notNull(),
   skills: text("skills").array().notNull(),
   certifications: jsonb("certifications").array().notNull(),
   languages: jsonb("languages").array().notNull(),
+  publications: jsonb("publications").array(),
+  projects: jsonb("projects").array(),
   resumeUrl: text("resume_url"),
+  transcriptUrl: text("transcript_url"),
   linkedinUrl: text("linkedin_url"),
   portfolioUrl: text("portfolio_url"),
-  availability: text("availability").notNull(), // immediate, 2 weeks, etc.
+  githubUrl: text("github_url"),
+  availability: text("availability").notNull(),
   workAuthorization: text("work_authorization").notNull(),
-  // Fields for autofill
+  visaSponsorship: boolean("visa_sponsorship").default(false),
+  willingToRelocate: boolean("willing_to_relocate").default(false),
+  preferredLocations: text("preferred_locations").array(),
+  salaryExpectation: text("salary_expectation"),
   address: text("address").notNull(),
   city: text("city").notNull(),
   state: text("state").notNull(),
   zipCode: text("zip_code").notNull(),
   country: text("country").notNull(),
-  citizenshipStatus: text("citizenship_status").notNull()
+  citizenshipStatus: text("citizenship_status").notNull(),
+  veteranStatus: text("veteran_status"),
+  militaryBranch: text("military_branch"),
+  militaryServiceDates: text("military_service_dates"),
+  references: jsonb("references").array(),
+  securityClearance: text("security_clearance"),
+  clearanceType: text("clearance_type"),
+  clearanceExpiry: text("clearance_expiry")
 });
 
 export const applications = pgTable("applications", {
@@ -53,15 +67,17 @@ export const applications = pgTable("applications", {
   applicationData: jsonb("application_data").notNull() // Store form data submitted
 });
 
-// Create Zod schemas for education and experience
 const educationSchema = z.object({
   school: z.string(),
   degree: z.string(),
   field: z.string(),
   startDate: z.string(),
   endDate: z.string(),
-  gpa: z.string().optional(),
-  activities: z.array(z.string()).optional()
+  gpa: z.string(),
+  majorCourses: z.array(z.string()),
+  transcriptUrl: z.string().nullable(),
+  honors: z.array(z.string()),
+  activities: z.array(z.string())
 });
 
 const experienceSchema = z.object({
@@ -72,7 +88,9 @@ const experienceSchema = z.object({
   endDate: z.string().optional(),
   current: z.boolean(),
   description: z.string(),
-  achievements: z.array(z.string()).optional()
+  achievements: z.array(z.string()),
+  technologiesUsed: z.array(z.string()),
+  responsibilities: z.array(z.string())
 });
 
 const certificationSchema = z.object({
@@ -80,22 +98,53 @@ const certificationSchema = z.object({
   issuer: z.string(),
   issueDate: z.string(),
   expiryDate: z.string().optional(),
-  credentialId: z.string().optional()
+  credentialId: z.string().optional(),
+  credentialUrl: z.string().optional(),
+  certificateUrl: z.string().nullable()
 });
 
 const languageSchema = z.object({
   name: z.string(),
-  proficiency: z.enum(['Basic', 'Intermediate', 'Advanced', 'Native'])
+  proficiency: z.enum(['Basic', 'Intermediate', 'Advanced', 'Native']),
+  certifications: z.array(z.string()).optional()
 });
 
-// Extend the profile schema with the new fields
+const publicationSchema = z.object({
+  title: z.string(),
+  publisher: z.string(),
+  date: z.string(),
+  url: z.string().optional(),
+  description: z.string()
+});
+
+const projectSchema = z.object({
+  name: z.string(),
+  description: z.string(),
+  role: z.string(),
+  url: z.string().optional(),
+  startDate: z.string(),
+  endDate: z.string().optional(),
+  technologiesUsed: z.array(z.string()),
+  achievements: z.array(z.string())
+});
+
 export const insertProfileSchema = createInsertSchema(profiles).extend({
   education: z.array(educationSchema),
   experience: z.array(experienceSchema),
   certifications: z.array(certificationSchema),
   languages: z.array(languageSchema),
+  publications: z.array(publicationSchema).optional(),
+  projects: z.array(projectSchema).optional(),
   workAuthorization: z.enum(['US Citizen', 'Green Card', 'H1B', 'Other']),
-  availability: z.enum(['Immediate', '2 Weeks', '1 Month', 'Other'])
+  availability: z.enum(['Immediate', '2 Weeks', '1 Month', 'Other']),
+  references: z.array(z.object({
+    name: z.string(),
+    title: z.string(),
+    company: z.string(),
+    email: z.string().email(),
+    phone: z.string(),
+    relationship: z.string()
+  })).optional()
 });
 
 export const insertJobSchema = createInsertSchema(jobs).omit({ id: true });
@@ -108,8 +157,9 @@ export type InsertJob = z.infer<typeof insertJobSchema>;
 export type InsertProfile = z.infer<typeof insertProfileSchema>;
 export type InsertApplication = z.infer<typeof insertApplicationSchema>;
 
-// Export additional types for components
 export type Education = z.infer<typeof educationSchema>;
 export type Experience = z.infer<typeof experienceSchema>;
 export type Certification = z.infer<typeof certificationSchema>;
 export type Language = z.infer<typeof languageSchema>;
+export type Publication = z.infer<typeof publicationSchema>;
+export type Project = z.infer<typeof projectSchema>;

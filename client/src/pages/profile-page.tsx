@@ -2,7 +2,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useFieldArray, useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -43,6 +43,8 @@ export default function ProfilePage() {
       workAuthorization: "US Citizen",
       availability: "2 Weeks",
       citizenshipStatus: "",
+      resumeUrl: "",
+      transcriptUrl: ""
     },
   });
 
@@ -91,10 +93,10 @@ export default function ProfilePage() {
     }
   }, [profile, form.reset]);
 
-  const { fields: educationFields, append: appendEducation, remove: removeEducation } = 
+  const { fields: educationFields, append: appendEducation, remove: removeEducation } =
     useFieldArray({ control: form.control, name: "education" });
 
-  const { fields: experienceFields, append: appendExperience, remove: removeExperience } = 
+  const { fields: experienceFields, append: appendExperience, remove: removeExperience } =
     useFieldArray({ control: form.control, name: "experience" });
 
   const mutation = useMutation({
@@ -144,10 +146,11 @@ export default function ProfilePage() {
       <Form {...form}>
         <form onSubmit={onSubmit} className="space-y-6">
           <Tabs defaultValue="personal" className="w-full">
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className="grid w-full grid-cols-5">
               <TabsTrigger value="personal">Personal Info</TabsTrigger>
               <TabsTrigger value="education">Education</TabsTrigger>
               <TabsTrigger value="experience">Experience</TabsTrigger>
+              <TabsTrigger value="documents">Documents</TabsTrigger>
               <TabsTrigger value="additional">Additional Info</TabsTrigger>
             </TabsList>
 
@@ -530,6 +533,95 @@ export default function ProfilePage() {
               </Card>
             </TabsContent>
 
+            <TabsContent value="documents" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Documents</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="resumeUrl"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Resume</FormLabel>
+                          <FormControl>
+                            <div className="flex gap-4 items-center">
+                              <Input
+                                type="file"
+                                accept=".pdf,.doc,.docx"
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0];
+                                  if (file) {
+                                    // TODO: Implement file upload logic
+                                    field.onChange(URL.createObjectURL(file));
+                                  }
+                                }}
+                              />
+                              {field.value && (
+                                <a
+                                  href={field.value}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-sm text-blue-500 hover:underline"
+                                >
+                                  View Current Resume
+                                </a>
+                              )}
+                            </div>
+                          </FormControl>
+                          <FormDescription>
+                            Upload your resume in PDF, DOC, or DOCX format (max 5MB)
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="transcriptUrl"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Academic Transcript</FormLabel>
+                          <FormControl>
+                            <div className="flex gap-4 items-center">
+                              <Input
+                                type="file"
+                                accept=".pdf"
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0];
+                                  if (file) {
+                                    // TODO: Implement file upload logic
+                                    field.onChange(URL.createObjectURL(file));
+                                  }
+                                }}
+                              />
+                              {field.value && (
+                                <a
+                                  href={field.value}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-sm text-blue-500 hover:underline"
+                                >
+                                  View Current Transcript
+                                </a>
+                              )}
+                            </div>
+                          </FormControl>
+                          <FormDescription>
+                            Upload your academic transcript in PDF format (max 5MB)
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
             <TabsContent value="additional" className="space-y-6">
               <Card>
                 <CardHeader>
@@ -591,8 +683,8 @@ export default function ProfilePage() {
           </Tabs>
 
           <div className="flex justify-end">
-            <Button 
-              type="submit" 
+            <Button
+              type="submit"
               disabled={mutation.isPending}
               className="min-w-[120px]"
             >
