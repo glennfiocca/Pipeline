@@ -46,44 +46,49 @@ export default function ProfilePage() {
     },
   });
 
-  // Add this effect to update form when profile data is loaded
+  // Update the useEffect hook for form reset
   useEffect(() => {
     if (profile) {
-      // Parse stringified JSON arrays back into objects
-      const parsedProfile = {
-        ...profile,
-        education: Array.isArray(profile.education) 
-          ? profile.education.map(edu => {
-              if (typeof edu === 'string') {
-                try {
-                  // Handle double-stringified JSON
-                  return JSON.parse(JSON.parse(edu));
-                } catch {
-                  return JSON.parse(edu);
+      try {
+        // Parse stringified JSON arrays back into objects
+        const parsedProfile = {
+          ...profile,
+          education: Array.isArray(profile.education) 
+            ? profile.education.map(edu => {
+                if (typeof edu === 'string') {
+                  try {
+                    return JSON.parse(edu);
+                  } catch (e) {
+                    console.error('Failed to parse education:', edu, e);
+                    return {};
+                  }
                 }
-              }
-              return edu;
-            })
-          : [],
-        experience: Array.isArray(profile.experience)
-          ? profile.experience.map(exp => {
-              if (typeof exp === 'string') {
-                try {
-                  // Handle double-stringified JSON
-                  return JSON.parse(JSON.parse(exp));
-                } catch {
-                  return JSON.parse(exp);
+                return edu;
+              })
+            : [],
+          experience: Array.isArray(profile.experience)
+            ? profile.experience.map(exp => {
+                if (typeof exp === 'string') {
+                  try {
+                    return JSON.parse(exp);
+                  } catch (e) {
+                    console.error('Failed to parse experience:', exp, e);
+                    return {};
+                  }
                 }
-              }
-              return exp;
-            })
-          : [],
-        skills: Array.isArray(profile.skills) ? profile.skills : [],
-        certifications: Array.isArray(profile.certifications) ? profile.certifications : [],
-        languages: Array.isArray(profile.languages) ? profile.languages : [],
-      };
+                return exp;
+              })
+            : [],
+          skills: Array.isArray(profile.skills) ? profile.skills : [],
+          certifications: Array.isArray(profile.certifications) ? profile.certifications : [],
+          languages: Array.isArray(profile.languages) ? profile.languages : [],
+        };
 
-      form.reset(parsedProfile);
+        console.log('Resetting form with parsed profile:', parsedProfile);
+        form.reset(parsedProfile);
+      } catch (error) {
+        console.error('Error parsing profile data:', error);
+      }
     }
   }, [profile, form.reset]);
 
@@ -105,7 +110,6 @@ export default function ProfilePage() {
         description: "Your profile has been saved successfully.",
         duration: 5000,
       });
-      // Don't navigate away, just show the success message
     },
     onError: (error: Error) => {
       toast({
@@ -129,9 +133,15 @@ export default function ProfilePage() {
     <div className="container py-10">
       <Form {...form}>
         <form 
-          onSubmit={form.handleSubmit((data) => {
-            mutation.mutate(data);
-          })} 
+          onSubmit={async (e) => {
+            e.preventDefault();
+            const formData = await form.getValues();
+            try {
+              await mutation.mutateAsync(formData);
+            } catch (error) {
+              console.error('Form submission error:', error);
+            }
+          }} 
           className="space-y-6"
         >
           <Tabs defaultValue="personal" className="w-full">
