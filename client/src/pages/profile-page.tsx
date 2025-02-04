@@ -124,7 +124,6 @@ export default function ProfilePage() {
     mutationFn: async (values: any) => {
       console.log('Submitting values:', values);
 
-      // Ensure arrays are properly formatted
       const formattedValues = {
         ...values,
         education: values.education.map((edu: any) => ({
@@ -177,7 +176,7 @@ export default function ProfilePage() {
       toast({
         title: "Success!",
         description: "Your profile has been saved successfully.",
-        duration: 5000,
+        duration: 3000,
       });
     },
     onError: (error: Error) => {
@@ -186,35 +185,33 @@ export default function ProfilePage() {
         title: "Error saving profile",
         description: error.message,
         variant: "destructive",
-        duration: 5000,
+        duration: 3000,
       });
     },
   });
 
-  const onSubmit = form.handleSubmit(async (data) => {
+  const onSubmit = async (data: any) => {
     try {
       console.log('Form data before submit:', data);
-      const result = await mutation.mutateAsync(data);
-      console.log('Mutation completed successfully:', result);
+      await mutation.mutateAsync(data);
 
-      // Explicitly show success toast
       toast({
         title: "Success!",
         description: "Your profile has been saved successfully.",
-        duration: 5000,
+        duration: 3000,
       });
 
     } catch (error) {
       console.error('Form submission error:', error);
-      // Explicitly show error toast
+
       toast({
         title: "Error saving profile",
         description: error instanceof Error ? error.message : "Failed to save profile",
         variant: "destructive",
-        duration: 5000,
+        duration: 3000,
       });
     }
-  });
+  };
 
   if (isLoading) {
     return (
@@ -227,7 +224,7 @@ export default function ProfilePage() {
   return (
     <div className="container py-10">
       <Form {...form}>
-        <form onSubmit={onSubmit} className="space-y-6">
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
           <Tabs defaultValue="personal" className="w-full">
             <TabsList className="grid w-full grid-cols-5">
               <TabsTrigger value="personal">Personal Info</TabsTrigger>
