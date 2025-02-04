@@ -35,6 +35,8 @@ export default function ProfilePage() {
       skills: [],
       certifications: [],
       languages: [],
+      publications: [],
+      projects: [],
       address: "",
       city: "",
       state: "",
@@ -44,7 +46,18 @@ export default function ProfilePage() {
       availability: "2 Weeks",
       citizenshipStatus: "",
       resumeUrl: "",
-      transcriptUrl: ""
+      transcriptUrl: "",
+      referenceList: [],
+      visaSponsorship: false,
+      willingToRelocate: false,
+      preferredLocations: [],
+      salaryExpectation: "",
+      veteranStatus: "",
+      militaryBranch: "",
+      militaryServiceDates: "",
+      securityClearance: "",
+      clearanceType: "",
+      clearanceExpiry: ""
     },
   });
 
@@ -83,15 +96,23 @@ export default function ProfilePage() {
           skills: Array.isArray(profile.skills) ? profile.skills : [],
           certifications: Array.isArray(profile.certifications) ? profile.certifications : [],
           languages: Array.isArray(profile.languages) ? profile.languages : [],
+          publications: Array.isArray(profile.publications) ? profile.publications : [],
+          projects: Array.isArray(profile.projects) ? profile.projects : [],
+          referenceList: Array.isArray(profile.referenceList) ? profile.referenceList : []
         };
 
         console.log('Setting form values with:', parsedProfile);
         form.reset(parsedProfile);
       } catch (error) {
         console.error('Error parsing profile data:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load profile data. Please try again.",
+          variant: "destructive",
+        });
       }
     }
-  }, [profile, form.reset]);
+  }, [profile, form.reset, toast]);
 
   const { fields: educationFields, append: appendEducation, remove: removeEducation } =
     useFieldArray({ control: form.control, name: "education" });
@@ -103,7 +124,7 @@ export default function ProfilePage() {
     mutationFn: async (values: any) => {
       console.log('Submitting values:', values);
 
-      // Ensure education array is properly formatted
+      // Ensure arrays are properly formatted
       const formattedValues = {
         ...values,
         education: values.education.map((edu: any) => ({
@@ -126,7 +147,7 @@ export default function ProfilePage() {
         languages: values.languages || [],
         publications: values.publications || [],
         projects: values.projects || [],
-        references: values.references || [],
+        referenceList: values.referenceList || [],
         preferredLocations: values.preferredLocations || []
       };
 

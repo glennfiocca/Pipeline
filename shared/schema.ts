@@ -51,7 +51,7 @@ export const profiles = pgTable("profiles", {
   veteranStatus: text("veteran_status"),
   militaryBranch: text("military_branch"),
   militaryServiceDates: text("military_service_dates"),
-  references: jsonb("references").array(),
+  referenceList: jsonb("reference_list").array(),
   securityClearance: text("security_clearance"),
   clearanceType: text("clearance_type"),
   clearanceExpiry: text("clearance_expiry")
@@ -137,7 +137,7 @@ export const insertProfileSchema = createInsertSchema(profiles).extend({
   projects: z.array(projectSchema).optional(),
   workAuthorization: z.enum(['US Citizen', 'Green Card', 'H1B', 'Other']),
   availability: z.enum(['Immediate', '2 Weeks', '1 Month', 'Other']),
-  references: z.array(z.object({
+  referenceList: z.array(z.object({
     name: z.string(),
     title: z.string(),
     company: z.string(),
