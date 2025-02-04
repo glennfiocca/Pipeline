@@ -75,16 +75,21 @@ export class DatabaseStorage implements IStorage {
   async updateProfile(id: number, updateProfile: InsertProfile): Promise<Profile> {
     console.log('Updating profile', id, 'with data:', updateProfile);
 
+    // Ensure arrays and objects are properly stringified for JSONB columns
     const profileToUpdate = {
       ...updateProfile,
-      education: updateProfile.education.map(edu => JSON.stringify(edu)),
-      experience: updateProfile.experience.map(exp => JSON.stringify(exp)),
+      education: updateProfile.education?.map(edu => JSON.stringify(edu)) || [],
+      experience: updateProfile.experience?.map(exp => JSON.stringify(exp)) || [],
       skills: updateProfile.skills || [],
-      certifications: updateProfile.certifications || [],
-      languages: updateProfile.languages || [],
+      certifications: updateProfile.certifications?.map(cert => JSON.stringify(cert)) || [],
+      languages: updateProfile.languages?.map(lang => JSON.stringify(lang)) || [],
+      publications: updateProfile.publications?.map(pub => JSON.stringify(pub)) || [],
+      projects: updateProfile.projects?.map(proj => JSON.stringify(proj)) || [],
+      referenceList: updateProfile.referenceList?.map(ref => JSON.stringify(ref)) || []
     };
 
     try {
+      console.log('Attempting to update with processed data:', profileToUpdate);
       const [profile] = await db.update(profiles)
         .set(profileToUpdate)
         .where(eq(profiles.id, id))
