@@ -100,6 +100,7 @@ export default function ProfilePage() {
 
   const mutation = useMutation({
     mutationFn: async (values: any) => {
+      console.log('Submitting values:', values);
       const res = await apiRequest("POST", "/api/profiles", values);
       return res.json();
     },
@@ -112,6 +113,7 @@ export default function ProfilePage() {
       });
     },
     onError: (error: Error) => {
+      console.error('Mutation error:', error);
       toast({
         title: "Error saving profile",
         description: error.message,
@@ -133,9 +135,14 @@ export default function ProfilePage() {
     <div className="container py-10">
       <Form {...form}>
         <form 
-          onSubmit={form.handleSubmit((data) => {
-            mutation.mutate(data);
-          })} 
+          onSubmit={(e) => {
+            e.preventDefault();
+            const handleSubmit = form.handleSubmit((data) => {
+              console.log('Form data before submit:', data);
+              return mutation.mutate(data);
+            });
+            handleSubmit(e);
+          }}
           className="space-y-6"
         >
           <Tabs defaultValue="personal" className="w-full">
@@ -586,9 +593,19 @@ export default function ProfilePage() {
           </Tabs>
 
           <div className="flex justify-end">
-            <Button type="submit" disabled={mutation.isPending}>
-              {mutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Save Profile
+            <Button 
+              type="submit" 
+              disabled={mutation.isPending}
+              className="min-w-[120px]"
+            >
+              {mutation.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                'Save Profile'
+              )}
             </Button>
           </div>
         </form>

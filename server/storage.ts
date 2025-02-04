@@ -46,6 +46,8 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createProfile(insertProfile: InsertProfile): Promise<Profile> {
+    console.log('Creating profile with data:', insertProfile);
+
     // Ensure arrays are properly stringified before storage
     const profileToInsert = {
       ...insertProfile,
@@ -56,11 +58,19 @@ export class DatabaseStorage implements IStorage {
       languages: insertProfile.languages || [],
     };
 
-    const [profile] = await db.insert(profiles)
-      .values(profileToInsert)
-      .returning();
+    console.log('Profile data after processing:', profileToInsert);
 
-    return profile;
+    try {
+      const [profile] = await db.insert(profiles)
+        .values(profileToInsert)
+        .returning();
+
+      console.log('Created profile:', profile);
+      return profile;
+    } catch (error) {
+      console.error('Error creating profile:', error);
+      throw error;
+    }
   }
 
   async getApplications(): Promise<Application[]> {
