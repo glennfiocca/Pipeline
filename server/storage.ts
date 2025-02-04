@@ -46,7 +46,20 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createProfile(insertProfile: InsertProfile): Promise<Profile> {
-    const [profile] = await db.insert(profiles).values(insertProfile).returning();
+    // Ensure arrays are properly stringified before storage
+    const profileToInsert = {
+      ...insertProfile,
+      education: insertProfile.education.map(edu => JSON.stringify(edu)),
+      experience: insertProfile.experience.map(exp => JSON.stringify(exp)),
+      skills: insertProfile.skills || [],
+      certifications: insertProfile.certifications || [],
+      languages: insertProfile.languages || [],
+    };
+
+    const [profile] = await db.insert(profiles)
+      .values(profileToInsert)
+      .returning();
+
     return profile;
   }
 

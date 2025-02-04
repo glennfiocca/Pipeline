@@ -12,6 +12,7 @@ import { Profile, insertProfileSchema, Education, Experience, Certification, Lan
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2, Plus, X } from "lucide-react";
+import {useEffect} from 'react';
 
 export default function ProfilePage() {
   const { toast } = useToast();
@@ -22,7 +23,7 @@ export default function ProfilePage() {
 
   const form = useForm({
     resolver: zodResolver(insertProfileSchema),
-    defaultValues: profile || {
+    defaultValues: {
       name: "",
       email: "",
       phone: "",
@@ -44,6 +45,47 @@ export default function ProfilePage() {
       citizenshipStatus: "",
     },
   });
+
+  // Add this effect to update form when profile data is loaded
+  useEffect(() => {
+    if (profile) {
+      // Parse stringified JSON arrays back into objects
+      const parsedProfile = {
+        ...profile,
+        education: Array.isArray(profile.education) 
+          ? profile.education.map(edu => {
+              if (typeof edu === 'string') {
+                try {
+                  // Handle double-stringified JSON
+                  return JSON.parse(JSON.parse(edu));
+                } catch {
+                  return JSON.parse(edu);
+                }
+              }
+              return edu;
+            })
+          : [],
+        experience: Array.isArray(profile.experience)
+          ? profile.experience.map(exp => {
+              if (typeof exp === 'string') {
+                try {
+                  // Handle double-stringified JSON
+                  return JSON.parse(JSON.parse(exp));
+                } catch {
+                  return JSON.parse(exp);
+                }
+              }
+              return exp;
+            })
+          : [],
+        skills: Array.isArray(profile.skills) ? profile.skills : [],
+        certifications: Array.isArray(profile.certifications) ? profile.certifications : [],
+        languages: Array.isArray(profile.languages) ? profile.languages : [],
+      };
+
+      form.reset(parsedProfile);
+    }
+  }, [profile, form.reset]);
 
   const { fields: educationFields, append: appendEducation, remove: removeEducation } = 
     useFieldArray({ control: form.control, name: "education" });
