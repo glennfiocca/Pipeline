@@ -194,9 +194,25 @@ export default function ProfilePage() {
   const onSubmit = form.handleSubmit(async (data) => {
     try {
       console.log('Form data before submit:', data);
-      await mutation.mutateAsync(data);
+      const result = await mutation.mutateAsync(data);
+      console.log('Mutation completed successfully:', result);
+
+      // Explicitly show success toast
+      toast({
+        title: "Success!",
+        description: "Your profile has been saved successfully.",
+        duration: 5000,
+      });
+
     } catch (error) {
       console.error('Form submission error:', error);
+      // Explicitly show error toast
+      toast({
+        title: "Error saving profile",
+        description: error instanceof Error ? error.message : "Failed to save profile",
+        variant: "destructive",
+        duration: 5000,
+      });
     }
   });
 
