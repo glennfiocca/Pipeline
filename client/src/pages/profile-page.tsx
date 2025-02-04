@@ -1,4 +1,4 @@
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useFieldArray, useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,15 @@ import { useEffect } from 'react';
 
 export default function ProfilePage() {
   const { toast } = useToast();
+
+  // Test toast on component mount
+  useEffect(() => {
+    toast({
+      title: "Page Loaded",
+      description: "Testing toast notifications",
+      duration: 5000,
+    });
+  }, []);
 
   const { data: profile, isLoading } = useQuery<Profile>({
     queryKey: ["/api/profiles/1"],
@@ -67,44 +76,47 @@ export default function ProfilePage() {
   const { fields: experienceFields, append: appendExperience, remove: removeExperience } =
     useFieldArray({ control: form.control, name: "experience" });
 
-  const mutation = useMutation({
-    mutationFn: async (values: any) => {
+  async function onSubmit(values: any) {
+    try {
+      console.log("Submitting form...");
       const response = await apiRequest("PATCH", `/api/profiles/${profile?.id || 1}`, values);
+
       if (!response.ok) {
         const error = await response.json();
         throw new Error(error.message || "Failed to save profile");
       }
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/profiles"] });
-      toast({
-        title: "Success!",
-        description: "Your profile has been saved successfully.",
-        duration: 3000,
-      });
-    },
-    onError: (error: Error) => {
-      console.error('Mutation error handler:', error);
-      toast({
-        title: "Error saving profile",
-        description: error.message,
-        variant: "destructive",
-        duration: 3000,
-      });
-    },
-  });
 
-  // Set form data when profile loads
+      console.log("Form submitted successfully, showing toast...");
+      // Add a delay before showing the toast
+      setTimeout(() => {
+        toast({
+          title: "Success!",
+          description: "Your profile has been saved successfully.",
+          duration: 5000,
+        });
+      }, 100);
+
+      // Invalidate query after successful save
+      queryClient.invalidateQueries({ queryKey: ["/api/profiles"] });
+
+    } catch (error) {
+      console.error("Form submission error:", error);
+      setTimeout(() => {
+        toast({
+          title: "Error saving profile",
+          description: error instanceof Error ? error.message : "Failed to save profile",
+          variant: "destructive",
+          duration: 5000,
+        });
+      }, 100);
+    }
+  }
+
   useEffect(() => {
     if (profile) {
       form.reset(profile);
     }
   }, [profile, form]);
-
-  async function onSubmit(values: any) {
-    await mutation.mutateAsync(values);
-  }
 
   if (isLoading) {
     return (
@@ -678,17 +690,9 @@ export default function ProfilePage() {
           <div className="flex justify-end">
             <Button
               type="submit"
-              disabled={mutation.isPending}
               className="min-w-[120px]"
             >
-              {mutation.isPending ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                'Save Profile'
-              )}
+              Save Profile
             </Button>
           </div>
         </form>
