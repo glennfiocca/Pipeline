@@ -152,14 +152,27 @@ export default function ProfilePage() {
       };
 
       console.log('Formatted values:', formattedValues);
-      const res = await apiRequest("POST", "/api/profiles", formattedValues);
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.message || "Failed to save profile");
+
+      try {
+        const res = await apiRequest("POST", "/api/profiles", formattedValues);
+        console.log('API Response:', res);
+
+        if (!res.ok) {
+          const error = await res.json();
+          console.error('API Error:', error);
+          throw new Error(error.message || "Failed to save profile");
+        }
+
+        const data = await res.json();
+        console.log('API Success:', data);
+        return data;
+      } catch (error) {
+        console.error('Mutation error:', error);
+        throw error;
       }
-      return res.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      console.log('Mutation success:', data);
       queryClient.invalidateQueries({ queryKey: ["/api/profiles"] });
       toast({
         title: "Success!",
@@ -168,7 +181,7 @@ export default function ProfilePage() {
       });
     },
     onError: (error: Error) => {
-      console.error('Mutation error:', error);
+      console.error('Mutation error handler:', error);
       toast({
         title: "Error saving profile",
         description: error.message,
