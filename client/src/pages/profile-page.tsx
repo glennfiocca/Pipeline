@@ -17,6 +17,10 @@ import { useEffect } from 'react';
 export default function ProfilePage() {
   const { toast } = useToast();
 
+  const { data: profile, isLoading } = useQuery<Profile>({
+    queryKey: ["/api/profiles/1"],
+  });
+
   const form = useForm({
     resolver: zodResolver(insertProfileSchema),
     defaultValues: {
@@ -63,10 +67,6 @@ export default function ProfilePage() {
   const { fields: experienceFields, append: appendExperience, remove: removeExperience } =
     useFieldArray({ control: form.control, name: "experience" });
 
-  const { data: profile, isLoading } = useQuery<Profile>({
-    queryKey: ["/api/profiles/1"],
-  });
-
   const mutation = useMutation({
     mutationFn: async (values: any) => {
       const response = await apiRequest("PATCH", `/api/profiles/${profile?.id || 1}`, values);
@@ -79,9 +79,8 @@ export default function ProfilePage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/profiles"] });
       toast({
-        title: "Success",
-        description: "Profile saved successfully",
-        variant: "default",
+        title: "Profile Updated",
+        description: "Your profile has been saved successfully",
       });
     },
     onError: (error: Error) => {
@@ -93,56 +92,12 @@ export default function ProfilePage() {
     },
   });
 
+  // Set form data when profile loads
   useEffect(() => {
     if (profile) {
-      try {
-        const parsedProfile = {
-          ...profile,
-          education: Array.isArray(profile.education)
-            ? profile.education.map(edu => {
-                if (typeof edu === 'string') {
-                  try {
-                    return JSON.parse(edu);
-                  } catch (e) {
-                    console.error('Failed to parse education:', edu, e);
-                    return {};
-                  }
-                }
-                return edu;
-              })
-            : [],
-          experience: Array.isArray(profile.experience)
-            ? profile.experience.map(exp => {
-                if (typeof exp === 'string') {
-                  try {
-                    return JSON.parse(exp);
-                  } catch (e) {
-                    console.error('Failed to parse experience:', exp, e);
-                    return {};
-                  }
-                }
-                return exp;
-              })
-            : [],
-          skills: Array.isArray(profile.skills) ? profile.skills : [],
-          certifications: Array.isArray(profile.certifications) ? profile.certifications : [],
-          languages: Array.isArray(profile.languages) ? profile.languages : [],
-          publications: Array.isArray(profile.publications) ? profile.publications : [],
-          projects: Array.isArray(profile.projects) ? profile.projects : [],
-          referenceList: Array.isArray(profile.referenceList) ? profile.referenceList : []
-        };
-
-        form.reset(parsedProfile);
-      } catch (error) {
-        console.error('Error parsing profile data:', error);
-        toast({
-          title: "Error",
-          description: "Failed to load profile data. Please try again.",
-          variant: "destructive",
-        });
-      }
+      form.reset(profile);
     }
-  }, [profile, form.reset, toast]);
+  }, [profile, form]);
 
   async function onSubmit(values: any) {
     await mutation.mutateAsync(values);
@@ -324,9 +279,9 @@ export default function ProfilePage() {
                       endDate: "",
                       gpa: "",
                       majorCourses: [],
+                      transcriptUrl: null,
                       honors: [],
-                      activities: [],
-                      transcriptUrl: null
+                      activities: []
                     })}
                   >
                     <Plus className="h-4 w-4 mr-2" />
