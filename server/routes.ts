@@ -36,21 +36,36 @@ export function registerRoutes(app: Express): Server {
     res.json(profile);
   });
 
+  // Handle both POST (create) and PATCH (update) for profiles
   app.post("/api/profiles", async (req, res) => {
     try {
       const parsed = insertProfileSchema.safeParse(req.body);
       if (!parsed.success) return res.status(400).json(parsed.error);
-
-      // If profile has an ID, update instead of create
-      if (req.body.id) {
-        const profile = await storage.updateProfile(req.body.id, parsed.data);
-        return res.json(profile);
-      }
-
       const profile = await storage.createProfile(parsed.data);
       res.status(201).json(profile);
     } catch (error) {
-      console.error('Profile creation/update error:', error);
+      console.error('Profile creation error:', error);
+      res.status(500).json({ message: (error as Error).message });
+    }
+  });
+
+  // Add specific PATCH route for profile updates
+  app.patch("/api/profiles/:id", async (req, res) => {
+    try {
+      console.log('Received PATCH request for profile:', req.params.id);
+      console.log('Request body:', req.body);
+
+      const parsed = insertProfileSchema.safeParse(req.body);
+      if (!parsed.success) {
+        console.error('Validation error:', parsed.error);
+        return res.status(400).json(parsed.error);
+      }
+
+      const profile = await storage.updateProfile(parseInt(req.params.id), parsed.data);
+      console.log('Updated profile:', profile);
+      res.json(profile);
+    } catch (error) {
+      console.error('Profile update error:', error);
       res.status(500).json({ message: (error as Error).message });
     }
   });

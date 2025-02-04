@@ -78,37 +78,36 @@ export default function ProfilePage() {
 
   async function onSubmit(values: any) {
     try {
-      console.log("Submitting form...");
+      console.log("Submitting form with values:", values);
       const response = await apiRequest("PATCH", `/api/profiles/${profile?.id || 1}`, values);
+      console.log("API Response status:", response.status);
+
+      const responseData = await response.json();
+      console.log("API Response data:", responseData);
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || "Failed to save profile");
+        throw new Error(responseData.message || "Failed to save profile");
       }
 
-      console.log("Form submitted successfully, showing toast...");
-      // Add a delay before showing the toast
-      setTimeout(() => {
-        toast({
-          title: "Success!",
-          description: "Your profile has been saved successfully.",
-          duration: 5000,
-        });
-      }, 100);
+      console.log("Form submitted successfully");
 
       // Invalidate query after successful save
       queryClient.invalidateQueries({ queryKey: ["/api/profiles"] });
 
+      toast({
+        title: "Success!",
+        description: "Your profile has been saved successfully.",
+        duration: 5000,
+      });
+
     } catch (error) {
       console.error("Form submission error:", error);
-      setTimeout(() => {
-        toast({
-          title: "Error saving profile",
-          description: error instanceof Error ? error.message : "Failed to save profile",
-          variant: "destructive",
-          duration: 5000,
-        });
-      }, 100);
+      toast({
+        title: "Error saving profile",
+        description: error instanceof Error ? error.message : "Failed to save profile",
+        variant: "destructive",
+        duration: 5000,
+      });
     }
   }
 
