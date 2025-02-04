@@ -1,52 +1,34 @@
-import { LinkedInScraper } from './linkedin';
-import { HiringCafeScraper } from './hiringcafe';
 import { IndeedScraper } from './indeed';
 import { storage } from '../../storage';
 import type { InsertJob } from '@shared/schema';
 
 export class ScraperManager {
-  private scrapers = [
-    new HiringCafeScraper(),
-    new IndeedScraper(),
-    new LinkedInScraper()
-  ];
+  private scraper = new IndeedScraper();
 
   async runScrapers() {
-    console.log('Starting job scraping...');
+    console.log('Starting job generation...');
     const allJobs: InsertJob[] = [];
 
-    for (const scraper of this.scrapers) {
-      try {
-        console.log(`Running scraper: ${scraper.constructor.name}`);
-        const jobs = await scraper.scrape();
-        console.log(`Found ${jobs.length} jobs from ${scraper.constructor.name}`);
+    try {
+      console.log('Generating mock jobs...');
+      const jobs = await this.scraper.scrape();
+      console.log(`Generated ${jobs.length} jobs`);
 
-        // Deduplicate jobs based on title + company
-        const newJobs = jobs.filter(job => {
-          const isDuplicate = allJobs.some(
-            existing => 
-              existing.title.toLowerCase() === job.title.toLowerCase() &&
-              existing.company.toLowerCase() === job.company.toLowerCase()
-          );
-          return !isDuplicate;
-        });
-
-        allJobs.push(...newJobs);
-
-        // Store jobs in database
-        for (const job of newJobs) {
-          try {
-            await storage.createJob(job);
-            console.log('Stored job:', job.title, 'at', job.company);
-          } catch (error) {
-            console.error('Error storing job:', error);
-          }
+      // Store jobs in database
+      for (const job of jobs) {
+        try {
+          await storage.createJob(job);
+          console.log('Stored job:', job.title, 'at', job.company);
+        } catch (error) {
+          console.error('Error storing job:', error);
         }
-      } catch (error) {
-        console.error(`Scraper error in ${scraper.constructor.name}:`, error);
       }
+
+      allJobs.push(...jobs);
+    } catch (error) {
+      console.error('Error generating jobs:', error);
     }
 
-    console.log(`Job scraping completed. Total unique jobs found: ${allJobs.length}`);
+    console.log(`Job generation completed. Total jobs created: ${allJobs.length}`);
   }
 }
