@@ -58,8 +58,7 @@ export class DatabaseStorage implements IStorage {
       const existingProfile = await this.getProfileByEmail(insertProfile.email);
 
       if (existingProfile) {
-        // If it exists, update it instead
-        return await this.updateProfile(existingProfile.id, insertProfile);
+        throw new Error(`A profile with email ${insertProfile.email} already exists`);
       }
 
       // Ensure all arrays are properly initialized
@@ -86,6 +85,20 @@ export class DatabaseStorage implements IStorage {
 
   async updateProfile(id: number, updateProfile: Partial<InsertProfile>): Promise<Profile> {
     try {
+      // First get the existing profile
+      const existingProfile = await this.getProfile(id);
+      if (!existingProfile) {
+        throw new Error('Profile not found');
+      }
+
+      // If email is being changed, check if the new email is already taken by another profile
+      if (updateProfile.email && updateProfile.email !== existingProfile.email) {
+        const emailExists = await this.getProfileByEmail(updateProfile.email);
+        if (emailExists && emailExists.id !== id) {
+          throw new Error(`Email ${updateProfile.email} is already taken`);
+        }
+      }
+
       // Clean up the update data to handle arrays properly
       const updateData = Object.fromEntries(
         Object.entries(updateProfile)

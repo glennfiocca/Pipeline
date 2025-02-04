@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useFieldArray, useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -78,7 +78,7 @@ export default function ProfilePage() {
       const formData = Object.fromEntries(
         Object.entries(values).map(([key, value]) => [
           key,
-          Array.isArray(value) ? value.filter(Boolean) : value
+          Array.isArray(value) ? value.filter(Boolean) : value || ""
         ])
       ) as InsertProfile;
 
@@ -91,7 +91,15 @@ export default function ProfilePage() {
       const responseData = await response.json();
 
       if (!response.ok) {
-        throw new Error(responseData.message || "Failed to save profile");
+        let errorMessage = "Failed to save profile";
+        if (responseData.message) {
+          if (responseData.message.includes("duplicate key")) {
+            errorMessage = "This email address is already registered with another profile";
+          } else {
+            errorMessage = responseData.message;
+          }
+        }
+        throw new Error(errorMessage);
       }
 
       await queryClient.invalidateQueries({ queryKey: ["/api/profiles"] });
