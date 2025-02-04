@@ -101,15 +101,18 @@ export default function ProfilePage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/profiles"] });
       toast({
-        title: "Profile updated",
-        description: "Your profile has been updated successfully.",
+        title: "Success!",
+        description: "Your profile has been saved successfully.",
+        duration: 5000,
       });
+      // Don't navigate away, just show the success message
     },
     onError: (error: Error) => {
       toast({
-        title: "Error",
+        title: "Error saving profile",
         description: error.message,
         variant: "destructive",
+        duration: 5000,
       });
     },
   });
@@ -125,7 +128,12 @@ export default function ProfilePage() {
   return (
     <div className="container py-10">
       <Form {...form}>
-        <form onSubmit={form.handleSubmit((data) => mutation.mutate(data))} className="space-y-6">
+        <form 
+          onSubmit={form.handleSubmit((data) => {
+            mutation.mutate(data);
+          })} 
+          className="space-y-6"
+        >
           <Tabs defaultValue="personal" className="w-full">
             <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="personal">Personal Info</TabsTrigger>
