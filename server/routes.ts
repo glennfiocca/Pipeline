@@ -2,6 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertJobSchema, insertProfileSchema, insertApplicationSchema } from "@shared/schema";
+import { ScraperManager } from './services/scraper/manager';
 
 export function registerRoutes(app: Express): Server {
   // Jobs
@@ -81,6 +82,18 @@ export function registerRoutes(app: Express): Server {
       res.json(application);
     } catch (error) {
       res.status(404).json({ error: (error as Error).message });
+    }
+  });
+
+  // Add scraper route
+  app.post("/api/jobs/scrape", async (_req, res) => {
+    try {
+      const manager = new ScraperManager();
+      await manager.runScrapers();
+      res.json({ message: "Job scraping completed" });
+    } catch (error) {
+      console.error('Error running scrapers:', error);
+      res.status(500).json({ error: "Failed to scrape jobs" });
     }
   });
 
