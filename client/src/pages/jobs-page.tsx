@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Job } from "@shared/schema";
+import { Job, Application, type InsertApplication } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useState } from "react";
 
@@ -37,7 +37,7 @@ export default function JobsPage() {
     queryKey: ["/api/jobs"],
   });
 
-  const { data: applications = [] } = useQuery({
+  const { data: applications = [] } = useQuery<Application[]>({
     queryKey: ["/api/applications"],
   });
 
@@ -49,11 +49,17 @@ export default function JobsPage() {
 
   const applyMutation = useMutation({
     mutationFn: async (jobId: number) => {
-      const res = await apiRequest("POST", "/api/applications", {
+      const application: InsertApplication = {
         jobId,
         status: "applied",
         appliedAt: new Date().toISOString(),
-      });
+      };
+
+      const res = await apiRequest("POST", "/api/applications", application);
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || "Failed to submit application");
+      }
       return res.json();
     },
     onSuccess: () => {
@@ -74,7 +80,7 @@ export default function JobsPage() {
 
   const filteredJobs = jobs.filter((job) => {
     // Text search filter
-    const matchesSearch = 
+    const matchesSearch =
       job.title.toLowerCase().includes(search.toLowerCase()) ||
       job.company.toLowerCase().includes(search.toLowerCase()) ||
       job.description.toLowerCase().includes(search.toLowerCase());
@@ -111,8 +117,8 @@ export default function JobsPage() {
               <CardContent className="pt-6 space-y-4">
                 <div className="space-y-2">
                   <Label>Industry</Label>
-                  <Select 
-                    value={industryType} 
+                  <Select
+                    value={industryType}
                     onValueChange={setIndustryType}
                   >
                     <SelectTrigger>
@@ -130,8 +136,8 @@ export default function JobsPage() {
 
                 <div className="space-y-2">
                   <Label>Location</Label>
-                  <Select 
-                    value={location} 
+                  <Select
+                    value={location}
                     onValueChange={setLocation}
                   >
                     <SelectTrigger>
@@ -165,8 +171,8 @@ export default function JobsPage() {
                   </div>
                 </div>
 
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   className="w-full"
                   onClick={() => {
                     setIndustryType("All");
@@ -206,7 +212,7 @@ export default function JobsPage() {
                   job={job}
                   onApply={() => applyMutation.mutate(job.id)}
                   isApplying={applyMutation.isPending && applyMutation.variables === job.id}
-                  isApplied={applications.some(app => app.jobId === job.id)}
+                  isApplied={applications.some((app: Application) => app.jobId === job.id)}
                 />
               ))
             )}
