@@ -5,7 +5,7 @@ import type { Job, InsertJob } from '@shared/schema';
 
 export abstract class BaseScraper {
   protected queue: PQueue;
-  protected robotsTxt: string | null = null;
+  protected robots: any = null;
 
   constructor(
     protected baseUrl: string,
@@ -19,15 +19,15 @@ export abstract class BaseScraper {
       // Fetch and parse robots.txt
       const robotsUrl = new URL('/robots.txt', this.baseUrl).toString();
       const response = await axios.get(robotsUrl);
-      this.robotsTxt = robotsParser(robotsUrl, response.data);
+      this.robots = robotsParser(robotsUrl, response.data);
     } catch (error) {
       console.warn(`Could not fetch robots.txt for ${this.baseUrl}:`, error);
     }
   }
 
   protected isAllowed(url: string): boolean {
-    if (!this.robotsTxt) return true;
-    return this.robotsTxt.isAllowed(url, 'PipelineBot');
+    if (!this.robots) return true;
+    return this.robots.isAllowed(url, 'PipelineBot');
   }
 
   protected validateJob(job: Partial<InsertJob>): job is InsertJob {

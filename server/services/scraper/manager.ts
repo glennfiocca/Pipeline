@@ -1,21 +1,21 @@
-import { LinkedInScraper } from './linkedin';
+import { HiringCafeScraper } from './hiringcafe';
 import { storage } from '../../storage';
 import type { InsertJob } from '@shared/schema';
 
 export class ScraperManager {
   private scrapers = [
-    new LinkedInScraper(),
+    new HiringCafeScraper(),
     // Add more scrapers here as we implement them
   ];
 
   async runScrapers() {
     console.log('Starting job scraping...');
-    
+
     for (const scraper of this.scrapers) {
       try {
         const jobs = await scraper.scrape();
         console.log(`Found ${jobs.length} jobs from scraper`);
-        
+
         // Store jobs in database
         for (const job of jobs) {
           try {
@@ -28,7 +28,7 @@ export class ScraperManager {
         console.error('Scraper error:', error);
       }
     }
-    
+
     console.log('Job scraping completed');
   }
 }
