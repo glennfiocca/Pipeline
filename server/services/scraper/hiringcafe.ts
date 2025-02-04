@@ -23,9 +23,10 @@ export class HiringCafeScraper extends BaseScraper {
       };
 
       try {
+        // First make a test request to check if the site is accessible
         const testResponse = await axios.get(this.baseUrl, { 
           headers,
-          timeout: 10000, // 10 second timeout
+          timeout: 10000,
           validateStatus: (status) => status < 500 // Accept any status < 500
         });
 

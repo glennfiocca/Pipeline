@@ -1,73 +1,82 @@
-import puppeteer from 'puppeteer';
+import axios from 'axios';
+import * as cheerio from 'cheerio';
 import { BaseScraper } from './base';
 import type { InsertJob } from '@shared/schema';
 
 export class LinkedInScraper extends BaseScraper {
   constructor() {
-    super('https://www.linkedin.com', 2); // 2 concurrent requests
+    super('https://www.linkedin.com/jobs');
   }
 
   async scrape(): Promise<InsertJob[]> {
-    const browser = await puppeteer.launch({
-      headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox']
-    });
-
     const jobs: InsertJob[] = [];
 
     try {
-      const page = await browser.newPage();
-      
-      // Search for STEM and Finance jobs
-      const searchUrls = [
-        'https://www.linkedin.com/jobs/search/?keywords=software%20engineer',
-        'https://www.linkedin.com/jobs/search/?keywords=data%20scientist',
-        'https://www.linkedin.com/jobs/search/?keywords=financial%20analyst'
-      ];
+      // Test the connection with proper headers
+      const headers = {
+        'User-Agent': 'Mozilla/5.0 (compatible; PipelineBot/1.0; +https://pipeline.com)',
+        'Accept': 'text/html',
+      };
 
-      for (const url of searchUrls) {
-        if (!this.isAllowed(url)) {
-          console.log(`Skipping ${url} - not allowed by robots.txt`);
-          continue;
-        }
+      // Search for different job types
+      const jobTypes = ['software-engineer', 'data-scientist', 'financial-analyst'];
+      const locations = ['united-states', 'remote'];
 
-        await this.queue.add(async () => {
+      for (const jobType of jobTypes) {
+        for (const location of locations) {
+          const url = `${this.baseUrl}/search?keywords=${jobType}&location=${location}`;
+
+          if (!this.isAllowed(url)) {
+            console.log(`Skipping ${url} - not allowed by robots.txt`);
+            continue;
+          }
+
           try {
-            await page.goto(url, { waitUntil: 'networkidle0' });
-            
-            // Wait for job cards to load
-            await page.waitForSelector('.job-card-container');
+            console.log(`Fetching jobs from: ${url}`);
+            const response = await axios.get(url, { headers });
+            const $ = cheerio.load(response.data);
 
-            const jobListings = await page.evaluate(() => {
-              const cards = document.querySelectorAll('.job-card-container');
-              return Array.from(cards).map(card => ({
-                title: card.querySelector('.job-card-list__title')?.textContent?.trim(),
-                company: card.querySelector('.job-card-container__company-name')?.textContent?.trim(),
-                location: card.querySelector('.job-card-container__metadata-item')?.textContent?.trim(),
-                salary: 'Competitive', // LinkedIn often doesn't show salary
-                description: card.querySelector('.job-card-list__description')?.textContent?.trim(),
-                requirements: 'See full listing', // Detailed in full listing
-                sourceUrl: card.querySelector('a')?.href,
+            $('.job-card-container').each((_, element) => {
+              const $job = $(element);
+
+              const job: InsertJob = {
+                title: $job.find('.job-card-list__title').text().trim(),
+                company: $job.find('.job-card-container__company-name').text().trim(),
+                location: $job.find('.job-card-container__metadata-item').text().trim() || 'Remote',
+                salary: 'Competitive',
+                description: $job.find('.job-card-list__description').text().trim() || 
+                           'View full description on LinkedIn',
+                requirements: 'See full listing on LinkedIn for requirements',
                 source: 'LinkedIn',
-                type: 'STEM', // We'll categorize based on search keywords
+                sourceUrl: $job.find('a.job-card-list__title').attr('href') || url,
+                type: jobType.includes('financial') ? 'Finance' : 'STEM',
                 published: true
-              }));
+              };
+
+              if (this.validateJob(job)) {
+                console.log('Found valid job:', {
+                  title: job.title,
+                  company: job.company,
+                  type: job.type
+                });
+                jobs.push(job);
+              }
             });
 
-            // Filter and validate jobs
-            const validJobs = jobListings.filter(this.validateJob);
-            jobs.push(...validJobs);
+            // Be respectful with rate limiting
+            await new Promise(resolve => setTimeout(resolve, 2000));
 
           } catch (error) {
-            console.error('Error scraping LinkedIn jobs:', error);
+            console.error(`Error fetching jobs for ${jobType} in ${location}:`, error);
           }
-        });
+        }
       }
 
-    } finally {
-      await browser.close();
+    } catch (error) {
+      console.error('Error in LinkedIn scraper:', error);
     }
 
+    console.log(`Found total of ${jobs.length} jobs from LinkedIn`);
     return jobs;
   }
 }
