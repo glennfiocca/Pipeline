@@ -17,7 +17,7 @@ import { useEffect } from 'react';
 export default function ProfilePage() {
   const { toast } = useToast();
   const { data: profile, isLoading } = useQuery<Profile>({
-    queryKey: ["/api/profiles/1"],
+    queryKey: ["/api/profiles/1"]
   });
 
   const form = useForm<InsertProfile>({
@@ -74,7 +74,7 @@ export default function ProfilePage() {
 
   async function onSubmit(values: InsertProfile) {
     try {
-      // Only submit the fields that are actually filled out
+      // Ensure all array fields are properly initialized
       const formData = Object.fromEntries(
         Object.entries(values).map(([key, value]) => [
           key,
@@ -99,7 +99,6 @@ export default function ProfilePage() {
       toast({
         title: "Success!",
         description: "Your profile has been saved successfully.",
-        duration: 5000,
       });
     } catch (error) {
       console.error("Form submission error:", error);
@@ -107,7 +106,6 @@ export default function ProfilePage() {
         title: "Error saving profile",
         description: error instanceof Error ? error.message : "Failed to save profile",
         variant: "destructive",
-        duration: 5000,
       });
     }
   }

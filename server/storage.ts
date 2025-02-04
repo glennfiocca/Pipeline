@@ -12,6 +12,7 @@ export interface IStorage {
   // Profiles
   getProfiles(): Promise<Profile[]>;
   getProfile(id: number): Promise<Profile | undefined>;
+  getProfileByEmail(email: string): Promise<Profile | undefined>;
   createProfile(profile: InsertProfile): Promise<Profile>;
   updateProfile(id: number, profile: Partial<InsertProfile>): Promise<Profile>;
 
@@ -46,8 +47,21 @@ export class DatabaseStorage implements IStorage {
     return profile;
   }
 
+  async getProfileByEmail(email: string): Promise<Profile | undefined> {
+    const [profile] = await db.select().from(profiles).where(eq(profiles.email, email));
+    return profile;
+  }
+
   async createProfile(insertProfile: InsertProfile): Promise<Profile> {
     try {
+      // First check if a profile with this email already exists
+      const existingProfile = await this.getProfileByEmail(insertProfile.email);
+
+      if (existingProfile) {
+        // If it exists, update it instead
+        return await this.updateProfile(existingProfile.id, insertProfile);
+      }
+
       // Ensure all arrays are properly initialized
       const profileData = {
         ...insertProfile,
