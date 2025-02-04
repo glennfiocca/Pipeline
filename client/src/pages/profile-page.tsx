@@ -8,12 +8,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Profile, insertProfileSchema, type InsertProfile } from "@shared/schema";
+import { Profile, insertProfileSchema, type InsertProfile, type Education, type Experience, type Language, type Certification } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2, Plus, X } from "lucide-react";
 import { useEffect } from 'react';
-import { z } from "zod";
 
 export default function ProfilePage() {
   const { toast } = useToast();
@@ -87,7 +86,6 @@ export default function ProfilePage() {
         throw new Error(responseData.message || "Failed to save profile");
       }
 
-      console.log("Form submitted successfully");
       queryClient.invalidateQueries({ queryKey: ["/api/profiles"] });
 
       toast({
@@ -109,17 +107,19 @@ export default function ProfilePage() {
 
   useEffect(() => {
     if (profile) {
-      form.reset({
+      const typedProfile: InsertProfile = {
         ...profile,
-        education: profile.education || [],
-        experience: profile.experience || [],
+        education: (profile.education || []) as Education[],
+        experience: (profile.experience || []) as Experience[],
         skills: profile.skills || [],
-        certifications: profile.certifications || [],
-        languages: profile.languages || [],
+        certifications: (profile.certifications || []) as Certification[],
+        languages: (profile.languages || []) as Language[],
         publications: profile.publications || [],
         projects: profile.projects || [],
         referenceList: profile.referenceList || []
-      });
+      };
+
+      form.reset(typedProfile);
     }
   }, [profile, form]);
 
