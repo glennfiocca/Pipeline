@@ -154,7 +154,7 @@ export default function ProfilePage() {
       console.log('Formatted values:', formattedValues);
 
       try {
-        const res = await apiRequest("POST", "/api/profiles", formattedValues);
+        const res = await apiRequest("PATCH", `/api/profiles/${profile?.id || 1}`, formattedValues);
         console.log('API Response:', res);
 
         if (!res.ok) {
