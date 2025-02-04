@@ -37,6 +37,10 @@ export default function JobsPage() {
     queryKey: ["/api/jobs"],
   });
 
+  const { data: applications = [] } = useQuery({
+    queryKey: ["/api/applications"],
+  });
+
   const parseSalary = (salaryStr: string): [number, number] => {
     const matches = salaryStr.match(/\$(\d{1,3}(?:,\d{3})*)/g);
     if (!matches || matches.length !== 2) return [0, 0];
@@ -201,6 +205,8 @@ export default function JobsPage() {
                   key={job.id}
                   job={job}
                   onApply={() => applyMutation.mutate(job.id)}
+                  isApplying={applyMutation.isPending && applyMutation.variables === job.id}
+                  isApplied={applications.some(app => app.jobId === job.id)}
                 />
               ))
             )}

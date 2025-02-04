@@ -1,15 +1,17 @@
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { MapPin, Building2, DollarSign } from "lucide-react";
+import { MapPin, Building2, DollarSign, Loader2 } from "lucide-react";
 import type { Job } from "@shared/schema";
 
 interface JobCardProps {
   job: Job;
   onApply: (jobId: number) => void;
+  isApplied?: boolean;
+  isApplying?: boolean;
 }
 
-export function JobCard({ job, onApply }: JobCardProps) {
+export function JobCard({ job, onApply, isApplied, isApplying }: JobCardProps) {
   return (
     <Card className="w-full">
       <CardHeader>
@@ -38,8 +40,21 @@ export function JobCard({ job, onApply }: JobCardProps) {
         </div>
       </CardContent>
       <CardFooter>
-        <Button onClick={() => onApply(job.id)} className="w-full">
-          Quick Apply
+        <Button 
+          onClick={() => onApply(job.id)} 
+          className="w-full"
+          disabled={isApplied || isApplying}
+        >
+          {isApplying ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Applying...
+            </>
+          ) : isApplied ? (
+            "Applied"
+          ) : (
+            "Quick Apply"
+          )}
         </Button>
       </CardFooter>
     </Card>
