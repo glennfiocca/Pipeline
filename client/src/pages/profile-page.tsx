@@ -17,89 +17,6 @@ import { useEffect } from 'react';
 export default function ProfilePage() {
   const { toast } = useToast();
 
-  const { data: profile, isLoading } = useQuery<Profile>({
-    queryKey: ["/api/profiles/1"],
-  });
-
-  const mutation = useMutation({
-    mutationFn: async (values: any) => {
-      const response = await apiRequest("PATCH", `/api/profiles/${profile?.id || 1}`, values);
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || "Failed to save profile");
-      }
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/profiles"] });
-      toast({
-        title: "Profile Updated",
-        description: "Your profile has been saved successfully",
-        variant: "default",
-      });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to save profile",
-        variant: "destructive",
-      });
-    },
-  });
-
-  // Update form when profile data is loaded
-  useEffect(() => {
-    if (profile) {
-      try {
-        const parsedProfile = {
-          ...profile,
-          education: Array.isArray(profile.education)
-            ? profile.education.map(edu => {
-                if (typeof edu === 'string') {
-                  try {
-                    return JSON.parse(edu);
-                  } catch (e) {
-                    console.error('Failed to parse education:', edu, e);
-                    return {};
-                  }
-                }
-                return edu;
-              })
-            : [],
-          experience: Array.isArray(profile.experience)
-            ? profile.experience.map(exp => {
-                if (typeof exp === 'string') {
-                  try {
-                    return JSON.parse(exp);
-                  } catch (e) {
-                    console.error('Failed to parse experience:', exp, e);
-                    return {};
-                  }
-                }
-                return exp;
-              })
-            : [],
-          skills: Array.isArray(profile.skills) ? profile.skills : [],
-          certifications: Array.isArray(profile.certifications) ? profile.certifications : [],
-          languages: Array.isArray(profile.languages) ? profile.languages : [],
-          publications: Array.isArray(profile.publications) ? profile.publications : [],
-          projects: Array.isArray(profile.projects) ? profile.projects : [],
-          referenceList: Array.isArray(profile.referenceList) ? profile.referenceList : []
-        };
-
-        console.log('Setting form values with:', parsedProfile);
-        form.reset(parsedProfile);
-      } catch (error) {
-        console.error('Error parsing profile data:', error);
-        toast({
-          title: "Error",
-          description: "Failed to load profile data. Please try again.",
-          variant: "destructive",
-        });
-      }
-    }
-  }, [profile, form.reset, toast]);
-
   const form = useForm({
     resolver: zodResolver(insertProfileSchema),
     defaultValues: {
@@ -146,6 +63,86 @@ export default function ProfilePage() {
   const { fields: experienceFields, append: appendExperience, remove: removeExperience } =
     useFieldArray({ control: form.control, name: "experience" });
 
+  const { data: profile, isLoading } = useQuery<Profile>({
+    queryKey: ["/api/profiles/1"],
+  });
+
+  const mutation = useMutation({
+    mutationFn: async (values: any) => {
+      const response = await apiRequest("PATCH", `/api/profiles/${profile?.id || 1}`, values);
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Failed to save profile");
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/profiles"] });
+      toast({
+        title: "Success",
+        description: "Profile saved successfully",
+        variant: "default",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to save profile",
+        variant: "destructive",
+      });
+    },
+  });
+
+  useEffect(() => {
+    if (profile) {
+      try {
+        const parsedProfile = {
+          ...profile,
+          education: Array.isArray(profile.education)
+            ? profile.education.map(edu => {
+                if (typeof edu === 'string') {
+                  try {
+                    return JSON.parse(edu);
+                  } catch (e) {
+                    console.error('Failed to parse education:', edu, e);
+                    return {};
+                  }
+                }
+                return edu;
+              })
+            : [],
+          experience: Array.isArray(profile.experience)
+            ? profile.experience.map(exp => {
+                if (typeof exp === 'string') {
+                  try {
+                    return JSON.parse(exp);
+                  } catch (e) {
+                    console.error('Failed to parse experience:', exp, e);
+                    return {};
+                  }
+                }
+                return exp;
+              })
+            : [],
+          skills: Array.isArray(profile.skills) ? profile.skills : [],
+          certifications: Array.isArray(profile.certifications) ? profile.certifications : [],
+          languages: Array.isArray(profile.languages) ? profile.languages : [],
+          publications: Array.isArray(profile.publications) ? profile.publications : [],
+          projects: Array.isArray(profile.projects) ? profile.projects : [],
+          referenceList: Array.isArray(profile.referenceList) ? profile.referenceList : []
+        };
+
+        form.reset(parsedProfile);
+      } catch (error) {
+        console.error('Error parsing profile data:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load profile data. Please try again.",
+          variant: "destructive",
+        });
+      }
+    }
+  }, [profile, form.reset, toast]);
 
   async function onSubmit(values: any) {
     await mutation.mutateAsync(values);
@@ -325,6 +322,11 @@ export default function ProfilePage() {
                       field: "",
                       startDate: "",
                       endDate: "",
+                      gpa: "",
+                      majorCourses: [],
+                      honors: [],
+                      activities: [],
+                      transcriptUrl: null
                     })}
                   >
                     <Plus className="h-4 w-4 mr-2" />
@@ -387,6 +389,20 @@ export default function ProfilePage() {
                           )}
                         />
 
+                        <FormField
+                          control={form.control}
+                          name={`education.${index}.gpa`}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>GPA</FormLabel>
+                              <FormControl>
+                                <Input {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
                         <div className="grid grid-cols-2 gap-4">
                           <FormField
                             control={form.control}
@@ -439,6 +455,9 @@ export default function ProfilePage() {
                       endDate: "",
                       current: false,
                       description: "",
+                      achievements: [],
+                      technologiesUsed: [],
+                      responsibilities: []
                     })}
                   >
                     <Plus className="h-4 w-4 mr-2" />
@@ -572,7 +591,6 @@ export default function ProfilePage() {
                                 onChange={(e) => {
                                   const file = e.target.files?.[0];
                                   if (file) {
-                                    // TODO: Implement file upload logic
                                     field.onChange(URL.createObjectURL(file));
                                   }
                                 }}
@@ -611,7 +629,6 @@ export default function ProfilePage() {
                                 onChange={(e) => {
                                   const file = e.target.files?.[0];
                                   if (file) {
-                                    // TODO: Implement file upload logic
                                     field.onChange(URL.createObjectURL(file));
                                   }
                                 }}
