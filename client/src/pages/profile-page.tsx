@@ -75,15 +75,25 @@ export default function ProfilePage() {
 
   async function onSubmit(values: InsertProfile) {
     try {
-      console.log("Submitting form with values:", values);
-      const response = await apiRequest("PATCH", `/api/profiles/${profile?.id || 1}`, values);
-      console.log("API Response status:", response.status);
-
-      const responseData = await response.json();
-      console.log("API Response data:", responseData);
+      const response = await apiRequest(
+        "PATCH", 
+        `/api/profiles/${profile?.id || 1}`, 
+        {
+          ...values,
+          education: values.education || [],
+          experience: values.experience || [],
+          skills: values.skills || [],
+          certifications: values.certifications || [],
+          languages: values.languages || [],
+          publications: values.publications || [],
+          projects: values.projects || [],
+          referenceList: values.referenceList || []
+        }
+      );
 
       if (!response.ok) {
-        throw new Error(responseData.message || "Failed to save profile");
+        const error = await response.json();
+        throw new Error(error.message || "Failed to save profile");
       }
 
       queryClient.invalidateQueries({ queryKey: ["/api/profiles"] });
@@ -107,19 +117,19 @@ export default function ProfilePage() {
 
   useEffect(() => {
     if (profile) {
-      const typedProfile: InsertProfile = {
+      form.reset({
         ...profile,
-        education: (profile.education || []) as Education[],
-        experience: (profile.experience || []) as Experience[],
+        education: profile.education as Education[],
+        experience: profile.experience as Experience[],
         skills: profile.skills || [],
-        certifications: (profile.certifications || []) as Certification[],
-        languages: (profile.languages || []) as Language[],
+        certifications: profile.certifications as Certification[],
+        languages: profile.languages as Language[],
         publications: profile.publications || [],
         projects: profile.projects || [],
-        referenceList: profile.referenceList || []
-      };
-
-      form.reset(typedProfile);
+        referenceList: profile.referenceList || [],
+        workAuthorization: profile.workAuthorization || "US Citizen",
+        availability: profile.availability || "2 Weeks"
+      });
     }
   }, [profile, form]);
 

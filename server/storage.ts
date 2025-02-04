@@ -47,51 +47,37 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createProfile(insertProfile: InsertProfile): Promise<Profile> {
-    console.log('Creating new profile with data:', insertProfile);
+    const [profile] = await db.insert(profiles)
+      .values({
+        ...insertProfile,
+        education: insertProfile.education,
+        experience: insertProfile.experience,
+        skills: insertProfile.skills || [],
+        certifications: insertProfile.certifications,
+        languages: insertProfile.languages,
+        publications: insertProfile.publications || [],
+        projects: insertProfile.projects || [],
+        referenceList: insertProfile.referenceList || []
+      })
+      .returning();
 
-    // Ensure arrays are properly stringified before storage
-    const profileToInsert = {
-      ...insertProfile,
-      education: insertProfile.education.map(edu => JSON.stringify(edu)),
-      experience: insertProfile.experience.map(exp => JSON.stringify(exp)),
-      skills: insertProfile.skills || [],
-      certifications: insertProfile.certifications || [],
-      languages: insertProfile.languages || [],
-    };
-
-    try {
-      const [profile] = await db.insert(profiles)
-        .values(profileToInsert)
-        .returning();
-
-      console.log('Created new profile:', profile);
-      return profile;
-    } catch (error) {
-      console.error('Error creating profile:', error);
-      throw error;
-    }
+    return profile;
   }
 
   async updateProfile(id: number, updateProfile: InsertProfile): Promise<Profile> {
-    console.log('Updating profile', id, 'with data:', updateProfile);
-
-    // Ensure arrays and objects are properly stringified for JSONB columns
-    const profileToUpdate = {
-      ...updateProfile,
-      education: updateProfile.education?.map(edu => JSON.stringify(edu)) || [],
-      experience: updateProfile.experience?.map(exp => JSON.stringify(exp)) || [],
-      skills: updateProfile.skills || [],
-      certifications: updateProfile.certifications?.map(cert => JSON.stringify(cert)) || [],
-      languages: updateProfile.languages?.map(lang => JSON.stringify(lang)) || [],
-      publications: updateProfile.publications?.map(pub => JSON.stringify(pub)) || [],
-      projects: updateProfile.projects?.map(proj => JSON.stringify(proj)) || [],
-      referenceList: updateProfile.referenceList?.map(ref => JSON.stringify(ref)) || []
-    };
-
     try {
-      console.log('Attempting to update with processed data:', profileToUpdate);
       const [profile] = await db.update(profiles)
-        .set(profileToUpdate)
+        .set({
+          ...updateProfile,
+          education: updateProfile.education,
+          experience: updateProfile.experience,
+          skills: updateProfile.skills || [],
+          certifications: updateProfile.certifications,
+          languages: updateProfile.languages,
+          publications: updateProfile.publications || [],
+          projects: updateProfile.projects || [],
+          referenceList: updateProfile.referenceList || []
+        })
         .where(eq(profiles.id, id))
         .returning();
 
@@ -99,7 +85,6 @@ export class DatabaseStorage implements IStorage {
         throw new Error('Profile not found');
       }
 
-      console.log('Updated profile:', profile);
       return profile;
     } catch (error) {
       console.error('Error updating profile:', error);
