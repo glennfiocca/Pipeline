@@ -21,43 +21,29 @@ export default function ProfilePage() {
     queryKey: ["/api/profiles/1"],
   });
 
-  const form = useForm({
-    resolver: zodResolver(insertProfileSchema),
-    defaultValues: {
-      name: "",
-      email: "",
-      phone: "",
-      title: "",
-      bio: "",
-      location: "",
-      education: [],
-      experience: [],
-      skills: [],
-      certifications: [],
-      languages: [],
-      publications: [],
-      projects: [],
-      address: "",
-      city: "",
-      state: "",
-      zipCode: "",
-      country: "",
-      workAuthorization: "US Citizen",
-      availability: "2 Weeks",
-      citizenshipStatus: "",
-      resumeUrl: "",
-      transcriptUrl: "",
-      referenceList: [],
-      visaSponsorship: false,
-      willingToRelocate: false,
-      preferredLocations: [],
-      salaryExpectation: "",
-      veteranStatus: "",
-      militaryBranch: "",
-      militaryServiceDates: "",
-      securityClearance: "",
-      clearanceType: "",
-      clearanceExpiry: ""
+  const mutation = useMutation({
+    mutationFn: async (values: any) => {
+      const response = await apiRequest("PATCH", `/api/profiles/${profile?.id || 1}`, values);
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Failed to save profile");
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/profiles"] });
+      toast({
+        title: "Profile Updated",
+        description: "Your profile has been saved successfully",
+        variant: "default",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to save profile",
+        variant: "destructive",
+      });
     },
   });
 
@@ -114,104 +100,56 @@ export default function ProfilePage() {
     }
   }, [profile, form.reset, toast]);
 
+  const form = useForm({
+    resolver: zodResolver(insertProfileSchema),
+    defaultValues: {
+      name: "",
+      email: "",
+      phone: "",
+      title: "",
+      bio: "",
+      location: "",
+      education: [],
+      experience: [],
+      skills: [],
+      certifications: [],
+      languages: [],
+      publications: [],
+      projects: [],
+      address: "",
+      city: "",
+      state: "",
+      zipCode: "",
+      country: "",
+      workAuthorization: "US Citizen",
+      availability: "2 Weeks",
+      citizenshipStatus: "",
+      resumeUrl: "",
+      transcriptUrl: "",
+      referenceList: [],
+      visaSponsorship: false,
+      willingToRelocate: false,
+      preferredLocations: [],
+      salaryExpectation: "",
+      veteranStatus: "",
+      militaryBranch: "",
+      militaryServiceDates: "",
+      securityClearance: "",
+      clearanceType: "",
+      clearanceExpiry: ""
+    },
+  });
+
   const { fields: educationFields, append: appendEducation, remove: removeEducation } =
     useFieldArray({ control: form.control, name: "education" });
 
   const { fields: experienceFields, append: appendExperience, remove: removeExperience } =
     useFieldArray({ control: form.control, name: "experience" });
 
-  const mutation = useMutation({
-    mutationFn: async (values: any) => {
-      console.log('Submitting values:', values);
 
-      const formattedValues = {
-        ...values,
-        education: values.education.map((edu: any) => ({
-          ...edu,
-          majorCourses: edu.majorCourses || [],
-          honors: edu.honors || [],
-          activities: edu.activities || [],
-          gpa: edu.gpa || "0.0",
-          transcriptUrl: edu.transcriptUrl || null
-        })),
-        experience: values.experience.map((exp: any) => ({
-          ...exp,
-          achievements: exp.achievements || [],
-          technologiesUsed: exp.technologiesUsed || [],
-          responsibilities: exp.responsibilities || [],
-          current: exp.current || false
-        })),
-        skills: values.skills || [],
-        certifications: values.certifications || [],
-        languages: values.languages || [],
-        publications: values.publications || [],
-        projects: values.projects || [],
-        referenceList: values.referenceList || [],
-        preferredLocations: values.preferredLocations || []
-      };
-
-      console.log('Formatted values:', formattedValues);
-
-      try {
-        const res = await apiRequest("PATCH", `/api/profiles/${profile?.id || 1}`, formattedValues);
-        console.log('API Response:', res);
-
-        if (!res.ok) {
-          const error = await res.json();
-          console.error('API Error:', error);
-          throw new Error(error.message || "Failed to save profile");
-        }
-
-        const data = await res.json();
-        console.log('API Success:', data);
-        return data;
-      } catch (error) {
-        console.error('Mutation error:', error);
-        throw error;
-      }
-    },
-    onSuccess: (data) => {
-      console.log('Mutation success:', data);
-      queryClient.invalidateQueries({ queryKey: ["/api/profiles"] });
-      toast({
-        title: "Success!",
-        description: "Your profile has been saved successfully.",
-        duration: 3000,
-      });
-    },
-    onError: (error: Error) => {
-      console.error('Mutation error handler:', error);
-      toast({
-        title: "Error saving profile",
-        description: error.message,
-        variant: "destructive",
-        duration: 3000,
-      });
-    },
-  });
-
-  const onSubmit = async (data: any) => {
-    try {
-      console.log('Form data before submit:', data);
-      await mutation.mutateAsync(data);
-
-      toast({
-        title: "Success!",
-        description: "Your profile has been saved successfully.",
-        duration: 3000,
-      });
-
-    } catch (error) {
-      console.error('Form submission error:', error);
-
-      toast({
-        title: "Error saving profile",
-        description: error instanceof Error ? error.message : "Failed to save profile",
-        variant: "destructive",
-        duration: 3000,
-      });
-    }
-  };
+  async function onSubmit(values: any) {
+    await mutation.mutateAsync(values);
+  }
 
   if (isLoading) {
     return (
