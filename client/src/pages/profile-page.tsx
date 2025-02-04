@@ -102,7 +102,40 @@ export default function ProfilePage() {
   const mutation = useMutation({
     mutationFn: async (values: any) => {
       console.log('Submitting values:', values);
-      const res = await apiRequest("POST", "/api/profiles", values);
+
+      // Ensure education array is properly formatted
+      const formattedValues = {
+        ...values,
+        education: values.education.map((edu: any) => ({
+          ...edu,
+          majorCourses: edu.majorCourses || [],
+          honors: edu.honors || [],
+          activities: edu.activities || [],
+          gpa: edu.gpa || "0.0",
+          transcriptUrl: edu.transcriptUrl || null
+        })),
+        experience: values.experience.map((exp: any) => ({
+          ...exp,
+          achievements: exp.achievements || [],
+          technologiesUsed: exp.technologiesUsed || [],
+          responsibilities: exp.responsibilities || [],
+          current: exp.current || false
+        })),
+        skills: values.skills || [],
+        certifications: values.certifications || [],
+        languages: values.languages || [],
+        publications: values.publications || [],
+        projects: values.projects || [],
+        references: values.references || [],
+        preferredLocations: values.preferredLocations || []
+      };
+
+      console.log('Formatted values:', formattedValues);
+      const res = await apiRequest("POST", "/api/profiles", formattedValues);
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || "Failed to save profile");
+      }
       return res.json();
     },
     onSuccess: () => {
