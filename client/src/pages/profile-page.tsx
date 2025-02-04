@@ -8,29 +8,21 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Profile, insertProfileSchema } from "@shared/schema";
+import { Profile, insertProfileSchema, type InsertProfile } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2, Plus, X } from "lucide-react";
 import { useEffect } from 'react';
+import { z } from "zod";
 
 export default function ProfilePage() {
   const { toast } = useToast();
-
-  // Test toast on component mount
-  useEffect(() => {
-    toast({
-      title: "Page Loaded",
-      description: "Testing toast notifications",
-      duration: 5000,
-    });
-  }, []);
 
   const { data: profile, isLoading } = useQuery<Profile>({
     queryKey: ["/api/profiles/1"],
   });
 
-  const form = useForm({
+  const form = useForm<InsertProfile>({
     resolver: zodResolver(insertProfileSchema),
     defaultValues: {
       name: "",
@@ -71,12 +63,18 @@ export default function ProfilePage() {
   });
 
   const { fields: educationFields, append: appendEducation, remove: removeEducation } =
-    useFieldArray({ control: form.control, name: "education" });
+    useFieldArray({
+      control: form.control,
+      name: "education"
+    });
 
   const { fields: experienceFields, append: appendExperience, remove: removeExperience } =
-    useFieldArray({ control: form.control, name: "experience" });
+    useFieldArray({
+      control: form.control,
+      name: "experience"
+    });
 
-  async function onSubmit(values: any) {
+  async function onSubmit(values: InsertProfile) {
     try {
       console.log("Submitting form with values:", values);
       const response = await apiRequest("PATCH", `/api/profiles/${profile?.id || 1}`, values);
@@ -90,8 +88,6 @@ export default function ProfilePage() {
       }
 
       console.log("Form submitted successfully");
-
-      // Invalidate query after successful save
       queryClient.invalidateQueries({ queryKey: ["/api/profiles"] });
 
       toast({
@@ -113,7 +109,17 @@ export default function ProfilePage() {
 
   useEffect(() => {
     if (profile) {
-      form.reset(profile);
+      form.reset({
+        ...profile,
+        education: profile.education || [],
+        experience: profile.experience || [],
+        skills: profile.skills || [],
+        certifications: profile.certifications || [],
+        languages: profile.languages || [],
+        publications: profile.publications || [],
+        projects: profile.projects || [],
+        referenceList: profile.referenceList || []
+      });
     }
   }, [profile, form]);
 
