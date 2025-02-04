@@ -1,0 +1,77 @@
+import type { Express } from "express";
+import { createServer, type Server } from "http";
+import { storage } from "./storage";
+import { insertJobSchema, insertProfileSchema, insertApplicationSchema } from "@shared/schema";
+
+export function registerRoutes(app: Express): Server {
+  // Jobs
+  app.get("/api/jobs", async (_req, res) => {
+    const jobs = await storage.getJobs();
+    res.json(jobs);
+  });
+
+  app.get("/api/jobs/:id", async (req, res) => {
+    const job = await storage.getJob(parseInt(req.params.id));
+    if (!job) return res.sendStatus(404);
+    res.json(job);
+  });
+
+  app.post("/api/jobs", async (req, res) => {
+    const parsed = insertJobSchema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json(parsed.error);
+    const job = await storage.createJob(parsed.data);
+    res.status(201).json(job);
+  });
+
+  // Profiles
+  app.get("/api/profiles", async (_req, res) => {
+    const profiles = await storage.getProfiles();
+    res.json(profiles);
+  });
+
+  app.get("/api/profiles/:id", async (req, res) => {
+    const profile = await storage.getProfile(parseInt(req.params.id));
+    if (!profile) return res.sendStatus(404);
+    res.json(profile);
+  });
+
+  app.post("/api/profiles", async (req, res) => {
+    const parsed = insertProfileSchema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json(parsed.error);
+    const profile = await storage.createProfile(parsed.data);
+    res.status(201).json(profile);
+  });
+
+  // Applications
+  app.get("/api/applications", async (_req, res) => {
+    const applications = await storage.getApplications();
+    res.json(applications);
+  });
+
+  app.post("/api/applications", async (req, res) => {
+    const parsed = insertApplicationSchema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json(parsed.error);
+    const application = await storage.createApplication(parsed.data);
+    res.status(201).json(application);
+  });
+
+  app.patch("/api/applications/:id/status", async (req, res) => {
+    const { status } = req.body;
+    if (typeof status !== "string") {
+      return res.status(400).json({ error: "Status must be a string" });
+    }
+    
+    try {
+      const application = await storage.updateApplicationStatus(
+        parseInt(req.params.id),
+        status
+      );
+      res.json(application);
+    } catch (error) {
+      res.status(404).json({ error: (error as Error).message });
+    }
+  });
+
+  const httpServer = createServer(app);
+  return httpServer;
+}
