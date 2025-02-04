@@ -88,12 +88,18 @@ export function registerRoutes(app: Express): Server {
   // Add scraper route
   app.post("/api/jobs/scrape", async (_req, res) => {
     try {
+      console.log('Starting job scraping process...');
       const manager = new ScraperManager();
       await manager.runScrapers();
-      res.json({ message: "Job scraping completed" });
+
+      // Verify jobs were created by counting them
+      const jobs = await storage.getJobs();
+      console.log(`After scraping, found ${jobs.length} total jobs in database`);
+
+      res.json({ message: "Job scraping completed", jobCount: jobs.length });
     } catch (error) {
       console.error('Error running scrapers:', error);
-      res.status(500).json({ error: "Failed to scrape jobs" });
+      res.status(500).json({ error: "Failed to scrape jobs", details: (error as Error).message });
     }
   });
 
