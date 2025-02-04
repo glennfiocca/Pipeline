@@ -75,7 +75,24 @@ export default function ProfilePage() {
         throw new Error(error.message || "Failed to save profile");
       }
       return response.json();
-    }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/profiles"] });
+      toast({
+        title: "Success!",
+        description: "Your profile has been saved successfully.",
+        duration: 3000,
+      });
+    },
+    onError: (error: Error) => {
+      console.error('Mutation error handler:', error);
+      toast({
+        title: "Error saving profile",
+        description: error.message,
+        variant: "destructive",
+        duration: 3000,
+      });
+    },
   });
 
   // Set form data when profile loads
@@ -86,21 +103,7 @@ export default function ProfilePage() {
   }, [profile, form]);
 
   async function onSubmit(values: any) {
-    try {
-      await mutation.mutateAsync(values);
-      queryClient.invalidateQueries({ queryKey: ["/api/profiles"] });
-      toast({
-        title: "Success",
-        description: "Your profile has been saved successfully",
-      });
-    } catch (error) {
-      console.error('Submit error:', error);
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to save profile",
-        variant: "destructive",
-      });
-    }
+    await mutation.mutateAsync(values);
   }
 
   if (isLoading) {
