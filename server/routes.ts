@@ -36,10 +36,22 @@ export function registerRoutes(app: Express): Server {
   });
 
   app.post("/api/profiles", async (req, res) => {
-    const parsed = insertProfileSchema.safeParse(req.body);
-    if (!parsed.success) return res.status(400).json(parsed.error);
-    const profile = await storage.createProfile(parsed.data);
-    res.status(201).json(profile);
+    try {
+      const parsed = insertProfileSchema.safeParse(req.body);
+      if (!parsed.success) return res.status(400).json(parsed.error);
+
+      // If profile has an ID, update instead of create
+      if (req.body.id) {
+        const profile = await storage.updateProfile(req.body.id, parsed.data);
+        return res.json(profile);
+      }
+
+      const profile = await storage.createProfile(parsed.data);
+      res.status(201).json(profile);
+    } catch (error) {
+      console.error('Profile creation/update error:', error);
+      res.status(500).json({ message: (error as Error).message });
+    }
   });
 
   // Applications
@@ -60,7 +72,7 @@ export function registerRoutes(app: Express): Server {
     if (typeof status !== "string") {
       return res.status(400).json({ error: "Status must be a string" });
     }
-    
+
     try {
       const application = await storage.updateApplicationStatus(
         parseInt(req.params.id),

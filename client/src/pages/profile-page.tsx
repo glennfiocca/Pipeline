@@ -8,11 +8,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Profile, insertProfileSchema, Education, Experience, Certification, Language } from "@shared/schema";
+import { Profile, insertProfileSchema } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2, Plus, X } from "lucide-react";
-import {useEffect} from 'react';
+import { useEffect } from 'react';
 
 export default function ProfilePage() {
   const { toast } = useToast();
@@ -46,14 +46,13 @@ export default function ProfilePage() {
     },
   });
 
-  // Update the useEffect hook for form reset
+  // Update form when profile data is loaded
   useEffect(() => {
     if (profile) {
       try {
-        // Parse stringified JSON arrays back into objects
         const parsedProfile = {
           ...profile,
-          education: Array.isArray(profile.education) 
+          education: Array.isArray(profile.education)
             ? profile.education.map(edu => {
                 if (typeof edu === 'string') {
                   try {
@@ -84,7 +83,7 @@ export default function ProfilePage() {
           languages: Array.isArray(profile.languages) ? profile.languages : [],
         };
 
-        console.log('Resetting form with parsed profile:', parsedProfile);
+        console.log('Setting form values with:', parsedProfile);
         form.reset(parsedProfile);
       } catch (error) {
         console.error('Error parsing profile data:', error);
@@ -123,6 +122,15 @@ export default function ProfilePage() {
     },
   });
 
+  const onSubmit = form.handleSubmit(async (data) => {
+    try {
+      console.log('Form data before submit:', data);
+      await mutation.mutateAsync(data);
+    } catch (error) {
+      console.error('Form submission error:', error);
+    }
+  });
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[calc(100vh-4rem)]">
@@ -134,17 +142,7 @@ export default function ProfilePage() {
   return (
     <div className="container py-10">
       <Form {...form}>
-        <form 
-          onSubmit={(e) => {
-            e.preventDefault();
-            const handleSubmit = form.handleSubmit((data) => {
-              console.log('Form data before submit:', data);
-              return mutation.mutate(data);
-            });
-            handleSubmit(e);
-          }}
-          className="space-y-6"
-        >
+        <form onSubmit={onSubmit} className="space-y-6">
           <Tabs defaultValue="personal" className="w-full">
             <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="personal">Personal Info</TabsTrigger>

@@ -13,6 +13,7 @@ export interface IStorage {
   getProfiles(): Promise<Profile[]>;
   getProfile(id: number): Promise<Profile | undefined>;
   createProfile(profile: InsertProfile): Promise<Profile>;
+  updateProfile(id: number, profile: InsertProfile): Promise<Profile>;
 
   // Applications
   getApplications(): Promise<Application[]>;
@@ -46,7 +47,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createProfile(insertProfile: InsertProfile): Promise<Profile> {
-    console.log('Creating profile with data:', insertProfile);
+    console.log('Creating new profile with data:', insertProfile);
 
     // Ensure arrays are properly stringified before storage
     const profileToInsert = {
@@ -58,17 +59,45 @@ export class DatabaseStorage implements IStorage {
       languages: insertProfile.languages || [],
     };
 
-    console.log('Profile data after processing:', profileToInsert);
-
     try {
       const [profile] = await db.insert(profiles)
         .values(profileToInsert)
         .returning();
 
-      console.log('Created profile:', profile);
+      console.log('Created new profile:', profile);
       return profile;
     } catch (error) {
       console.error('Error creating profile:', error);
+      throw error;
+    }
+  }
+
+  async updateProfile(id: number, updateProfile: InsertProfile): Promise<Profile> {
+    console.log('Updating profile', id, 'with data:', updateProfile);
+
+    const profileToUpdate = {
+      ...updateProfile,
+      education: updateProfile.education.map(edu => JSON.stringify(edu)),
+      experience: updateProfile.experience.map(exp => JSON.stringify(exp)),
+      skills: updateProfile.skills || [],
+      certifications: updateProfile.certifications || [],
+      languages: updateProfile.languages || [],
+    };
+
+    try {
+      const [profile] = await db.update(profiles)
+        .set(profileToUpdate)
+        .where(eq(profiles.id, id))
+        .returning();
+
+      if (!profile) {
+        throw new Error('Profile not found');
+      }
+
+      console.log('Updated profile:', profile);
+      return profile;
+    } catch (error) {
+      console.error('Error updating profile:', error);
       throw error;
     }
   }
