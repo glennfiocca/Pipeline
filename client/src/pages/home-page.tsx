@@ -25,7 +25,7 @@ export default function HomePage() {
                     Browse Jobs
                   </Button>
                 </Link>
-                <Link href={user ? "/profile" : "/auth"}>
+                <Link href={user ? "/profile" : "/auth/register"}>
                   <Button variant="outline" size="lg">
                     {user ? "Create Profile" : "Sign Up to Create Profile"}
                   </Button>
