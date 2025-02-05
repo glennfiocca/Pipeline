@@ -71,7 +71,6 @@ export function setupAuth(app: Express) {
   });
 
   app.post("/api/register", async (req, res) => {
-    res.setHeader('Content-Type', 'application/json');
     try {
       // Validate request body against schema
       const validatedData = insertUserSchema.parse(req.body);
@@ -122,7 +121,6 @@ export function setupAuth(app: Express) {
   });
 
   app.post("/api/login", (req, res, next) => {
-    res.setHeader('Content-Type', 'application/json');
     passport.authenticate("local", (err: any, user: Express.User, info: any) => {
       if (err) {
         console.error("Login error:", err);
@@ -142,7 +140,6 @@ export function setupAuth(app: Express) {
   });
 
   app.post("/api/logout", (req, res, next) => {
-    res.setHeader('Content-Type', 'application/json');
     req.logout((err) => {
       if (err) {
         console.error("Logout error:", err);
@@ -153,7 +150,6 @@ export function setupAuth(app: Express) {
   });
 
   app.get("/api/user", (req, res) => {
-    res.setHeader('Content-Type', 'application/json');
     if (!req.isAuthenticated()) {
       return res.status(401).json({ error: "Not authenticated" });
     }
