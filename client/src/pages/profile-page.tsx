@@ -47,7 +47,7 @@ export default function ProfilePage() {
       resumeUrl: "",
       transcriptUrl: "",
       referenceList: [],
-      visaSponsorship: false,
+      visaSponsorship: false, 
       willingToRelocate: false,
       preferredLocations: [],
       salaryExpectation: "",
@@ -74,13 +74,20 @@ export default function ProfilePage() {
 
   async function onSubmit(values: InsertProfile) {
     try {
-      // Ensure all array fields are properly initialized
-      const formData = Object.fromEntries(
-        Object.entries(values).map(([key, value]) => [
-          key,
-          Array.isArray(value) ? value.filter(Boolean) : value || ""
-        ])
-      ) as InsertProfile;
+      const formData = {
+        ...values,
+        education: values.education?.filter(Boolean) || [],
+        experience: values.experience?.filter(Boolean) || [],
+        skills: values.skills?.filter(Boolean) || [],
+        certifications: values.certifications?.filter(Boolean) || [],
+        languages: values.languages?.filter(Boolean) || [],
+        publications: values.publications?.filter(Boolean) || [],
+        projects: values.projects?.filter(Boolean) || [],
+        referenceList: values.referenceList?.filter(Boolean) || [],
+        preferredLocations: values.preferredLocations?.filter(Boolean) || [],
+        visaSponsorship: Boolean(values.visaSponsorship),
+        willingToRelocate: Boolean(values.willingToRelocate)
+      } as InsertProfile;
 
       const response = await apiRequest(
         profile?.id ? "PATCH" : "POST",
@@ -118,7 +125,6 @@ export default function ProfilePage() {
     }
   }
 
-  // Update form when profile data is loaded
   useEffect(() => {
     if (profile) {
       const formData = {
