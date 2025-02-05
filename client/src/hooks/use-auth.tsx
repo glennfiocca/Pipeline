@@ -88,38 +88,31 @@ function useRegisterMutation() {
         // Validate the data first
         const validated = insertUserSchema.parse(userData);
 
-        // Make the API request with proper headers
-        const res = await fetch("/api/register", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(validated),
-        });
-
-        const data = await res.json();
+        // Make the API request
+        const res = await apiRequest("POST", "/api/register", validated);
 
         if (!res.ok) {
-          throw new Error(data.error || data.details || "Registration failed");
+          const error = await res.json();
+          throw new Error(error.error || error.details || "Registration failed");
         }
 
-        return data.user;
+        return await res.json();
       } catch (error: any) {
-        // Handle both Zod validation errors and API errors
-        if (error.errors || error.details) {
-          throw new Error(error.errors || error.details);
+        console.error("Registration error details:", error);
+        if (error.errors) {
+          throw new Error(error.errors);
         }
         throw new Error(error.message || "Registration failed");
       }
     },
-    onSuccess: (user: User) => {
-      queryClient.setQueryData(["/api/user"], { user });
+    onSuccess: (data) => {
+      queryClient.setQueryData(["/api/user"], { user: data.user });
       toast({
         title: "Welcome!",
         description: "Your account has been created successfully.",
       });
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast({
         title: "Registration failed",
         description: error.message,

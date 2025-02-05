@@ -78,25 +78,20 @@ export function setupAuth(app: Express) {
     }
   });
 
-  // Modified registration endpoint to handle errors consistently
   app.post("/api/register", async (req, res) => {
     try {
-      // Validate request body against schema
       const validatedData = insertUserSchema.parse(req.body);
 
-      // Check for existing user
       const existingUser = await storage.getUserByUsername(validatedData.username);
       if (existingUser) {
         return res.status(400).json({ error: "Username already exists" });
       }
 
-      // Check for existing email
       const existingEmail = await storage.getUserByEmail(validatedData.email);
       if (existingEmail) {
         return res.status(400).json({ error: "Email already registered" });
       }
 
-      // Hash password and create user
       const hashedPassword = await hashPassword(validatedData.password);
       const { confirmPassword, ...userDataWithoutConfirm } = validatedData;
 
@@ -107,16 +102,12 @@ export function setupAuth(app: Express) {
         createdAt: new Date().toISOString()
       });
 
-      // Login the user after successful registration
-      return new Promise((resolve, reject) => {
-        req.login(user, (err) => {
-          if (err) {
-            reject(err);
-          } else {
-            res.json({ user });
-            resolve();
-          }
-        });
+      req.login(user, (err) => {
+        if (err) {
+          console.error("Login error after registration:", err);
+          return res.status(500).json({ error: "Error logging in after registration" });
+        }
+        return res.status(201).json({ user });
       });
     } catch (error) {
       console.error("Registration error:", error);
