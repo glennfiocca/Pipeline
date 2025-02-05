@@ -5,13 +5,13 @@ import session from "express-session";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 import { storage } from "./storage";
-import { insertUserSchema, type User as SelectUser, type InsertUser } from "@shared/schema";
+import { insertUserSchema, type User, type InsertUser } from "@shared/schema";
 import { fromZodError } from "zod-validation-error";
 import { ZodError } from "zod";
 
 declare global {
   namespace Express {
-    interface User extends SelectUser {}
+    interface User extends User {}
   }
 }
 
@@ -91,14 +91,12 @@ export function setupAuth(app: Express) {
       const hashedPassword = await hashPassword(validatedData.password);
       const { confirmPassword, ...userDataWithoutConfirm } = validatedData;
 
-      const userToCreate = {
+      const user = await storage.createUser({
         username: userDataWithoutConfirm.username,
         email: userDataWithoutConfirm.email,
         password: hashedPassword,
         createdAt: new Date().toISOString()
-      };
-
-      const user = await storage.createUser(userToCreate);
+      });
 
       // Login the user after successful registration
       req.login(user, (err) => {
@@ -106,7 +104,7 @@ export function setupAuth(app: Express) {
           console.error("Login error after registration:", err);
           return res.status(500).json({ error: "Error during login after registration" });
         }
-        return res.status(201).json({ user });
+        return res.json({ user });
       });
     } catch (error) {
       console.error("Registration error:", error);
@@ -120,29 +118,13 @@ export function setupAuth(app: Express) {
     }
   });
 
-  app.post("/api/login", (req, res, next) => {
-    passport.authenticate("local", (err: any, user: Express.User, info: any) => {
-      if (err) {
-        console.error("Login error:", err);
-        return res.status(500).json({ error: "Internal server error" });
-      }
-      if (!user) {
-        return res.status(401).json({ error: info?.message || "Invalid credentials" });
-      }
-      req.login(user, (err) => {
-        if (err) {
-          console.error("Login session error:", err);
-          return res.status(500).json({ error: "Error during login" });
-        }
-        res.json({ user });
-      });
-    })(req, res, next);
+  app.post("/api/login", passport.authenticate("local"), (req, res) => {
+    res.json({ user: req.user });
   });
 
   app.post("/api/logout", (req, res, next) => {
     req.logout((err) => {
       if (err) {
-        console.error("Logout error:", err);
         return next(err);
       }
       res.json({ message: "Logged out successfully" });
