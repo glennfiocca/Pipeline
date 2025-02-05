@@ -1,7 +1,11 @@
-import { jobs, profiles, applications } from "@shared/schema";
-import type { Job, Profile, Application, InsertJob, InsertProfile, InsertApplication } from "@shared/schema";
+import { jobs, profiles, applications, users } from "@shared/schema";
+import type { Job, Profile, Application, User, InsertJob, InsertProfile, InsertApplication, InsertUser } from "@shared/schema";
 import { db } from "./db";
 import { eq } from "drizzle-orm";
+import session from "express-session";
+import connectPg from "connect-pg-simple";
+
+const PostgresSessionStore = connectPg(session);
 
 export interface IStorage {
   // Jobs
@@ -21,9 +25,31 @@ export interface IStorage {
   getApplication(id: number): Promise<Application | undefined>;
   createApplication(application: InsertApplication): Promise<Application>;
   updateApplicationStatus(id: number, status: string): Promise<Application>;
+
+  // New user-related interfaces
+  getUser(id: number): Promise<User | undefined>;
+  getUserByUsername(username: string): Promise<User | undefined>;
+  getUserByEmail(email: string): Promise<User | undefined>;
+  getUserByResetToken(token: string): Promise<User | undefined>;
+  createUser(user: InsertUser): Promise<User>;
+  updateUserPassword(id: number, hashedPassword: string): Promise<User>;
+  updateUserResetToken(id: number, token: string, expiry: string): Promise<User>;
+  clearUserResetToken(id: number): Promise<User>;
+
+  // Session store
+  sessionStore: session.Store;
 }
 
 export class DatabaseStorage implements IStorage {
+  sessionStore: session.Store;
+
+  constructor() {
+    this.sessionStore = new PostgresSessionStore({
+      pool: db.client,
+      createTableIfMissing: true
+    });
+  }
+
   async getJobs(): Promise<Job[]> {
     return await db.select().from(jobs);
   }
@@ -151,6 +177,58 @@ export class DatabaseStorage implements IStorage {
     }
 
     return application;
+  }
+
+  async getUser(id: number): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user;
+  }
+
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user;
+  }
+
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.email, email));
+    return user;
+  }
+
+  async getUserByResetToken(token: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.resetToken, token));
+    return user;
+  }
+
+  async createUser(insertUser: InsertUser): Promise<User> {
+    const [user] = await db.insert(users).values(insertUser).returning();
+    return user;
+  }
+
+  async updateUserPassword(id: number, hashedPassword: string): Promise<User> {
+    const [user] = await db
+      .update(users)
+      .set({ password: hashedPassword })
+      .where(eq(users.id, id))
+      .returning();
+    return user;
+  }
+
+  async updateUserResetToken(id: number, token: string, expiry: string): Promise<User> {
+    const [user] = await db
+      .update(users)
+      .set({ resetToken: token, resetTokenExpiry: expiry })
+      .where(eq(users.id, id))
+      .returning();
+    return user;
+  }
+
+  async clearUserResetToken(id: number): Promise<User> {
+    const [user] = await db
+      .update(users)
+      .set({ resetToken: null, resetTokenExpiry: null })
+      .where(eq(users.id, id))
+      .returning();
+    return user;
   }
 }
 
