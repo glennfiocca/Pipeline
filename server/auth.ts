@@ -5,7 +5,8 @@ import session from "express-session";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 import { storage } from "./storage";
-import { User as SelectUser } from "@shared/schema";
+import { insertUserSchema, User as SelectUser } from "@shared/schema";
+import { fromZodError } from "zod-validation-error";
 
 declare global {
   namespace Express {
@@ -70,33 +71,48 @@ export function setupAuth(app: Express) {
 
   app.post("/api/register", async (req, res) => {
     try {
-      const existingUser = await storage.getUserByUsername(req.body.username);
+      // Validate request body against schema
+      const validatedData = insertUserSchema.parse(req.body);
+
+      // Check for existing user
+      const existingUser = await storage.getUserByUsername(validatedData.username);
       if (existingUser) {
         return res.status(400).json({ message: "Username already exists" });
       }
 
-      const existingEmail = await storage.getUserByEmail(req.body.email);
+      // Check for existing email
+      const existingEmail = await storage.getUserByEmail(validatedData.email);
       if (existingEmail) {
         return res.status(400).json({ message: "Email already registered" });
       }
 
-      const hashedPassword = await hashPassword(req.body.password);
-      const user = await storage.createUser({
-        ...req.body,
+      // Hash password and create user
+      const hashedPassword = await hashPassword(validatedData.password);
+      const userData = {
+        ...validatedData,
         password: hashedPassword,
-        confirmPassword: hashedPassword // This field is only used for validation
-      });
+      };
 
+      delete userData.confirmPassword; // Remove confirmPassword before saving
+      const user = await storage.createUser(userData);
+
+      // Login the user after successful registration
       req.login(user, (err) => {
         if (err) {
           console.error("Login error after registration:", err);
           return res.status(500).json({ message: "Error during login after registration" });
         }
-        res.status(201).json({ user });
+        return res.status(201).json({ user });
       });
     } catch (error) {
       console.error("Registration error:", error);
-      res.status(500).json({ message: "Error creating user" });
+      if (error.name === "ZodError") {
+        return res.status(400).json({ 
+          message: "Validation error", 
+          errors: fromZodError(error).message 
+        });
+      }
+      return res.status(500).json({ message: "Error creating user" });
     }
   });
 

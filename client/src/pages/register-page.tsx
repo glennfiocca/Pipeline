@@ -28,8 +28,23 @@ export default function RegisterPage() {
     try {
       await registerMutation.mutateAsync(values);
       setLocation("/");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Registration error:", error);
+      const errorMessage = error.message || "Failed to create account";
+      if (error.errors) {
+        // Handle validation errors
+        toast({
+          title: "Validation Error",
+          description: error.errors,
+          variant: "destructive"
+        });
+      } else {
+        toast({
+          title: "Registration Failed",
+          description: errorMessage,
+          variant: "destructive"
+        });
+      }
     }
   }
 

@@ -1,8 +1,8 @@
-import { pgTable, text, serial, integer, boolean, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, serial } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-// Add user table schema
+// User table schema
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   username: text("username").notNull().unique(),
@@ -12,6 +12,23 @@ export const users = pgTable("users", {
   resetTokenExpiry: text("reset_token_expiry"),
   createdAt: text("created_at").notNull().default(new Date().toISOString())
 });
+
+// User schema validation
+export const insertUserSchema = createInsertSchema(users)
+  .extend({
+    confirmPassword: z.string(),
+    email: z.string().email("Invalid email format"),
+    username: z.string().min(3, "Username must be at least 3 characters"),
+    password: z.string().min(6, "Password must be at least 6 characters")
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords don't match",
+    path: ["confirmPassword"],
+  });
+
+// User types
+export type User = typeof users.$inferSelect;
+export type InsertUser = z.infer<typeof insertUserSchema>;
 
 export const jobs = pgTable("jobs", {
   id: serial("id").primaryKey(),
@@ -178,14 +195,4 @@ export type Publication = z.infer<typeof publicationSchema>;
 export type Project = z.infer<typeof projectSchema>;
 export type Reference = z.infer<typeof referenceSchema>;
 
-// Add user-related schemas
-export const insertUserSchema = createInsertSchema(users).extend({
-  confirmPassword: z.string()
-}).refine((data) => data.password === data.confirmPassword, {
-  message: "Passwords don't match",
-  path: ["confirmPassword"],
-});
-
-// Add user types
-export type User = typeof users.$inferSelect;
-export type InsertUser = z.infer<typeof insertUserSchema>;
+import { boolean, integer, jsonb } from "drizzle-orm/pg-core";
