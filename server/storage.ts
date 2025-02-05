@@ -1,5 +1,4 @@
-import { jobs, profiles, applications, users } from "@shared/schema";
-import type { Job, Profile, Application, User, InsertJob, InsertProfile, InsertApplication, InsertUser } from "@shared/schema";
+import { jobs, profiles, applications, users, type Job, type Profile, type Application, type User, type InsertJob, type InsertProfile, type InsertApplication, type InsertUser } from "@shared/schema";
 import { db } from "./db";
 import { eq } from "drizzle-orm";
 import session from "express-session";
@@ -30,7 +29,7 @@ export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;
-  createUser(user: InsertUser): Promise<User>;
+  createUser(user: Pick<InsertUser, "username" | "email" | "password"> & { createdAt: string }): Promise<User>;
   updateUserPassword(id: number, hashedPassword: string): Promise<User>;
   updateUserResetToken(id: number, token: string, expiry: string): Promise<User>;
   clearUserResetToken(id: number): Promise<User>;
@@ -49,7 +48,6 @@ export class DatabaseStorage implements IStorage {
     });
   }
 
-  // User methods
   async getUser(id: number): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));
     return user;
@@ -65,7 +63,7 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
-  async createUser(insertUser: InsertUser): Promise<User> {
+  async createUser(insertUser: Pick<InsertUser, "username" | "email" | "password"> & { createdAt: string }): Promise<User> {
     const [user] = await db.insert(users).values(insertUser).returning();
     return user;
   }
@@ -97,7 +95,6 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
-  // Jobs methods
   async getJobs(): Promise<Job[]> {
     return await db.select().from(jobs);
   }
@@ -112,7 +109,6 @@ export class DatabaseStorage implements IStorage {
     return job;
   }
 
-  // Profile methods
   async getProfiles(): Promise<Profile[]> {
     return await db.select().from(profiles);
   }
@@ -141,7 +137,6 @@ export class DatabaseStorage implements IStorage {
     return updatedProfile;
   }
 
-  // Application methods
   async getApplications(): Promise<Application[]> {
     return await db.select().from(applications);
   }
