@@ -24,10 +24,11 @@ function useLoginMutation() {
         const error = await res.json();
         throw new Error(error.message || "Login failed");
       }
-      return res.json();
+      const data = await res.json();
+      return data.user;
     },
     onSuccess: (user: User) => {
-      queryClient.setQueryData(["/api/user"], user);
+      queryClient.setQueryData(["/api/user"], { user });
       toast({
         title: "Welcome back!",
         description: "You have successfully logged in.",
@@ -78,10 +79,11 @@ function useRegisterMutation() {
         const error = await res.json();
         throw new Error(error.message || "Registration failed");
       }
-      return res.json();
+      const data = await res.json();
+      return data.user;
     },
     onSuccess: (user: User) => {
-      queryClient.setQueryData(["/api/user"], user);
+      queryClient.setQueryData(["/api/user"], { user });
       toast({
         title: "Welcome!",
         description: "Your account has been created successfully.",
@@ -103,7 +105,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     data: user,
     error,
     isLoading,
-  } = useQuery<User>({
+  } = useQuery<{ user: User }>({
     queryKey: ["/api/user"],
     retry: false,
   });
@@ -115,7 +117,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   return (
     <AuthContext.Provider
       value={{
-        user: user ?? null,
+        user: user?.user ?? null,
         isLoading,
         error: error as Error | null,
         loginMutation,

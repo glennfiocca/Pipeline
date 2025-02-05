@@ -68,7 +68,6 @@ export function setupAuth(app: Express) {
     }
   });
 
-  // Authentication routes
   app.post("/api/register", async (req, res) => {
     try {
       const existingUser = await storage.getUserByUsername(req.body.username);
@@ -89,8 +88,11 @@ export function setupAuth(app: Express) {
       });
 
       req.login(user, (err) => {
-        if (err) throw err;
-        res.status(201).json(user);
+        if (err) {
+          console.error("Login error after registration:", err);
+          return res.status(500).json({ message: "Error during login after registration" });
+        }
+        res.status(201).json({ user });
       });
     } catch (error) {
       console.error("Registration error:", error);
@@ -99,14 +101,14 @@ export function setupAuth(app: Express) {
   });
 
   app.post("/api/login", (req, res, next) => {
-    passport.authenticate("local", (err, user, info) => {
+    passport.authenticate("local", (err: any, user: Express.User, info: any) => {
       if (err) return next(err);
       if (!user) {
         return res.status(401).json({ message: info.message || "Invalid credentials" });
       }
       req.login(user, (err) => {
         if (err) return next(err);
-        res.json(user);
+        res.json({ user });
       });
     })(req, res, next);
   });
@@ -122,6 +124,6 @@ export function setupAuth(app: Express) {
     if (!req.isAuthenticated()) {
       return res.status(401).json({ message: "Not authenticated" });
     }
-    res.json(req.user);
+    res.json({ user: req.user });
   });
 }
