@@ -17,13 +17,6 @@ export function registerRoutes(app: Express): Server {
     res.json(job);
   });
 
-  app.post("/api/jobs", async (req, res) => {
-    const parsed = insertJobSchema.safeParse(req.body);
-    if (!parsed.success) return res.status(400).json(parsed.error);
-    const job = await storage.createJob(parsed.data);
-    res.status(201).json(job);
-  });
-
   // Profiles
   app.get("/api/profiles", async (_req, res) => {
     const profiles = await storage.getProfiles();

@@ -1,6 +1,7 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { setupAuth } from "./auth";
 
 const app = express();
 
@@ -8,7 +9,10 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Setup routes before any other middleware
+// Setup auth first
+setupAuth(app);
+
+// Then setup routes
 const server = registerRoutes(app);
 
 // Error handler for JSON parsing
@@ -31,7 +35,7 @@ app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
   res.status(status).json({ error: message });
 });
 
-// Setup Vite or serve static files after all API routes are registered
+// Setup Vite last, after all API routes are registered
 if (app.get("env") === "development") {
   setupVite(app, server);
 } else {
