@@ -6,7 +6,6 @@ import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 import { storage } from "./storage";
 import { User as SelectUser } from "@shared/schema";
-import { sendResetPasswordEmail } from "./services/email";
 
 declare global {
   namespace Express {
@@ -115,51 +114,6 @@ export function setupAuth(app: Express) {
       if (err) return next(err);
       res.sendStatus(200);
     });
-  });
-
-  app.post("/api/forgot-password", async (req, res) => {
-    try {
-      const { email } = req.body;
-      const user = await storage.getUserByEmail(email);
-      
-      if (!user) {
-        return res.status(404).json({ message: "User not found" });
-      }
-
-      const resetToken = randomBytes(32).toString("hex");
-      const resetTokenExpiry = new Date(Date.now() + 3600000).toISOString(); // 1 hour from now
-
-      await storage.updateUserResetToken(user.id, resetToken, resetTokenExpiry);
-      
-      // In a real application, you would send an email with the reset link
-      // For now, we'll just return the token in the response
-      res.json({ message: "Password reset instructions sent to your email" });
-    } catch (error) {
-      res.status(500).json({ message: "Error processing request" });
-    }
-  });
-
-  app.post("/api/reset-password", async (req, res) => {
-    try {
-      const { token, password } = req.body;
-      const user = await storage.getUserByResetToken(token);
-
-      if (!user) {
-        return res.status(400).json({ message: "Invalid or expired reset token" });
-      }
-
-      if (new Date(user.resetTokenExpiry!) < new Date()) {
-        return res.status(400).json({ message: "Reset token has expired" });
-      }
-
-      const hashedPassword = await hashPassword(password);
-      await storage.updateUserPassword(user.id, hashedPassword);
-      await storage.clearUserResetToken(user.id);
-
-      res.json({ message: "Password updated successfully" });
-    } catch (error) {
-      res.status(500).json({ message: "Error resetting password" });
-    }
   });
 
   app.get("/api/user", (req, res) => {
