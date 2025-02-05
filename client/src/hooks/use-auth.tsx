@@ -88,8 +88,15 @@ function useRegisterMutation() {
         // Validate the data first
         const validated = insertUserSchema.parse(userData);
 
-        // Make the API request
-        const res = await apiRequest("POST", "/api/register", validated);
+        // Make the API request with proper headers
+        const res = await fetch("/api/register", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(validated),
+        });
+
         const data = await res.json();
 
         if (!res.ok) {
@@ -102,7 +109,7 @@ function useRegisterMutation() {
         if (error.errors || error.details) {
           throw new Error(error.errors || error.details);
         }
-        throw error;
+        throw new Error(error.message || "Registration failed");
       }
     },
     onSuccess: (user: User) => {
