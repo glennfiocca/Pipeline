@@ -56,7 +56,7 @@ export function NavBar() {
                 size="sm"
                 onClick={async () => {
                   await logoutMutation.mutateAsync();
-                  setLocation("/auth");
+                  setLocation("/auth/login");
                 }}
               >
                 <LogOutIcon className="h-4 w-4 mr-2" />
@@ -64,12 +64,12 @@ export function NavBar() {
               </Button>
             ) : (
               <>
-                <Link href="/auth">
+                <Link href="/auth/login">
                   <Button variant="ghost" size="sm">
                     Login
                   </Button>
                 </Link>
-                <Link href="/auth">
+                <Link href="/auth/register">
                   <Button size="sm">
                     Sign Up
                   </Button>
