@@ -5,13 +5,21 @@ import session from "express-session";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 import { storage } from "./storage";
-import { insertUserSchema, type User, type InsertUser } from "@shared/schema";
+import { insertUserSchema, type InsertUser } from "@shared/schema";
 import { fromZodError } from "zod-validation-error";
 import { ZodError } from "zod";
 
 declare global {
   namespace Express {
-    interface User extends User {}
+    interface User {
+      id: number;
+      username: string;
+      email: string;
+      password: string;
+      resetToken?: string | null;
+      resetTokenExpiry?: string | null;
+      createdAt: string;
+    }
   }
 }
 
@@ -70,6 +78,7 @@ export function setupAuth(app: Express) {
     }
   });
 
+  // Modified registration endpoint to handle errors consistently
   app.post("/api/register", async (req, res) => {
     try {
       // Validate request body against schema
@@ -99,12 +108,15 @@ export function setupAuth(app: Express) {
       });
 
       // Login the user after successful registration
-      req.login(user, (err) => {
-        if (err) {
-          console.error("Login error after registration:", err);
-          return res.status(500).json({ error: "Error during login after registration" });
-        }
-        return res.json({ user });
+      return new Promise((resolve, reject) => {
+        req.login(user, (err) => {
+          if (err) {
+            reject(err);
+          } else {
+            res.json({ user });
+            resolve();
+          }
+        });
       });
     } catch (error) {
       console.error("Registration error:", error);

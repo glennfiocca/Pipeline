@@ -45,6 +45,14 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // Error handler for JSON parsing
+  app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
+    if (err instanceof SyntaxError && 'body' in err) {
+      return res.status(400).json({ error: 'Invalid JSON' });
+    }
+    next(err);
+  });
+
   const server = registerRoutes(app);
 
   // Global error handler
