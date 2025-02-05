@@ -1,8 +1,12 @@
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { BriefcaseIcon, HomeIcon, UserCircleIcon, BarChartIcon } from "lucide-react";
+import { BriefcaseIcon, HomeIcon, UserCircleIcon, BarChartIcon, LogOutIcon } from "lucide-react";
+import { useAuth } from "@/hooks/use-auth";
 
 export function NavBar() {
+  const { user, logoutMutation } = useAuth();
+  const [, setLocation] = useLocation();
+
   return (
     <nav className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-14 max-w-screen-2xl items-center">
@@ -14,7 +18,7 @@ export function NavBar() {
             </a>
           </Link>
         </div>
-        <div className="flex flex-1 items-center justify-between space-x-2 md:justify-end">
+        <div className="flex flex-1 items-center justify-between space-x-2">
           <div className="w-full flex justify-start space-x-2">
             <Link href="/">
               <Button variant="ghost" size="sm">
@@ -28,18 +32,50 @@ export function NavBar() {
                 Jobs
               </Button>
             </Link>
-            <Link href="/profile">
-              <Button variant="ghost" size="sm">
-                <UserCircleIcon className="h-4 w-4 mr-2" />
-                Profile
+            {user && (
+              <>
+                <Link href="/profile">
+                  <Button variant="ghost" size="sm">
+                    <UserCircleIcon className="h-4 w-4 mr-2" />
+                    Profile
+                  </Button>
+                </Link>
+                <Link href="/dashboard">
+                  <Button variant="ghost" size="sm">
+                    <BarChartIcon className="h-4 w-4 mr-2" />
+                    Dashboard
+                  </Button>
+                </Link>
+              </>
+            )}
+          </div>
+          <div className="flex items-center space-x-2">
+            {user ? (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={async () => {
+                  await logoutMutation.mutateAsync();
+                  setLocation("/auth");
+                }}
+              >
+                <LogOutIcon className="h-4 w-4 mr-2" />
+                Logout
               </Button>
-            </Link>
-            <Link href="/dashboard">
-              <Button variant="ghost" size="sm">
-                <BarChartIcon className="h-4 w-4 mr-2" />
-                Dashboard
-              </Button>
-            </Link>
+            ) : (
+              <>
+                <Link href="/auth">
+                  <Button variant="ghost" size="sm">
+                    Login
+                  </Button>
+                </Link>
+                <Link href="/auth">
+                  <Button size="sm">
+                    Sign Up
+                  </Button>
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </div>
