@@ -1,7 +1,10 @@
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
+import { useAuth } from "@/hooks/use-auth";
 
 export default function HomePage() {
+  const { user } = useAuth();
+
   return (
     <div className="flex flex-col min-h-screen">
       <main className="flex-1">
@@ -22,9 +25,9 @@ export default function HomePage() {
                     Browse Jobs
                   </Button>
                 </Link>
-                <Link href="/profile">
+                <Link href={user ? "/profile" : "/auth"}>
                   <Button variant="outline" size="lg">
-                    Create Profile
+                    {user ? "Create Profile" : "Sign Up to Create Profile"}
                   </Button>
                 </Link>
               </div>
