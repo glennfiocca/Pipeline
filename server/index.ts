@@ -4,25 +4,21 @@ import { setupVite, serveStatic, log } from "./vite";
 
 const app = express();
 
-// Move JSON middleware before any route handling
+// Basic middleware setup
 app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
+app.use(express.urlencoded({ extended: true }));
 
-// Global middleware to set JSON content type for API routes
-app.use((req, res, next) => {
-  if (req.path.startsWith('/api')) {
-    res.setHeader('Content-Type', 'application/json');
-  }
-  next();
-});
-
-// Setup routes and auth before static file handling
+// Setup routes before any other middleware
 const server = registerRoutes(app);
 
 // Error handler for JSON parsing
 app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
   if (err instanceof SyntaxError && 'body' in err) {
-    return res.status(400).json({ error: 'Invalid JSON' });
+    console.error('JSON Parse Error:', err);
+    return res.status(400).json({ 
+      error: 'Invalid JSON format',
+      details: err.message
+    });
   }
   next(err);
 });

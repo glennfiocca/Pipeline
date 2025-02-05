@@ -9,20 +9,6 @@ import { insertUserSchema, type InsertUser } from "@shared/schema";
 import { fromZodError } from "zod-validation-error";
 import { ZodError } from "zod";
 
-declare global {
-  namespace Express {
-    interface User {
-      id: number;
-      username: string;
-      email: string;
-      password: string;
-      resetToken?: string | null;
-      resetTokenExpiry?: string | null;
-      createdAt: string;
-    }
-  }
-}
-
 const scryptAsync = promisify(scrypt);
 
 async function hashPassword(password: string) {
@@ -39,6 +25,7 @@ async function comparePasswords(supplied: string, stored: string) {
 }
 
 export function setupAuth(app: Express) {
+  // Session configuration
   const sessionSettings: session.SessionOptions = {
     secret: process.env.REPL_ID!,
     resave: false,
@@ -46,7 +33,7 @@ export function setupAuth(app: Express) {
     store: storage.sessionStore,
     cookie: {
       secure: app.get("env") === "production",
-      maxAge: 24 * 60 * 60 * 1000 // 24 hours
+      maxAge: 24 * 60 * 60 * 1000
     }
   };
 
@@ -72,26 +59,34 @@ export function setupAuth(app: Express) {
   passport.deserializeUser(async (id: number, done) => {
     try {
       const user = await storage.getUser(id);
+      if (!user) {
+        return done(new Error('User not found'));
+      }
       done(null, user);
     } catch (err) {
       done(err);
     }
   });
 
+  // Registration endpoint
   app.post("/api/register", async (req, res) => {
     try {
+      console.log('Registration request body:', req.body);
       const validatedData = insertUserSchema.parse(req.body);
 
+      // Check for existing user
       const existingUser = await storage.getUserByUsername(validatedData.username);
       if (existingUser) {
         return res.status(400).json({ error: "Username already exists" });
       }
 
+      // Check for existing email
       const existingEmail = await storage.getUserByEmail(validatedData.email);
       if (existingEmail) {
         return res.status(400).json({ error: "Email already registered" });
       }
 
+      // Create new user
       const hashedPassword = await hashPassword(validatedData.password);
       const { confirmPassword, ...userDataWithoutConfirm } = validatedData;
 
@@ -102,29 +97,49 @@ export function setupAuth(app: Express) {
         createdAt: new Date().toISOString()
       });
 
-      req.login(user, (err) => {
-        if (err) {
-          console.error("Login error after registration:", err);
-          return res.status(500).json({ error: "Error logging in after registration" });
-        }
-        return res.status(201).json({ user });
+      // Log in the user
+      return new Promise<void>((resolve, reject) => {
+        req.login(user, (err) => {
+          if (err) {
+            console.error("Login error after registration:", err);
+            reject(new Error("Error logging in after registration"));
+          } else {
+            res.status(201).json({ user });
+            resolve();
+          }
+        });
       });
     } catch (error) {
       console.error("Registration error:", error);
       if (error instanceof ZodError) {
-        return res.status(400).json({ 
-          error: "Validation error", 
-          details: fromZodError(error).message 
+        return res.status(400).json({
+          error: "Validation error",
+          details: fromZodError(error).message
         });
       }
       return res.status(500).json({ error: "Error creating user" });
     }
   });
 
-  app.post("/api/login", passport.authenticate("local"), (req, res) => {
-    res.json({ user: req.user });
+  // Login endpoint
+  app.post("/api/login", (req, res, next) => {
+    passport.authenticate("local", (err, user, info) => {
+      if (err) {
+        return next(err);
+      }
+      if (!user) {
+        return res.status(401).json({ error: info?.message || "Authentication failed" });
+      }
+      req.login(user, (err) => {
+        if (err) {
+          return next(err);
+        }
+        return res.json({ user });
+      });
+    })(req, res, next);
   });
 
+  // Logout endpoint
   app.post("/api/logout", (req, res, next) => {
     req.logout((err) => {
       if (err) {
@@ -134,6 +149,7 @@ export function setupAuth(app: Express) {
     });
   });
 
+  // User info endpoint
   app.get("/api/user", (req, res) => {
     if (!req.isAuthenticated()) {
       return res.status(401).json({ error: "Not authenticated" });
