@@ -19,14 +19,18 @@ function useLoginMutation() {
   const { toast } = useToast();
   return useMutation({
     mutationFn: async (credentials: Pick<InsertUser, "username" | "password">) => {
-      const res = await apiRequest("POST", "/api/login", credentials);
-      const data = await res.json();
+      try {
+        const res = await apiRequest("POST", "/api/login", credentials);
+        const data = await res.json();
 
-      if (!res.ok) {
-        throw new Error(data.error || "Login failed");
+        if (!res.ok) {
+          throw new Error(data.error || "Login failed");
+        }
+
+        return data.user;
+      } catch (error: any) {
+        throw new Error(error.message || "Login failed");
       }
-
-      return data.user;
     },
     onSuccess: (user: User) => {
       queryClient.setQueryData(["/api/user"], { user });
@@ -49,10 +53,14 @@ function useLogoutMutation() {
   const { toast } = useToast();
   return useMutation({
     mutationFn: async () => {
-      const res = await apiRequest("POST", "/api/logout");
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Logout failed");
+      try {
+        const res = await apiRequest("POST", "/api/logout");
+        if (!res.ok) {
+          const data = await res.json();
+          throw new Error(data.error || "Logout failed");
+        }
+      } catch (error: any) {
+        throw new Error(error.message || "Logout failed");
       }
     },
     onSuccess: () => {

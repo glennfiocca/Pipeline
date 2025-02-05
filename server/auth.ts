@@ -5,7 +5,7 @@ import session from "express-session";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 import { storage } from "./storage";
-import { insertUserSchema, type User as SelectUser } from "@shared/schema";
+import { insertUserSchema, type User as SelectUser, type InsertUser } from "@shared/schema";
 import { fromZodError } from "zod-validation-error";
 import { ZodError } from "zod";
 
@@ -89,14 +89,16 @@ export function setupAuth(app: Express) {
 
       // Hash password and create user
       const hashedPassword = await hashPassword(validatedData.password);
-      const userData = {
-        username: validatedData.username,
-        email: validatedData.email,
+
+      // Create user object without confirmPassword
+      const { confirmPassword, ...userData } = validatedData;
+      const userToCreate = {
+        ...userData,
         password: hashedPassword,
         createdAt: new Date().toISOString()
       };
 
-      const user = await storage.createUser(userData);
+      const user = await storage.createUser(userToCreate);
 
       // Login the user after successful registration
       req.login(user, (err) => {

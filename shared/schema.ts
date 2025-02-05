@@ -13,20 +13,26 @@ export const users = pgTable("users", {
   createdAt: text("created_at").notNull().default(new Date().toISOString())
 });
 
-// User schema validation
-export const insertUserSchema = createInsertSchema(users)
-  .extend({
-    confirmPassword: z.string(),
-    email: z.string().email("Invalid email format"),
-    username: z.string().min(3, "Username must be at least 3 characters"),
-    password: z.string().min(6, "Password must be at least 6 characters")
-  })
-  .refine((data) => data.password === data.confirmPassword, {
-    message: "Passwords don't match",
-    path: ["confirmPassword"],
-  });
+// Base schema for database operations
+const baseUserSchema = createInsertSchema(users).omit({ 
+  id: true,
+  resetToken: true,
+  resetTokenExpiry: true,
+  createdAt: true 
+});
 
-// User types
+// Extended schema for registration with validation
+export const insertUserSchema = baseUserSchema.extend({
+  confirmPassword: z.string(),
+  username: z.string().min(3, "Username must be at least 3 characters"),
+  email: z.string().email("Invalid email format"),
+  password: z.string().min(6, "Password must be at least 6 characters")
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "Passwords don't match",
+  path: ["confirmPassword"]
+});
+
+// Types
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
 
