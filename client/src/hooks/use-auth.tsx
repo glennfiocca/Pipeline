@@ -20,11 +20,12 @@ function useLoginMutation() {
   return useMutation({
     mutationFn: async (credentials: Pick<InsertUser, "username" | "password">) => {
       const res = await apiRequest("POST", "/api/login", credentials);
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.message || "Login failed");
-      }
       const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || "Login failed");
+      }
+
       return data.user;
     },
     onSuccess: (user: User) => {
@@ -50,7 +51,8 @@ function useLogoutMutation() {
     mutationFn: async () => {
       const res = await apiRequest("POST", "/api/logout");
       if (!res.ok) {
-        throw new Error("Logout failed");
+        const data = await res.json();
+        throw new Error(data.error || "Logout failed");
       }
     },
     onSuccess: () => {
@@ -75,17 +77,22 @@ function useRegisterMutation() {
   return useMutation({
     mutationFn: async (userData: InsertUser) => {
       try {
+        // Validate the data first
         const validated = insertUserSchema.parse(userData);
+
+        // Make the API request
         const res = await apiRequest("POST", "/api/register", validated);
-        if (!res.ok) {
-          const error = await res.json();
-          throw new Error(error.message || error.errors || "Registration failed");
-        }
         const data = await res.json();
+
+        if (!res.ok) {
+          throw new Error(data.error || data.details || "Registration failed");
+        }
+
         return data.user;
       } catch (error: any) {
-        if (error.errors) {
-          throw new Error(error.errors);
+        // Handle both Zod validation errors and API errors
+        if (error.errors || error.details) {
+          throw new Error(error.errors || error.details);
         }
         throw error;
       }

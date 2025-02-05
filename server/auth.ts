@@ -5,8 +5,9 @@ import session from "express-session";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 import { storage } from "./storage";
-import { insertUserSchema, User as SelectUser } from "@shared/schema";
+import { insertUserSchema, type User as SelectUser } from "@shared/schema";
 import { fromZodError } from "zod-validation-error";
+import { ZodError } from "zod";
 
 declare global {
   namespace Express {
@@ -77,53 +78,60 @@ export function setupAuth(app: Express) {
       // Check for existing user
       const existingUser = await storage.getUserByUsername(validatedData.username);
       if (existingUser) {
-        return res.status(400).json({ message: "Username already exists" });
+        return res.status(400).json({ error: "Username already exists" });
       }
 
       // Check for existing email
       const existingEmail = await storage.getUserByEmail(validatedData.email);
       if (existingEmail) {
-        return res.status(400).json({ message: "Email already registered" });
+        return res.status(400).json({ error: "Email already registered" });
       }
 
       // Hash password and create user
       const hashedPassword = await hashPassword(validatedData.password);
       const userData = {
-        ...validatedData,
+        username: validatedData.username,
+        email: validatedData.email,
         password: hashedPassword,
+        createdAt: new Date().toISOString()
       };
 
-      delete userData.confirmPassword; // Remove confirmPassword before saving
       const user = await storage.createUser(userData);
 
       // Login the user after successful registration
       req.login(user, (err) => {
         if (err) {
           console.error("Login error after registration:", err);
-          return res.status(500).json({ message: "Error during login after registration" });
+          return res.status(500).json({ error: "Error during login after registration" });
         }
         return res.status(201).json({ user });
       });
     } catch (error) {
       console.error("Registration error:", error);
-      if (error.name === "ZodError") {
+      if (error instanceof ZodError) {
         return res.status(400).json({ 
-          message: "Validation error", 
-          errors: fromZodError(error).message 
+          error: "Validation error", 
+          details: fromZodError(error).message 
         });
       }
-      return res.status(500).json({ message: "Error creating user" });
+      return res.status(500).json({ error: "Error creating user" });
     }
   });
 
   app.post("/api/login", (req, res, next) => {
     passport.authenticate("local", (err: any, user: Express.User, info: any) => {
-      if (err) return next(err);
+      if (err) {
+        console.error("Login error:", err);
+        return res.status(500).json({ error: "Internal server error" });
+      }
       if (!user) {
-        return res.status(401).json({ message: info.message || "Invalid credentials" });
+        return res.status(401).json({ error: info?.message || "Invalid credentials" });
       }
       req.login(user, (err) => {
-        if (err) return next(err);
+        if (err) {
+          console.error("Login session error:", err);
+          return res.status(500).json({ error: "Error during login" });
+        }
         res.json({ user });
       });
     })(req, res, next);
@@ -131,14 +139,17 @@ export function setupAuth(app: Express) {
 
   app.post("/api/logout", (req, res, next) => {
     req.logout((err) => {
-      if (err) return next(err);
-      res.sendStatus(200);
+      if (err) {
+        console.error("Logout error:", err);
+        return next(err);
+      }
+      res.json({ message: "Logged out successfully" });
     });
   });
 
   app.get("/api/user", (req, res) => {
     if (!req.isAuthenticated()) {
-      return res.status(401).json({ message: "Not authenticated" });
+      return res.status(401).json({ error: "Not authenticated" });
     }
     res.json({ user: req.user });
   });
