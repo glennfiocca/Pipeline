@@ -1,58 +1,50 @@
 import axios from 'axios';
-import * as cheerio from 'cheerio';
 import { BaseScraper } from './base';
 import type { InsertJob } from '@shared/schema';
 
 export class BlackstoneScraper extends BaseScraper {
   constructor() {
-    super('https://careers.blackstone.com', 1);
+    super('https://blackstone.wd1.myworkdayjobs.com/Blackstone', 1);
   }
 
   async scrape(): Promise<InsertJob[]> {
     const jobs: InsertJob[] = [];
 
     try {
-      console.log('Starting Blackstone careers scraper...');
-      
+      console.log('Starting Blackstone careers API scraper...');
+
       const headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-        'Accept-Language': 'en-US,en;q=0.5'
+        'Accept': 'application/json',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
       };
 
-      // First fetch the jobs listing page
-      const response = await axios.get(`${this.baseUrl}/jobs/search`, { 
-        headers,
-        timeout: 30000,
-        maxRedirects: 5
-      });
+      // Workday job search API endpoint
+      const response = await axios.get(
+        'https://blackstone.wd1.myworkdayjobs.com/wday/cxs/blackstone/Blackstone/jobs',
+        {
+          headers,
+          params: {
+            limit: 20,
+            offset: 0,
+            sortBy: 'POSTING_DATE_DESC'
+          }
+        }
+      );
 
-      const $ = cheerio.load(response.data);
-      console.log('Successfully loaded Blackstone careers page');
+      if (response.data && Array.isArray(response.data.jobPostings)) {
+        console.log(`Found ${response.data.jobPostings.length} job postings`);
 
-      // Parse job listings
-      $('.job-listing, .careers-job-item, article.job').each((_, element) => {
-        try {
-          const $job = $(element);
-          
-          const title = $job.find('.job-title, h2, .position-title').first().text().trim();
-          const location = $job.find('.location, .job-location').first().text().trim();
-          const jobUrl = $job.find('a').attr('href');
-          
-          // Get full description if available
-          const description = $job.find('.description, .job-description, .summary').first().text().trim();
-          const requirements = $job.find('.requirements, .qualifications').first().text().trim();
-
+        for (const posting of response.data.jobPostings) {
           const job: InsertJob = {
-            title,
+            title: posting.title,
             company: 'Blackstone',
-            location: location || 'New York, NY',
-            salary: 'Competitive',
-            description: description || 'Please see full job description on Blackstone careers',
-            requirements: requirements || 'Please see full job posting for detailed requirements',
+            location: posting.locationsText || 'Multiple Locations',
+            salary: posting.compensation || 'Competitive',
+            description: posting.description || 'Please see full job description on Blackstone careers',
+            requirements: posting.jobRequirements || 'See full job posting for detailed requirements',
             source: 'Blackstone Careers',
-            sourceUrl: jobUrl ? new URL(jobUrl, this.baseUrl).toString() : this.baseUrl,
-            type: 'Full-time',
+            sourceUrl: `${this.baseUrl}/job/${posting.externalPath}`,
+            type: posting.timeType || 'Full-time',
             published: true
           };
 
@@ -63,20 +55,18 @@ export class BlackstoneScraper extends BaseScraper {
             });
             jobs.push(job);
           }
-        } catch (error) {
-          console.error('Error parsing job element:', error);
         }
-      });
+      }
 
     } catch (error: any) {
-      console.error('Blackstone scraping error:', {
+      console.error('Blackstone API error:', {
         message: error.message,
         status: error.response?.status,
-        url: error.config?.url
+        data: error.response?.data
       });
     }
 
-    console.log(`Successfully scraped ${jobs.length} Blackstone jobs`);
+    console.log(`Successfully retrieved ${jobs.length} Blackstone jobs`);
     return jobs;
   }
 }
