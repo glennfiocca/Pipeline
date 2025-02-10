@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertJobSchema, insertProfileSchema, insertApplicationSchema } from "@shared/schema";
 import { ScraperManager } from './services/scraper/manager';
+import { processJobPosting, processBatchJobPostings } from './services/job-processor';
 
 export function registerRoutes(app: Express): Server {
   // Jobs
@@ -15,6 +16,57 @@ export function registerRoutes(app: Express): Server {
     const job = await storage.getJob(parseInt(req.params.id));
     if (!job) return res.sendStatus(404);
     res.json(job);
+  });
+
+  // Add new endpoint to test job processing
+  app.post("/api/jobs/process", async (req, res) => {
+    try {
+      const { jobDescription } = req.body;
+      if (!jobDescription || typeof jobDescription !== "string") {
+        return res.status(400).json({ error: "Job description is required" });
+      }
+
+      const processedJob = await processJobPosting(jobDescription);
+      res.json(processedJob);
+    } catch (error) {
+      console.error('Error processing job:', error);
+      res.status(500).json({ error: "Failed to process job description", details: (error as Error).message });
+    }
+  });
+
+  // Update the scraper endpoint to use our new processor
+  app.post("/api/jobs/scrape", async (_req, res) => {
+    try {
+      console.log('Starting job scraping process...');
+      const manager = new ScraperManager();
+      const rawJobData = await manager.runScrapers();
+
+      // Process the raw job data using our new processor
+      console.log('Processing scraped jobs...');
+      const processedJobs = await processBatchJobPostings(rawJobData);
+
+      // Store the processed jobs
+      for (const job of processedJobs) {
+        await storage.createJob({
+          ...job,
+          created_at: new Date(),
+          updated_at: new Date(),
+        });
+      }
+
+      // Verify jobs were created by counting them
+      const jobs = await storage.getJobs();
+      console.log(`After processing, found ${jobs.length} total jobs in database`);
+
+      res.json({ 
+        message: "Job scraping and processing completed", 
+        jobCount: jobs.length,
+        processedCount: processedJobs.length 
+      });
+    } catch (error) {
+      console.error('Error running scrapers:', error);
+      res.status(500).json({ error: "Failed to scrape jobs", details: (error as Error).message });
+    }
   });
 
   // Profiles
@@ -90,24 +142,6 @@ export function registerRoutes(app: Express): Server {
       res.json(application);
     } catch (error) {
       res.status(404).json({ error: (error as Error).message });
-    }
-  });
-
-  // Add scraper route
-  app.post("/api/jobs/scrape", async (_req, res) => {
-    try {
-      console.log('Starting job scraping process...');
-      const manager = new ScraperManager();
-      await manager.runScrapers();
-
-      // Verify jobs were created by counting them
-      const jobs = await storage.getJobs();
-      console.log(`After scraping, found ${jobs.length} total jobs in database`);
-
-      res.json({ message: "Job scraping completed", jobCount: jobs.length });
-    } catch (error) {
-      console.error('Error running scrapers:', error);
-      res.status(500).json({ error: "Failed to scrape jobs", details: (error as Error).message });
     }
   });
 
