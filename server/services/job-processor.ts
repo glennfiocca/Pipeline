@@ -29,11 +29,12 @@ export type JobExtraction = z.infer<typeof jobExtractionSchema>;
 
 // Function to process a raw job posting using OpenAI
 export async function processJobPosting(rawJobText: string): Promise<JobExtraction> {
-  const result = await queue.add(async () => {
+  return await queue.add(async () => {
     try {
+      console.log('Attempting to process job posting with OpenAI API...');
+
       const response = await openai.chat.completions.create({
-        // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
-        model: "gpt-4o",
+        model: "gpt-3.5-turbo",  // Using GPT-3.5 Turbo as it's more cost-effective
         response_format: { type: "json_object" },
         messages: [
           {
@@ -66,20 +67,32 @@ export async function processJobPosting(rawJobText: string): Promise<JobExtracti
         max_tokens: 1000,
       });
 
+      console.log('OpenAI API response received successfully');
+
       const content = response.choices[0].message.content;
       if (!content) {
         throw new Error("No content in OpenAI response");
       }
 
+      console.log('Parsing OpenAI response...');
       const result = JSON.parse(content);
+
+      console.log('Validating parsed data against schema...');
       return jobExtractionSchema.parse(result);
     } catch (error) {
-      console.error("Error processing job posting:", error);
-      throw new Error("Failed to process job posting: " + (error as Error).message);
+      if (error instanceof OpenAI.APIError) {
+        console.error("OpenAI API Error:", {
+          status: error.status,
+          message: error.message,
+          code: error.code,
+          type: error.type
+        });
+      } else {
+        console.error("Error processing job posting:", error);
+      }
+      throw error;
     }
   });
-
-  return result;
 }
 
 // Process multiple job postings in parallel with rate limiting
