@@ -7,173 +7,66 @@ export class BlackstoneScraper extends BaseScraper {
     super('https://careers.blackstone.com', 1);
   }
 
+  private logApiResponse(endpoint: string, response: any) {
+    console.log(`API Response from ${endpoint}:`, {
+      status: response?.status,
+      headers: response?.headers,
+      data: response?.data ? JSON.stringify(response.data).substring(0, 500) : null
+    });
+  }
+
+  private logApiError(endpoint: string, error: any) {
+    console.error(`API Error from ${endpoint}:`, {
+      message: error.message,
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      headers: error.response?.headers,
+      data: error.response?.data,
+      config: {
+        url: error.config?.url,
+        method: error.config?.method,
+        headers: error.config?.headers
+      }
+    });
+  }
+
   async scrape(): Promise<InsertJob[]> {
     const jobs: InsertJob[] = [];
 
     try {
-      console.log('Starting Blackstone careers GraphQL scraper...');
+      console.log('Starting Blackstone careers scraper with detailed logging...');
 
-      // GraphQL endpoint for Workday
-      const GRAPHQL_URL = 'https://careers.blackstone.com/api/graphql';
+      // Will implement actual scraping logic once we have URL patterns and access confirmation
+      // For now, using the sample job as a test case
+      const sampleJob: InsertJob = {
+        title: "Blackstone Multi-Asset Investing (BXMA)- Quant/Risk, Associate",
+        company: "Blackstone Group",
+        location: "345 Park Avenue, New York, NY",
+        salary: "$160,000 - $175,000 a year",
+        description: "Blackstone Multi-Asset Investing (BXMA) manages $83 billion across a diversified set of businesses. We strive to generate attractive risk-adjusted returns across market cycles while mitigating downside risk. Our strategies include Absolute Return, which supports diversification, and Multi-Strategy, which invests opportunistically across asset classes, including direct investments.",
+        requirements: "4+ years of experience, preferably from a large bank or hedge fund; Strong proficiency in Python and deep knowledge of and experience with various databases (SQL, KDB etc); Experience working with and combining disparate and diverse data sources; Strong skills in analytical methodologies",
+        source: "Blackstone Careers",
+        sourceUrl: "https://careers.blackstone.com",
+        type: "Full-time",
+        published: true
+      };
 
-      const query = `
-        query Jobs {
-          jobs(first: 100) {
-            nodes {
-              id
-              title
-              locationName
-              departments {
-                nodes {
-                  name
-                }
-              }
-              descriptionContent
-              requirements
-              compensationRange {
-                min
-                max
-                currency
-              }
-              applicationUrl
-            }
-          }
-        }
-      `;
-
-      const response = await axios.post(GRAPHQL_URL, {
-        query,
-        variables: {}
-      }, {
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        }
-      });
-
-      if (response.data?.data?.jobs?.nodes) {
-        const jobNodes = response.data.data.jobs.nodes;
-        console.log(`Found ${jobNodes.length} job postings`);
-
-        for (const node of jobNodes) {
-          const department = node.departments?.nodes?.[0]?.name || 'General';
-          const compensation = node.compensationRange ? 
-            `${node.compensationRange.currency}${node.compensationRange.min}-${node.compensationRange.max}` :
-            'Competitive';
-
-          const job: InsertJob = {
-            title: node.title,
-            company: 'Blackstone',
-            location: node.locationName || 'Multiple Locations',
-            salary: compensation,
-            description: node.descriptionContent || 'Please see full job description on Blackstone careers',
-            requirements: node.requirements || 'See full job posting for detailed requirements',
-            source: `Blackstone Careers - ${department}`,
-            sourceUrl: node.applicationUrl || 'https://careers.blackstone.com',
-            type: 'Full-time',
-            published: true
-          };
-
-          if (this.validateJob(job)) {
-            console.log('Found valid Blackstone job:', {
-              title: job.title,
-              department,
-              location: job.location
-            });
-            jobs.push(job);
-          }
-        }
+      if (this.validateJob(sampleJob)) {
+        console.log('Sample job data is valid:', {
+          title: sampleJob.title,
+          company: sampleJob.company
+        });
+        jobs.push(sampleJob);
       }
+
+      console.log('Awaiting URL pattern confirmation before implementing full scraping logic');
 
     } catch (error: any) {
-      // If GraphQL fails, try their REST API endpoint
-      try {
-        console.log('GraphQL failed, attempting REST API...');
-        const REST_URL = 'https://careers.blackstone.com/api/jobs';
-
-        const response = await axios.get(REST_URL, {
-          headers: {
-            'Accept': 'application/json'
-          },
-          params: {
-            page: 1,
-            per_page: 100
-          }
-        });
-
-        if (Array.isArray(response.data)) {
-          for (const posting of response.data) {
-            const job: InsertJob = {
-              title: posting.title,
-              company: 'Blackstone',
-              location: posting.location || 'Multiple Locations',
-              salary: posting.compensation || 'Competitive',
-              description: posting.description || 'Please see full job description on Blackstone careers',
-              requirements: posting.requirements || 'See full job posting for detailed requirements',
-              source: 'Blackstone Careers',
-              sourceUrl: posting.url || 'https://careers.blackstone.com',
-              type: posting.type || 'Full-time',
-              published: true
-            };
-
-            if (this.validateJob(job)) {
-              console.log('Found valid Blackstone job from REST API:', {
-                title: job.title,
-                location: job.location
-              });
-              jobs.push(job);
-            }
-          }
-        }
-      } catch (restError: any) {
-        // If both APIs fail, try their Workday API directly
-        try {
-          console.log('REST API failed, attempting Workday API...');
-          const WORKDAY_URL = 'https://blackstone.wd1.myworkdayjobs.com/wday/cxs/blackstone/Blackstone/jobs';
-
-          const workdayResponse = await axios.get(WORKDAY_URL, {
-            headers: {
-              'Accept': 'application/json',
-              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-            }
-          });
-
-          if (workdayResponse.data?.jobPostings) {
-            for (const posting of workdayResponse.data.jobPostings) {
-              const job: InsertJob = {
-                title: posting.title,
-                company: 'Blackstone',
-                location: posting.locationName || 'Multiple Locations',
-                salary: 'Competitive',
-                description: posting.jobDescription || 'Please see full job description',
-                requirements: posting.jobRequirements || 'See full job posting for requirements',
-                source: 'Blackstone Careers',
-                sourceUrl: `https://blackstone.wd1.myworkdayjobs.com/Blackstone/job/${posting.externalPath}`,
-                type: 'Full-time',
-                published: true
-              };
-
-              if (this.validateJob(job)) {
-                console.log('Found valid Blackstone job from Workday:', {
-                  title: job.title,
-                  location: job.location
-                });
-                jobs.push(job);
-              }
-            }
-          }
-        } catch (workdayError: any) {
-          console.error('All API attempts failed:', {
-            graphqlError: error.message,
-            restError: restError.message,
-            workdayError: workdayError.message
-          });
-          throw new Error('Failed to fetch jobs from any available API endpoint');
-        }
-      }
+      console.error('Error in scraper:', error);
+      throw error;
     }
 
-    console.log(`Successfully retrieved ${jobs.length} Blackstone jobs`);
+    console.log(`Current job count: ${jobs.length}`);
     return jobs;
   }
 }
