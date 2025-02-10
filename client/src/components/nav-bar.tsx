@@ -9,17 +9,17 @@ export function NavBar() {
 
   return (
     <nav className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container flex h-14 max-w-screen-2xl items-center">
+      <div className="container flex h-14 max-w-screen-2xl items-center justify-between mx-auto px-4 md:px-6 lg:px-8">
         <div className="mr-4 hidden md:flex">
           <Link href="/">
-            <a className="mr-6 flex items-center space-x-2">
+            <Button variant="ghost" className="mr-2 px-2">
               <BriefcaseIcon className="h-6 w-6" />
-              <span className="hidden font-bold sm:inline-block">Pipeline</span>
-            </a>
+              <span className="hidden font-bold sm:inline-block ml-2">Pipeline</span>
+            </Button>
           </Link>
         </div>
-        <div className="flex flex-1 items-center justify-between space-x-2">
-          <div className="w-full flex justify-start space-x-2">
+        <div className="flex flex-1 items-center justify-between space-x-2 md:justify-end">
+          <div className="w-full flex justify-start space-x-2 md:w-auto">
             <Link href="/">
               <Button variant="ghost" size="sm">
                 <HomeIcon className="h-4 w-4 mr-2" />
