@@ -2,65 +2,98 @@ import axios from 'axios';
 import * as cheerio from 'cheerio';
 import { BaseScraper } from './base';
 import type { InsertJob } from '@shared/schema';
-import * as fs from 'fs';
-import * as path from 'path';
 
 export class IndeedScraper extends BaseScraper {
   constructor() {
-    super('https://www.indeed.com', 1); // Use 1 concurrent request to respect rate limits
+    super('https://www.indeed.com', 1);
   }
 
   async scrape(): Promise<InsertJob[]> {
     const jobs: InsertJob[] = [];
+    let page = 0;
+    const jobsPerPage = 10;
 
     try {
-      await this.init(); // Initialize robots.txt parser
-      console.log('Starting Indeed scraper for Blackstone jobs...');
+      // Common headers that work well with Indeed
+      const headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.5',
+        'Accept-Encoding': 'gzip, deflate, br',
+        'Connection': 'keep-alive',
+        'Upgrade-Insecure-Requests': '1',
+        'Sec-Fetch-Dest': 'document',
+        'Sec-Fetch-Mode': 'navigate',
+        'Sec-Fetch-Site': 'none',
+        'Sec-Fetch-User': '?1',
+        'TE': 'trailers'
+      };
 
-      // For demonstration, use the sample Blackstone job
-      const sampleJobPath = path.join(process.cwd(), 'attached_assets', 'Pasted-Blackstone-Multi-Asset-Investing-BXMA-Quant-Risk-Associate-Blackstone-Group-nbsp-4-0-4-0-out-o-1739228237904.txt');
+      while (jobs.length < 10) {
+        const url = `${this.baseUrl}/jobs?q=Blackstone&l=United+States&start=${page * jobsPerPage}`;
+        console.log(`Fetching page ${page + 1} from ${url}`);
 
-      try {
-        const jobText = fs.readFileSync(sampleJobPath, 'utf-8');
+        const response = await axios.get(url, { 
+          headers,
+          timeout: 30000,
+          maxRedirects: 5,
+          validateStatus: status => status === 200
+        });
 
-        // Parse the sample job data
-        const job: InsertJob = {
-          title: 'Blackstone Multi-Asset Investing (BXMA)- Quant/Risk, Associate',
-          company: 'Blackstone Group',
-          location: '345 Park Avenue, New York, NY',
-          salary: '$160,000 - $175,000 a year',
-          description: 'Blackstone Multi-Asset Investing (BXMA) manages $83 billion across a diversified set of businesses. We strive to generate attractive risk-adjusted returns across market cycles while mitigating downside risk. Our strategies include Absolute Return, which supports diversification, and Multi-Strategy, which invests opportunistically across asset classes, including direct investments.',
-          requirements: [
-            '4+ years of experience, preferably from a large bank or hedge fund',
-            'Strong proficiency in Python and deep knowledge of and experience with various databases (SQL, KDB etc)',
-            'Experience working with and combining disparate and diverse data sources',
-            'Strong skills in analytical methodologies',
-            'Excellence in balancing multiple projects and efficiently meet goals in a dynamic environment',
-            'Ability to work independently as well as on a team'
-          ].join('; '),
-          source: 'Indeed',
-          sourceUrl: 'https://www.indeed.com/viewjob?jk=blackstone-quant-risk',
-          type: 'Full-time',
-          published: true
-        };
+        const $ = cheerio.load(response.data);
 
-        if (this.validateJob(job)) {
-          console.log('Found valid Blackstone job:', {
-            title: job.title,
-            company: job.company
-          });
-          jobs.push(job);
-        }
+        // Parse each job card
+        $('.job_seen_beacon').each((_, element) => {
+          const $job = $(element);
 
-      } catch (error) {
-        console.error('Error processing sample job:', error);
+          // Only process if it's a Blackstone job
+          const companyName = $job.find('[data-company-name]').text().trim();
+          if (!companyName.toLowerCase().includes('blackstone')) return;
+
+          const jobTitle = $job.find('.jobTitle').text().trim();
+          const jobUrl = $job.find('.jcs-JobTitle').attr('href');
+          const location = $job.find('.companyLocation').text().trim();
+
+          // Get full job details
+          const description = $job.find('.job-snippet').text().trim();
+          const salary = $job.find('.salary-snippet').text().trim();
+
+          const job: InsertJob = {
+            title: jobTitle,
+            company: companyName,
+            location: location || 'United States',
+            salary: salary || 'Competitive',
+            description: description || 'Please see full job description on Indeed',
+            requirements: 'Please see full job posting for detailed requirements',
+            source: 'Indeed',
+            sourceUrl: jobUrl ? new URL(jobUrl, this.baseUrl).toString() : url,
+            type: 'Full-time',
+            published: true
+          };
+
+          if (this.validateJob(job)) {
+            console.log(`Found valid Blackstone job: ${job.title}`);
+            jobs.push(job);
+          }
+        });
+
+        // Break if no more jobs found on current page
+        if (!$('.job_seen_beacon').length) break;
+
+        // Rate limiting
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        page++;
       }
 
-    } catch (error) {
-      console.error('Error in Indeed scraper:', error);
+    } catch (error: any) {
+      console.error('Indeed scraping error:', {
+        message: error.message,
+        status: error.response?.status,
+        url: error.config?.url
+      });
     }
 
-    console.log(`Found total of ${jobs.length} Blackstone jobs from Indeed`);
+    console.log(`Successfully scraped ${jobs.length} Blackstone jobs`);
     return jobs;
   }
 }
