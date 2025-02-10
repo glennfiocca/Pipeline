@@ -13,7 +13,11 @@ export function registerRoutes(app: Express): Server {
   });
 
   app.get("/api/jobs/:id", async (req, res) => {
-    const job = await storage.getJob(parseInt(req.params.id));
+    const jobId = parseInt(req.params.id);
+    if (isNaN(jobId)) {
+      return res.status(400).json({ error: "Invalid job ID" });
+    }
+    const job = await storage.getJob(jobId);
     if (!job) return res.sendStatus(404);
     res.json(job);
   });
