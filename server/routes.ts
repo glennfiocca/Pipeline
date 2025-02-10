@@ -3,13 +3,17 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertJobSchema, insertProfileSchema, insertApplicationSchema } from "@shared/schema";
 import { ScraperManager } from './services/scraper/manager';
-import { processJobPosting, processBatchJobPostings } from './services/job-processor';
 
 export function registerRoutes(app: Express): Server {
   // Jobs
   app.get("/api/jobs", async (_req, res) => {
-    const jobs = await storage.getJobs();
-    res.json(jobs);
+    try {
+      const jobs = await storage.getJobs();
+      res.json(jobs);
+    } catch (error) {
+      console.error('Error fetching jobs:', error);
+      res.status(500).json({ error: "Failed to fetch jobs" });
+    }
   });
 
   app.get("/api/jobs/:id", async (req, res) => {
@@ -22,23 +26,6 @@ export function registerRoutes(app: Express): Server {
     res.json(job);
   });
 
-  // Update the job processing endpoint
-  app.post("/api/jobs/process", async (req, res) => {
-    try {
-      const { jobDescription } = req.body;
-      if (!jobDescription || typeof jobDescription !== "string") {
-        return res.status(400).json({ error: "Job description is required" });
-      }
-
-      const processedJob = await processJobPosting(jobDescription);
-      const storedJob = await storage.createJob(processedJob);
-      res.json(storedJob);
-    } catch (error) {
-      console.error('Error processing job:', error);
-      res.status(500).json({ error: "Failed to process job description", details: (error as Error).message });
-    }
-  });
-
   // Update the scraper endpoint
   app.post("/api/jobs/scrape", async (_req, res) => {
     try {
@@ -46,12 +33,12 @@ export function registerRoutes(app: Express): Server {
       const manager = new ScraperManager();
       const jobs = await manager.runScrapers();
 
-      // Since the jobs are already processed by the scrapers, we can store them directly
       console.log('Scraping completed, found jobs:', jobs?.length || 0);
 
       res.json({ 
-        message: "Job scraping completed", 
-        jobCount: jobs?.length || 0
+        message: "Job scraping completed successfully", 
+        jobCount: jobs?.length || 0,
+        jobs: jobs 
       });
     } catch (error) {
       console.error('Error running scrapers:', error);

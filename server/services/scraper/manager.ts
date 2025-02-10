@@ -1,7 +1,6 @@
 import { IndeedScraper } from './indeed';
 import { storage } from '../../storage';
 import type { InsertJob } from '@shared/schema';
-import { processJobPosting } from '../job-processor';
 
 export class ScraperManager {
   private scraper = new IndeedScraper();
@@ -11,36 +10,29 @@ export class ScraperManager {
     const allJobs: InsertJob[] = [];
 
     try {
-      // Get raw job postings
-      console.log('Fetching raw job postings...');
-      const rawJobPostings = await this.scraper.scrape();
-      console.log(`Found ${rawJobPostings.length} raw job postings`);
+      // Get jobs from Indeed
+      console.log('Fetching jobs from Indeed...');
+      const jobs = await this.scraper.scrape();
+      console.log(`Found ${jobs.length} jobs from Indeed`);
 
-      // Process each job posting through GPT
-      console.log('Processing job postings with GPT...');
-      for (const rawPosting of rawJobPostings) {
+      // Store each job in the database
+      console.log('Storing jobs in database...');
+      for (const job of jobs) {
         try {
-          // Process the raw HTML through GPT
-          const processedJob = await processJobPosting(rawPosting);
-
-          // Store the processed job
-          const storedJob = await storage.createJob(processedJob);
-          console.log('Stored processed job:', storedJob.title, 'at', storedJob.company);
-
+          const storedJob = await storage.createJob(job);
+          console.log('Stored job:', storedJob.title, 'at', storedJob.company);
           allJobs.push(storedJob);
         } catch (error) {
-          console.error('Error processing/storing job:', error);
+          console.error('Error storing job:', error);
         }
-
-        // Small delay between GPT calls to respect rate limits
-        await new Promise(resolve => setTimeout(resolve, 1000));
       }
 
     } catch (error) {
       console.error('Error in scraping process:', error);
+      throw error; // Re-throw to let the route handler catch it
     }
 
-    console.log(`Job scraping completed. Total jobs processed and stored: ${allJobs.length}`);
+    console.log(`Job scraping completed. Total jobs stored: ${allJobs.length}`);
     return allJobs;
   }
 }

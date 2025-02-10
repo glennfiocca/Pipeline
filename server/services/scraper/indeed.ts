@@ -8,43 +8,26 @@ export class IndeedScraper extends BaseScraper {
     super('https://www.indeed.com', 1); // Use 1 concurrent request to respect rate limits
   }
 
-  async scrape(): Promise<string[]> {  // Changed return type to string[] for raw HTML
-    const rawJobPostings: string[] = [];
+  async scrape(): Promise<InsertJob[]> {
+    const jobs: InsertJob[] = [];
 
     try {
       await this.init(); // Initialize robots.txt parser
       console.log('Starting Indeed scraper...');
 
-      // Configure headers to identify our bot properly
       const headers = {
         'User-Agent': 'Mozilla/5.0 (compatible; PipelineBot/1.0; +https://pipeline.com)',
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
         'Accept-Language': 'en-US,en;q=0.5'
       };
 
-      // Search parameters
-      const searchQueries = [
-        'software engineer',
-        'data scientist',
-        'machine learning engineer',
-        'frontend developer',
-        'backend developer',
-        'full stack developer'
-      ];
+      // Search for different job types
+      const jobTypes = ['software engineer', 'data scientist', 'frontend developer'];
+      const locations = ['Remote', 'New York, NY', 'San Francisco, CA'];
 
-      const locations = [
-        'Remote',
-        'New York, NY',
-        'San Francisco, CA',
-        'Seattle, WA',
-        'Austin, TX'
-      ];
-
-      for (const query of searchQueries) {
+      for (const query of jobTypes) {
         for (const location of locations) {
-          const encodedQuery = encodeURIComponent(query);
-          const encodedLocation = encodeURIComponent(location);
-          const url = `${this.baseUrl}/jobs?q=${encodedQuery}&l=${encodedLocation}`;
+          const url = `${this.baseUrl}/jobs?q=${encodeURIComponent(query)}&l=${encodeURIComponent(location)}`;
 
           if (!this.isAllowed(url)) {
             console.log(`Skipping ${url} - not allowed by robots.txt`);
@@ -52,31 +35,54 @@ export class IndeedScraper extends BaseScraper {
           }
 
           try {
-            console.log(`Fetching jobs for ${query} in ${location}`);
-            const response = await axios.get(url, { headers });
+            console.log(`Fetching jobs for ${query} in ${location} from URL: ${url}`);
+            const response = await axios.get(url, { 
+              headers,
+              timeout: 10000,
+              validateStatus: (status) => status < 500 // Accept any status < 500
+            });
+
+            console.log('Response received:', {
+              status: response.status,
+              contentType: response.headers['content-type'],
+              dataLength: response.data.length
+            });
+
             const $ = cheerio.load(response.data);
 
-            // Extract each job posting's HTML
-            $('.job_seen_beacon').each((_, element) => {
+            // Updated selectors for Indeed's current structure
+            $('.job_seen_beacon, .jobsearch-ResultsList .result').each((_, element) => {
               try {
-                // Get the full HTML content of each job posting
-                const jobHtml = $(element).html();
-                if (jobHtml) {
-                  // Add some context to help GPT understand the structure
-                  const jobContext = `
-                    Job Title: ${$(element).find('.jobTitle').text().trim()}
-                    Company: ${$(element).find('.companyName').text().trim()}
-                    Location: ${$(element).find('.companyLocation').text().trim()}
+                const $job = $(element);
+                console.log('Processing job element:', $job.html()?.substring(0, 100));
 
-                    Full Job Posting HTML:
-                    ${jobHtml}
-                  `;
+                const job: InsertJob = {
+                  title: $job.find('[class*="jobTitle"], .title').first().text().trim(),
+                  company: $job.find('[class*="companyName"], .company').first().text().trim(),
+                  location: $job.find('[class*="companyLocation"], .location').first().text().trim() || location,
+                  salary: $job.find('[class*="salary-snippet"], .salaryText').first().text().trim() || 'Competitive',
+                  description: $job.find('[class*="job-snippet"], .summary').first().text().trim() || 
+                              'Visit Indeed for full job description',
+                  requirements: $job.find('[class*="job-requirements"], .requirements').first().text().trim() || 
+                               'Experience in relevant field required. See full listing for details.',
+                  source: 'Indeed',
+                  sourceUrl: this.baseUrl + ($job.find('a[class*="jcs-JobTitle"]').attr('href') || ''),
+                  type: 'Full-time',
+                  published: true
+                };
 
-                  rawJobPostings.push(jobContext);
-                  console.log('Found job posting:', $(element).find('.jobTitle').text().trim());
+                if (this.validateJob(job)) {
+                  console.log('Found valid job:', {
+                    title: job.title,
+                    company: job.company,
+                    location: job.location
+                  });
+                  jobs.push(job);
+                } else {
+                  console.log('Invalid job data:', job);
                 }
               } catch (error) {
-                console.error('Error extracting job HTML:', error);
+                console.error('Error parsing job element:', error);
               }
             });
 
@@ -93,7 +99,7 @@ export class IndeedScraper extends BaseScraper {
       console.error('Error in Indeed scraper:', error);
     }
 
-    console.log(`Found total of ${rawJobPostings.length} raw job postings from Indeed`);
-    return rawJobPostings;
+    console.log(`Found total of ${jobs.length} jobs from Indeed`);
+    return jobs;
   }
 }
