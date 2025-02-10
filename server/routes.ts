@@ -40,23 +40,14 @@ export function registerRoutes(app: Express): Server {
     try {
       console.log('Starting job scraping process...');
       const manager = new ScraperManager();
-      const rawJobData = await manager.runScrapers();
+      const jobs = await manager.runScrapers();
 
-      // Process the raw job data using our new processor
-      console.log('Processing scraped jobs...');
-      const processedJobs = await processBatchJobPostings(rawJobData);
-
-      // Store the processed jobs
-      const storedJobs = [];
-      for (const job of processedJobs) {
-        const storedJob = await storage.createJob(job);
-        storedJobs.push(storedJob);
-      }
+      // Since the jobs are already processed by the scrapers, we can store them directly
+      console.log('Scraping completed, found jobs:', jobs?.length || 0);
 
       res.json({ 
-        message: "Job scraping and processing completed", 
-        jobCount: storedJobs.length,
-        processedCount: processedJobs.length 
+        message: "Job scraping completed", 
+        jobCount: jobs?.length || 0
       });
     } catch (error) {
       console.error('Error running scrapers:', error);
