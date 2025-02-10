@@ -1,19 +1,19 @@
-import { IndeedScraper } from './indeed';
+import { BlackstoneScraper } from './blackstone';
 import { storage } from '../../storage';
 import type { InsertJob } from '@shared/schema';
 
 export class ScraperManager {
-  private scraper = new IndeedScraper();
+  private scraper = new BlackstoneScraper();
 
   async runScrapers(): Promise<InsertJob[]> {
     console.log('Starting job scraping process...');
     const allJobs: InsertJob[] = [];
 
     try {
-      // Get jobs from Indeed
-      console.log('Fetching jobs from Indeed...');
+      // Get jobs from Blackstone
+      console.log('Fetching jobs from Blackstone...');
       const jobs = await this.scraper.scrape();
-      console.log(`Found ${jobs.length} jobs from Indeed`);
+      console.log(`Found ${jobs.length} jobs from Blackstone`);
 
       // Store each job in the database
       console.log('Storing jobs in database...');
@@ -29,7 +29,7 @@ export class ScraperManager {
 
     } catch (error) {
       console.error('Error in scraping process:', error);
-      throw error; // Re-throw to let the route handler catch it
+      throw error;
     }
 
     console.log(`Job scraping completed. Total jobs stored: ${allJobs.length}`);
