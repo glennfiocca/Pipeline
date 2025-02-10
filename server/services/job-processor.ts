@@ -1,6 +1,5 @@
 import OpenAI from "openai";
 import { z } from "zod";
-import { createInsertSchema } from "drizzle-zod";
 import { jobs } from "@shared/schema";
 import PQueue from "p-queue";
 
@@ -18,45 +17,54 @@ const jobExtractionSchema = z.object({
   type: z.string(),
   salary: z.string(),
   description: z.string(),
-  requirements: z.array(z.string()),
-  benefits: z.array(z.string()),
-  skills: z.array(z.string()),
-  experience_level: z.string(),
-  remote_policy: z.string(),
+  requirements: z.string(),
+  source: z.string().default('AI Processed'),
+  sourceUrl: z.string().default(''),
+  published: z.boolean().default(true)
 });
 
 export type JobExtraction = z.infer<typeof jobExtractionSchema>;
 
+// Function to normalize requirements to string format
+function normalizeRequirements(requirements: unknown): string {
+  if (typeof requirements === 'string') return requirements;
+  if (Array.isArray(requirements)) return requirements.join('; ');
+  return 'No specific requirements listed';
+}
+
 // Function to process a raw job posting using OpenAI
 export async function processJobPosting(rawJobText: string): Promise<JobExtraction> {
-  return await queue.add(async () => {
+  return queue.add(async () => {
     try {
       console.log('Attempting to process job posting with OpenAI API...');
 
       const response = await openai.chat.completions.create({
-        model: "gpt-3.5-turbo",  // Using GPT-3.5 Turbo as it's more cost-effective
+        model: "gpt-3.5-turbo-0125", // Using the latest GPT-3.5 model for cost efficiency
         response_format: { type: "json_object" },
         messages: [
           {
             role: "system",
-            content: `You are a job posting analyzer. Extract and structure key information from job postings.
-            Output must be valid JSON matching this schema:
+            content: `You are a job posting analyzer that extracts structured information from job listings.
+            Return a clean, structured JSON object with these exact fields:
             {
-              "title": "Job title",
-              "company": "Company name",
-              "location": "Location (standardized format: City, State or Remote)",
+              "title": "Clear job title, standardized",
+              "company": "Company name only",
+              "location": "City, State format or Remote",
               "type": "Full-time/Part-time/Contract",
-              "salary": "Salary range or 'Not specified'",
-              "description": "Concise job description",
-              "requirements": ["Array of key requirements"],
-              "benefits": ["Array of benefits"],
-              "skills": ["Array of required skills"],
-              "experience_level": "Entry/Mid/Senior/Lead",
-              "remote_policy": "Remote/Hybrid/On-site"
+              "salary": "Standardized salary range or Competitive",
+              "description": "2-3 sentence summary of role and responsibilities",
+              "requirements": "All requirements as semicolon-separated string",
+              "source": "AI Processed",
+              "sourceUrl": "",
+              "published": true
             }
 
-            Infer missing information when possible. Keep arrays concise (3-5 items).
-            Standardize formatting and normalize variations.`
+            RULES:
+            1. requirements MUST be a single string with items separated by semicolons
+            2. Combine ALL qualifications, skills, and requirements into the requirements field
+            3. Keep description concise but informative
+            4. Standardize location format to "City, State" or "Remote"
+            5. Return ONLY these exact fields with no additional data`
           },
           {
             role: "user",
@@ -77,8 +85,15 @@ export async function processJobPosting(rawJobText: string): Promise<JobExtracti
       console.log('Parsing OpenAI response...');
       const result = JSON.parse(content);
 
+      // Ensure requirements is a string
+      const normalizedResult = {
+        ...result,
+        requirements: normalizeRequirements(result.requirements)
+      };
+
       console.log('Validating parsed data against schema...');
-      return jobExtractionSchema.parse(result);
+      return jobExtractionSchema.parse(normalizedResult);
+
     } catch (error) {
       if (error instanceof OpenAI.APIError) {
         console.error("OpenAI API Error:", {
@@ -92,7 +107,7 @@ export async function processJobPosting(rawJobText: string): Promise<JobExtracti
       }
       throw error;
     }
-  });
+  }) as Promise<JobExtraction>;
 }
 
 // Process multiple job postings in parallel with rate limiting

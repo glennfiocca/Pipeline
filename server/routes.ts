@@ -18,7 +18,7 @@ export function registerRoutes(app: Express): Server {
     res.json(job);
   });
 
-  // Add new endpoint to test job processing
+  // Update the job processing endpoint
   app.post("/api/jobs/process", async (req, res) => {
     try {
       const { jobDescription } = req.body;
@@ -27,14 +27,15 @@ export function registerRoutes(app: Express): Server {
       }
 
       const processedJob = await processJobPosting(jobDescription);
-      res.json(processedJob);
+      const storedJob = await storage.createJob(processedJob);
+      res.json(storedJob);
     } catch (error) {
       console.error('Error processing job:', error);
       res.status(500).json({ error: "Failed to process job description", details: (error as Error).message });
     }
   });
 
-  // Update the scraper endpoint to use our new processor
+  // Update the scraper endpoint
   app.post("/api/jobs/scrape", async (_req, res) => {
     try {
       console.log('Starting job scraping process...');
@@ -46,21 +47,15 @@ export function registerRoutes(app: Express): Server {
       const processedJobs = await processBatchJobPostings(rawJobData);
 
       // Store the processed jobs
+      const storedJobs = [];
       for (const job of processedJobs) {
-        await storage.createJob({
-          ...job,
-          created_at: new Date(),
-          updated_at: new Date(),
-        });
+        const storedJob = await storage.createJob(job);
+        storedJobs.push(storedJob);
       }
-
-      // Verify jobs were created by counting them
-      const jobs = await storage.getJobs();
-      console.log(`After processing, found ${jobs.length} total jobs in database`);
 
       res.json({ 
         message: "Job scraping and processing completed", 
-        jobCount: jobs.length,
+        jobCount: storedJobs.length,
         processedCount: processedJobs.length 
       });
     } catch (error) {
