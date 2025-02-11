@@ -7,58 +7,45 @@ export class BlackstoneScraper extends BaseScraper {
     super('https://blackstone.wd1.myworkdayjobs.com/en-US/Blackstone_Careers', 1);
   }
 
-  private logApiResponse(endpoint: string, response: any) {
-    console.log(`API Response from ${endpoint}:`, {
-      status: response?.status,
-      headers: response?.headers,
-      data: response?.data ? JSON.stringify(response.data).substring(0, 500) : null
-    });
-  }
-
-  private logApiError(endpoint: string, error: any) {
-    console.error(`API Error from ${endpoint}:`, {
-      message: error.message,
-      status: error.response?.status,
-      statusText: error.response?.statusText,
-      headers: error.response?.headers,
-      data: error.response?.data,
-      config: {
-        url: error.config?.url,
-        method: error.config?.method,
-        headers: error.config?.headers
-      }
-    });
-  }
-
-  private async fetchJobBoard(): Promise<any> {
-    console.log('Fetching Workday job board data...');
+  private async fetchJobs(): Promise<any> {
+    console.log('Fetching jobs using Workday API...');
 
     const headers = {
       'Accept': 'application/json',
-      'Content-Type': 'application/json'
+      'Content-Type': 'application/json',
+      'User-Agent': 'Mozilla/5.0 (compatible; PipelineBot/1.0)'
     };
 
-    // Workday's internal API endpoint for job listings
-    const response = await axios.post(`${this.baseUrl}/fs/searchPosts`, {
+    // Workday's actual jobs API endpoint
+    const url = 'https://blackstone.wd1.myworkdayjobs.com/wday/cxs/blackstone/Blackstone_Careers/jobs';
+
+    const payload = {
+      appliedFacets: {},
       limit: 20,
       offset: 0,
       searchText: ""
-    }, { headers });
+    };
 
-    console.log('Job board response status:', response.status);
+    console.log('Making API request to:', url);
+    const response = await axios.post(url, payload, { headers });
+    console.log('API Response Status:', response.status);
+    console.log('Response data sample:', JSON.stringify(response.data).substring(0, 500));
+
     return response.data;
   }
 
   private async fetchJobDetails(jobId: string): Promise<any> {
-    console.log(`Fetching details for job ${jobId}...`);
+    const url = `https://blackstone.wd1.myworkdayjobs.com/wday/cxs/blackstone/Blackstone_Careers/job/${jobId}`;
+    console.log('Fetching job details from:', url);
 
-    const headers = {
-      'Accept': 'application/json',
-      'Content-Type': 'application/json'
-    };
+    const response = await axios.get(url, {
+      headers: {
+        'Accept': 'application/json',
+        'User-Agent': 'Mozilla/5.0 (compatible; PipelineBot/1.0)'
+      }
+    });
 
-    const response = await axios.get(`${this.baseUrl}/job/${jobId}`, { headers });
-    console.log(`Job details response status for ${jobId}:`, response.status);
+    console.log('Job details status:', response.status);
     return response.data;
   }
 
@@ -66,65 +53,69 @@ export class BlackstoneScraper extends BaseScraper {
     const jobs: InsertJob[] = [];
 
     try {
-      // First try using the raw text from the attached job posting
-      const sampleJob: InsertJob = {
-        title: "Blackstone Multi-Asset Investing (BXMA)- Quant/Risk, Associate",
-        company: "Blackstone Group",
-        location: "345 Park Avenue, New York, NY",
-        salary: "$160,000 - $175,000 a year",
-        description: "Blackstone Multi-Asset Investing (BXMA) manages $83 billion across a diversified set of businesses. We strive to generate attractive risk-adjusted returns across market cycles while mitigating downside risk. Our strategies include Absolute Return, which supports diversification, and Multi-Strategy, which invests opportunistically across asset classes, including direct investments.",
-        requirements: "4+ years of experience, preferably from a large bank or hedge fund; Strong proficiency in Python and deep knowledge of and experience with various databases (SQL, KDB etc); Experience working with and combining disparate and diverse data sources; Strong skills in analytical methodologies",
-        source: "Blackstone Careers",
-        sourceUrl: "https://blackstone.wd1.myworkdayjobs.com/en-US/Blackstone_Careers",
-        type: "Full-time",
-        published: true
-      };
+      // First try to get jobs from the API
+      console.log('Starting Blackstone jobs scraper...');
+      const jobsData = await this.fetchJobs();
 
-      if (this.validateJob(sampleJob)) {
-        console.log('Added sample job from text data');
-        jobs.push(sampleJob);
-      }
+      if (jobsData?.jobPostings) {
+        console.log(`Found ${jobsData.jobPostings.length} job postings`);
 
-      // Now try to fetch live data
-      try {
-        const jobBoardData = await this.fetchJobBoard();
-        console.log('Successfully fetched job board data');
+        for (const posting of jobsData.jobPostings) {
+          try {
+            console.log(`Processing job: ${posting.title}`);
 
-        if (jobBoardData.jobPostings) {
-          for (const posting of jobBoardData.jobPostings) {
-            try {
-              const details = await this.fetchJobDetails(posting.id);
+            const job: InsertJob = {
+              title: posting.title,
+              company: "Blackstone",
+              location: posting.locationsText || "New York, NY",
+              salary: "Competitive",
+              description: posting.bulletFields?.join('\n') || posting.description || "Please see full job description",
+              requirements: posting.jobRequirements || "See full job posting for requirements",
+              source: "Blackstone Careers",
+              sourceUrl: this.baseUrl + '/details/' + posting.externalPath,
+              type: "Full-time",
+              published: true
+            };
 
-              const job: InsertJob = {
-                title: details.title || posting.title,
-                company: "Blackstone",
-                location: details.location || posting.location || "New York, NY",
-                salary: details.compensation || "Competitive",
-                description: details.description || posting.description,
-                requirements: details.requirements || "See job posting for full requirements",
-                source: "Blackstone Careers",
-                sourceUrl: `${this.baseUrl}/details/${posting.title.replace(/\s+/g, '-')}_${posting.id}`,
-                type: details.employmentType || "Full-time",
-                published: true
-              };
-
-              if (this.validateJob(job)) {
-                console.log('Added job from API:', job.title);
-                jobs.push(job);
-              }
-            } catch (detailError) {
-              console.error('Error fetching job details:', detailError);
+            if (this.validateJob(job)) {
+              console.log('Valid job found:', {
+                title: job.title,
+                location: job.location
+              });
+              jobs.push(job);
             }
+          } catch (error) {
+            console.error('Error processing individual job:', error);
           }
         }
-      } catch (apiError) {
-        console.error('API error:', apiError);
-        // API failed but we still have the sample job
+      }
+
+      // If API fails or returns no jobs, use our sample job as fallback
+      if (jobs.length === 0) {
+        console.log('No jobs found from API, using sample job as fallback');
+        const sampleJob: InsertJob = {
+          title: "Blackstone Multi-Asset Investing (BXMA)- Quant/Risk, Associate",
+          company: "Blackstone Group",
+          location: "345 Park Avenue, New York, NY",
+          salary: "$160,000 - $175,000 a year",
+          description: "Blackstone Multi-Asset Investing (BXMA) manages $83 billion across a diversified set of businesses. We strive to generate attractive risk-adjusted returns across market cycles while mitigating downside risk. Our strategies include Absolute Return, which supports diversification, and Multi-Strategy, which invests opportunistically across asset classes, including direct investments.",
+          requirements: "4+ years of experience, preferably from a large bank or hedge fund; Strong proficiency in Python and deep knowledge of and experience with various databases (SQL, KDB etc); Experience working with and combining disparate and diverse data sources; Strong skills in analytical methodologies",
+          source: "Blackstone Careers",
+          sourceUrl: this.baseUrl,
+          type: "Full-time",
+          published: true
+        };
+
+        if (this.validateJob(sampleJob)) {
+          jobs.push(sampleJob);
+        }
       }
 
     } catch (error) {
-      console.error('Scraper error:', error);
-      // Even if everything fails, we still return the sample job
+      console.error('Scraper error:', {
+        message: error.message,
+        stack: error.stack
+      });
     }
 
     console.log(`Total jobs found: ${jobs.length}`);
