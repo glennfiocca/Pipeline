@@ -4,6 +4,7 @@ import { JobCard } from "./JobCard";
 import { JobModal } from "./JobModal";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useAuth } from "@/hooks/use-auth";
 import type { Job } from "@shared/schema";
 
 // Mock data for testing
@@ -26,11 +27,14 @@ const mockJob: Job = {
 
 export function JobList() {
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
+  const { user } = useAuth();
+
   const { data: jobs = [mockJob], isLoading } = useQuery<Job[]>({
     queryKey: ["/api/jobs"],
   });
 
   const handleApply = (jobId: number) => {
+    if (!user) return;
     console.log("Applying for job:", jobId);
   };
 
