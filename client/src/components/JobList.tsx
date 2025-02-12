@@ -26,12 +26,11 @@ export function JobList() {
     cacheTime: 0  // Don't cache the data
   });
 
-  const isJobApplied = (jobId: number) => {
-    if (!user) return false;
-    const activeApplication = applications.find(app => 
-      app.jobId === jobId && app.status !== "Withdrawn"
+  const hasActiveApplication = (jobId: number) => {
+    return applications.some(app => 
+      app.jobId === jobId && 
+      app.status !== "Withdrawn"
     );
-    return !!activeApplication;
   };
 
   const applyMutation = useMutation({
@@ -89,7 +88,7 @@ export function JobList() {
               job={job}
               onApply={() => applyMutation.mutate(job.id)}
               onViewDetails={() => setSelectedJob(job)}
-              isApplied={isJobApplied(job.id)}
+              isApplied={hasActiveApplication(job.id)}
               isApplying={applyMutation.isPending}
             />
           ))}
@@ -101,7 +100,7 @@ export function JobList() {
         isOpen={!!selectedJob}
         onClose={() => setSelectedJob(null)}
         onApply={(jobId) => applyMutation.mutate(jobId)}
-        isApplied={selectedJob ? isJobApplied(selectedJob.id) : false}
+        isApplied={selectedJob ? hasActiveApplication(selectedJob.id) : false}
         isApplying={applyMutation.isPending}
       />
     </>
