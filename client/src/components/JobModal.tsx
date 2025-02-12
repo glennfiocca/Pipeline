@@ -8,6 +8,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Building2, MapPin, DollarSign, CheckCircle2, ExternalLink } from "lucide-react";
+import { Link } from "wouter";
+import { useAuth } from "@/hooks/use-auth";
 import type { Job } from "@shared/schema";
 
 interface JobModalProps {
@@ -20,6 +22,8 @@ interface JobModalProps {
 }
 
 export function JobModal({ job, isOpen, onClose, onApply, isApplied, isApplying }: JobModalProps) {
+  const { user } = useAuth();
+
   if (!job) return null;
 
   return (
@@ -71,15 +75,23 @@ export function JobModal({ job, isOpen, onClose, onApply, isApplied, isApplying 
           </div>
 
           <div className="flex items-center justify-between pt-6 border-t">
-            <Button
-              variant={isApplied ? "outline" : "default"}
-              onClick={() => onApply(job.id)}
-              disabled={isApplied || isApplying}
-              className="w-full"
-            >
-              <CheckCircle2 className="h-4 w-4 mr-2" />
-              {isApplied ? "Applied" : isApplying ? "Applying..." : "Quick Apply"}
-            </Button>
+            {user ? (
+              <Button
+                variant={isApplied ? "outline" : "default"}
+                onClick={() => onApply(job.id)}
+                disabled={isApplied || isApplying}
+                className="w-full"
+              >
+                <CheckCircle2 className="h-4 w-4 mr-2" />
+                {isApplied ? "Applied" : isApplying ? "Applying..." : "Quick Apply"}
+              </Button>
+            ) : (
+              <Link href="/auth/login" className="w-full">
+                <Button variant="default" className="w-full">
+                  Sign in to Apply
+                </Button>
+              </Link>
+            )}
           </div>
 
           {job.source && (

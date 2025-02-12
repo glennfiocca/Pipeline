@@ -2,6 +2,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Building2, MapPin, DollarSign, Loader2 } from "lucide-react";
+import { Link } from "wouter";
+import { useAuth } from "@/hooks/use-auth";
 import type { Job } from "@shared/schema";
 
 interface JobCardProps {
@@ -13,6 +15,8 @@ interface JobCardProps {
 }
 
 export function JobCard({ job, onApply, onViewDetails, isApplied, isApplying }: JobCardProps) {
+  const { user } = useAuth();
+
   return (
     <Card className="w-full transition-shadow hover:shadow-md">
       <CardContent className="p-6">
@@ -45,23 +49,31 @@ export function JobCard({ job, onApply, onViewDetails, isApplied, isApplying }: 
         </p>
 
         <div className="flex gap-4">
-          <Button 
-            variant="default" 
-            onClick={onApply}
-            disabled={isApplied || isApplying}
-            className="flex-1"
-          >
-            {isApplying ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Applying...
-              </>
-            ) : isApplied ? (
-              "Applied"
-            ) : (
-              "Quick Apply"
-            )}
-          </Button>
+          {user ? (
+            <Button 
+              variant="default" 
+              onClick={onApply}
+              disabled={isApplied || isApplying}
+              className="flex-1"
+            >
+              {isApplying ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Applying...
+                </>
+              ) : isApplied ? (
+                "Applied"
+              ) : (
+                "Quick Apply"
+              )}
+            </Button>
+          ) : (
+            <Link href="/auth/login" className="flex-1">
+              <Button variant="default" className="w-full">
+                Sign in to Apply
+              </Button>
+            </Link>
+          )}
           <Button
             variant="outline"
             onClick={onViewDetails}
