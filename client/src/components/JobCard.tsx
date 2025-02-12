@@ -1,7 +1,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Building2, MapPin, DollarSign } from "lucide-react";
+import { Building2, MapPin, DollarSign, Loader2 } from "lucide-react";
 import type { Job } from "@shared/schema";
 
 interface JobCardProps {
@@ -51,7 +51,16 @@ export function JobCard({ job, onApply, onViewDetails, isApplied, isApplying }: 
             disabled={isApplied || isApplying}
             className="flex-1"
           >
-            {isApplied ? "Applied" : isApplying ? "Applying..." : "Quick Apply"}
+            {isApplying ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Applying...
+              </>
+            ) : isApplied ? (
+              "Applied"
+            ) : (
+              "Quick Apply"
+            )}
           </Button>
           <Button
             variant="outline"

@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Job, Application, type InsertApplication } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useState } from "react";
+import { JobModal } from "@/components/JobModal";
 
 const INDUSTRY_TYPES = ["All", "STEM", "Finance", "Healthcare", "Consulting", "Legal Tech", "Clean Tech"];
 const LOCATIONS = [
@@ -49,6 +50,7 @@ export default function JobsPage() {
   const [industryType, setIndustryType] = useState("All");
   const [location, setLocation] = useState("All");
   const [salaryRange, setSalaryRange] = useState([80000, 200000]);
+  const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const { toast } = useToast();
 
   const { data: jobs = mockJobs, isLoading } = useQuery<Job[]>({
@@ -242,6 +244,7 @@ export default function JobsPage() {
                   key={job.id}
                   job={job}
                   onApply={() => applyMutation.mutate(job.id)}
+                  onViewDetails={() => setSelectedJob(job)}
                   isApplying={applyMutation.isPending && applyMutation.variables === job.id}
                   isApplied={applications.some((app) => app.jobId === job.id)}
                 />
@@ -255,6 +258,15 @@ export default function JobsPage() {
                 </p>
               </div>
             )}
+
+            <JobModal
+              job={selectedJob}
+              isOpen={!!selectedJob}
+              onClose={() => setSelectedJob(null)}
+              onApply={(jobId) => applyMutation.mutate(jobId)}
+              isApplied={selectedJob ? applications.some((app) => app.jobId === selectedJob.id) : false}
+              isApplying={applyMutation.isPending}
+            />
           </div>
         </div>
       </div>
