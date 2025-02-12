@@ -6,12 +6,13 @@ import type { Job } from "@shared/schema";
 
 interface JobCardProps {
   job: Job;
-  onApply: (jobId: number) => void;
+  onApply: () => void;
+  onViewDetails: () => void;
   isApplied?: boolean;
   isApplying?: boolean;
 }
 
-export function JobCard({ job, onApply, isApplied, isApplying }: JobCardProps) {
+export function JobCard({ job, onApply, onViewDetails, isApplied, isApplying }: JobCardProps) {
   return (
     <Card className="w-full">
       <CardHeader>
@@ -39,10 +40,10 @@ export function JobCard({ job, onApply, isApplied, isApplying }: JobCardProps) {
           </p>
         </div>
       </CardContent>
-      <CardFooter>
+      <CardFooter className="flex gap-2">
         <Button 
-          onClick={() => onApply(job.id)} 
-          className="w-full"
+          onClick={onApply} 
+          className="flex-1"
           disabled={isApplied || isApplying}
         >
           {isApplying ? (
@@ -55,6 +56,13 @@ export function JobCard({ job, onApply, isApplied, isApplying }: JobCardProps) {
           ) : (
             "Quick Apply"
           )}
+        </Button>
+        <Button 
+          variant="outline" 
+          onClick={onViewDetails}
+          className="flex-1"
+        >
+          View Details
         </Button>
       </CardFooter>
     </Card>
