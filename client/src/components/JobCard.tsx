@@ -44,18 +44,16 @@ export function JobCard({ job, onApply, onViewDetails, isApplied, isApplying }: 
           {job.description}
         </p>
 
-        <div className="flex gap-4">
+        <div className="grid grid-cols-2 gap-4">
           <Button
             onClick={() => onApply(job.id)}
             disabled={isApplied || isApplying}
-            className="flex-1"
           >
             {isApplied ? "Applied" : isApplying ? "Applying..." : "Quick Apply"}
           </Button>
           <Button
             variant="outline"
             onClick={onViewDetails}
-            className="flex-1"
           >
             View Details
           </Button>
