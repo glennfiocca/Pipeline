@@ -7,7 +7,7 @@ import {
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Building2, MapPin, DollarSign, BookmarkPlus, CheckCircle2, ExternalLink } from "lucide-react";
+import { Building2, MapPin, DollarSign, CheckCircle2, ExternalLink } from "lucide-react";
 import type { Job } from "@shared/schema";
 
 interface JobModalProps {
@@ -15,11 +15,11 @@ interface JobModalProps {
   isOpen: boolean;
   onClose: () => void;
   onApply: (jobId: number) => void;
-  onSave?: (jobId: number) => void;
   isApplied?: boolean;
+  isApplying?: boolean;
 }
 
-export function JobModal({ job, isOpen, onClose, onApply, onSave, isApplied }: JobModalProps) {
+export function JobModal({ job, isOpen, onClose, onApply, isApplied, isApplying }: JobModalProps) {
   if (!job) return null;
 
   return (
@@ -71,35 +71,30 @@ export function JobModal({ job, isOpen, onClose, onApply, onSave, isApplied }: J
           </div>
 
           <div className="flex items-center justify-between pt-6 border-t">
-            <div className="flex gap-2">
-              {onSave && (
-                <Button variant="outline" onClick={() => onSave(job.id)}>
-                  <BookmarkPlus className="h-4 w-4 mr-2" />
-                  Save
-                </Button>
-              )}
-              <Button
-                variant={isApplied ? "outline" : "default"}
-                onClick={() => onApply(job.id)}
-                disabled={isApplied}
-              >
-                <CheckCircle2 className="h-4 w-4 mr-2" />
-                {isApplied ? "Applied" : "Apply Now"}
-              </Button>
-            </div>
+            <Button
+              variant={isApplied ? "outline" : "default"}
+              onClick={() => onApply(job.id)}
+              disabled={isApplied || isApplying}
+              className="w-full"
+            >
+              <CheckCircle2 className="h-4 w-4 mr-2" />
+              {isApplied ? "Applied" : isApplying ? "Applying..." : "Quick Apply"}
+            </Button>
+          </div>
 
-            {job.source && (
+          {job.source && (
+            <div className="text-center">
               <a
                 href={job.sourceUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center text-sm text-muted-foreground hover:text-primary"
+                className="flex items-center justify-center text-sm text-muted-foreground hover:text-primary"
               >
                 View on {job.source}
                 <ExternalLink className="ml-1 h-4 w-4" />
               </a>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       </DialogContent>
     </Dialog>

@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Building2, MapPin, DollarSign, CheckCircle2, Eye } from "lucide-react";
+import { Building2, MapPin, DollarSign } from "lucide-react";
 import type { Job } from "@shared/schema";
 
 interface JobCardProps {
@@ -27,28 +27,6 @@ export function JobCard({ job, onApply, onViewDetails, isApplied, isApplying }: 
             </div>
           </div>
         </div>
-
-        <div className="flex gap-2 mt-4">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onViewDetails}
-            className="flex-1"
-          >
-            <Eye className="h-4 w-4 mr-2" />
-            View Details
-          </Button>
-          <Button
-            variant={isApplied ? "outline" : "default"}
-            size="sm"
-            onClick={() => onApply(job.id)}
-            disabled={isApplied || isApplying}
-            className="flex-1"
-          >
-            <CheckCircle2 className="h-4 w-4 mr-2" />
-            {isApplied ? "Applied" : isApplying ? "Applying..." : "Quick Apply"}
-          </Button>
-        </div>
       </CardHeader>
 
       <CardContent>
@@ -66,10 +44,25 @@ export function JobCard({ job, onApply, onViewDetails, isApplied, isApplying }: 
           </Badge>
         </div>
 
-        <div>
-          <p className="text-sm text-muted-foreground">
-            {job.description}
-          </p>
+        <p className="text-sm text-muted-foreground mb-4">
+          {job.description}
+        </p>
+
+        <div className="flex gap-4">
+          <Button
+            onClick={() => onApply(job.id)}
+            disabled={isApplied || isApplying}
+            className="flex-1"
+          >
+            {isApplied ? "Applied" : isApplying ? "Applying..." : "Quick Apply"}
+          </Button>
+          <Button
+            variant="outline"
+            onClick={onViewDetails}
+            className="flex-1"
+          >
+            View Details
+          </Button>
         </div>
       </CardContent>
     </Card>
