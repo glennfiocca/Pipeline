@@ -64,7 +64,7 @@ export function JobCard({ job, onApply, onViewDetails, isApplied, isApplying }: 
               ) : isApplied ? (
                 "Applied"
               ) : (
-                "Quick Apply"
+                "Apply"
               )}
             </Button>
           ) : (
