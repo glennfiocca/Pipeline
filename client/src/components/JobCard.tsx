@@ -82,10 +82,6 @@ export function JobCard({ job, onApply, onViewDetails, isApplied, isApplying }: 
               target="_blank" 
               rel="noopener noreferrer" 
               className="hover:underline"
-              onClick={(e) => {
-                e.preventDefault();
-                window.open(job.sourceUrl, '_blank');
-              }}
             >
               View on {job.source}
             </a>
