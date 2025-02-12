@@ -8,6 +8,7 @@ import { useAuth } from "@/hooks/use-auth";
 import type { Job, Application } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { queryClient } from "@/lib/queryClient";
 
 export function JobList() {
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
@@ -25,7 +26,9 @@ export function JobList() {
 
   const isJobApplied = (jobId: number) => {
     if (!user) return false;
-    return applications.some(app => app.jobId === jobId);
+    return applications.some(app => 
+      app.jobId === jobId && app.status !== "Withdrawn"
+    );
   };
 
   const handleApply = async (jobId: number) => {
@@ -39,6 +42,9 @@ export function JobList() {
         appliedAt: new Date().toISOString(),
         applicationData: {}
       });
+
+      // Invalidate the applications query to refetch the latest data
+      queryClient.invalidateQueries({ queryKey: ["/api/applications"] });
 
       toast({
         title: "Application submitted",
