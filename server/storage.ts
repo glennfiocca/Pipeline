@@ -152,22 +152,35 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateApplicationStatus(id: number, status: string): Promise<Application> {
+    const [currentApp] = await db
+      .select()
+      .from(applications)
+      .where(eq(applications.id, id));
+
+    if (!currentApp) {
+      throw new Error("Application not found");
+    }
+
+    const now = new Date().toISOString();
+    const newHistoryEntry = {
+      status,
+      date: now
+    };
+
+    const updatedHistory = currentApp.statusHistory 
+      ? [...(currentApp.statusHistory as any[]), newHistoryEntry]
+      : [newHistoryEntry];
+
     const [application] = await db
       .update(applications)
       .set({
         status,
-        lastStatusUpdate: new Date().toISOString(),
-        statusHistory: db.sql`
-          COALESCE(status_history, '[]'::jsonb) || 
-          jsonb_build_array(
-            jsonb_build_object(
-              'status', ${status}::text,
-              'date', ${new Date().toISOString()}::text
-            )
-          )`
+        lastStatusUpdate: now,
+        statusHistory: updatedHistory
       })
       .where(eq(applications.id, id))
       .returning();
+
     return application;
   }
 }

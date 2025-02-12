@@ -22,4 +22,4 @@ const pool = new Pool({
   max: 20
 });
 
-export const db = drizzle({ client: pool, schema });
+export const db = drizzle(pool, { schema });
