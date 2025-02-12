@@ -28,9 +28,10 @@ export function JobList() {
 
   const isJobApplied = (jobId: number) => {
     if (!user) return false;
-    return applications.some(app => 
+    const activeApplication = applications.find(app => 
       app.jobId === jobId && app.status !== "Withdrawn"
     );
+    return !!activeApplication;
   };
 
   const applyMutation = useMutation({
