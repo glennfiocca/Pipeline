@@ -22,6 +22,8 @@ export function JobList() {
   const { data: applications = [], isLoading: isLoadingApplications } = useQuery<Application[]>({
     queryKey: ["/api/applications"],
     enabled: !!user, // Only fetch applications if user is logged in
+    staleTime: 0, // Always fetch fresh data
+    cacheTime: 0  // Don't cache the data
   });
 
   const isJobApplied = (jobId: number) => {
