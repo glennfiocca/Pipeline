@@ -9,11 +9,15 @@ interface JobCardProps {
   onApply: (jobId: number) => void;
   onSave?: (jobId: number) => void;
   isApplied?: boolean;
+  onClick?: () => void;
 }
 
-export function JobCard({ job, onApply, onSave, isApplied }: JobCardProps) {
+export function JobCard({ job, onApply, onSave, isApplied, onClick }: JobCardProps) {
   return (
-    <Card className="w-full transition-shadow hover:shadow-md">
+    <Card 
+      className="w-full transition-shadow hover:shadow-md cursor-pointer" 
+      onClick={onClick}
+    >
       <CardHeader>
         <div className="flex items-start justify-between">
           <div>
@@ -25,7 +29,7 @@ export function JobCard({ job, onApply, onSave, isApplied }: JobCardProps) {
               <span>{job.company}</span>
             </div>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
             {onSave && (
               <Button variant="outline" size="sm" onClick={() => onSave(job.id)}>
                 <BookmarkPlus className="h-4 w-4 mr-2" />
@@ -63,20 +67,9 @@ export function JobCard({ job, onApply, onSave, isApplied }: JobCardProps) {
         <div className="space-y-4">
           <div>
             <h4 className="font-medium mb-2">Description</h4>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-muted-foreground line-clamp-2">
               {job.description}
             </p>
-          </div>
-
-          <div>
-            <h4 className="font-medium mb-2">Requirements</h4>
-            <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
-              {job.requirements.split(';').map((req, index) => (
-                <li key={index}>
-                  {req.trim()}
-                </li>
-              ))}
-            </ul>
           </div>
         </div>
       </CardContent>
@@ -85,7 +78,13 @@ export function JobCard({ job, onApply, onSave, isApplied }: JobCardProps) {
         <div className="flex w-full justify-between items-center text-sm text-muted-foreground">
           <span>Posted {new Date(job.lastCheckedAt).toLocaleDateString()}</span>
           {job.source && (
-            <a href={job.sourceUrl} target="_blank" rel="noopener noreferrer" className="hover:underline">
+            <a 
+              href={job.sourceUrl} 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              className="hover:underline"
+              onClick={(e) => e.stopPropagation()}
+            >
               View on {job.source}
             </a>
           )}

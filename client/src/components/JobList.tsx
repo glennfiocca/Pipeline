@@ -1,5 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 import { JobCard } from "./JobCard";
+import { JobModal } from "./JobModal";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Job } from "@shared/schema";
@@ -23,6 +25,7 @@ const mockJob: Job = {
 };
 
 export function JobList() {
+  const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const { data: jobs = [mockJob], isLoading } = useQuery<Job[]>({
     queryKey: ["/api/jobs"],
   });
@@ -46,17 +49,28 @@ export function JobList() {
   }
 
   return (
-    <ScrollArea className="h-[calc(100vh-4rem)] w-full px-4">
-      <div className="grid gap-4 pb-4 md:grid-cols-2 lg:grid-cols-3">
-        {jobs?.map((job) => (
-          <JobCard
-            key={job.id}
-            job={job}
-            onApply={handleApply}
-            onSave={handleSave}
-          />
-        ))}
-      </div>
-    </ScrollArea>
+    <>
+      <ScrollArea className="h-[calc(100vh-4rem)] w-full px-4">
+        <div className="grid gap-4 pb-4 md:grid-cols-2 lg:grid-cols-3">
+          {jobs?.map((job) => (
+            <JobCard
+              key={job.id}
+              job={job}
+              onApply={handleApply}
+              onSave={handleSave}
+              onClick={() => setSelectedJob(job)}
+            />
+          ))}
+        </div>
+      </ScrollArea>
+
+      <JobModal
+        job={selectedJob}
+        isOpen={!!selectedJob}
+        onClose={() => setSelectedJob(null)}
+        onApply={handleApply}
+        onSave={handleSave}
+      />
+    </>
   );
 }
