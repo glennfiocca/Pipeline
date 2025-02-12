@@ -41,7 +41,6 @@ export default function JobsPage() {
     queryKey: ["/api/applications"],
   });
 
-  // Get the first profile ID for now - in a real app, this would come from auth context
   const { data: profiles = [] } = useQuery({
     queryKey: ["/api/profiles"],
   });
@@ -61,10 +60,11 @@ export default function JobsPage() {
       const application: InsertApplication = {
         jobId,
         profileId: profiles[0].id,
-        status: "applied",
+        status: "Applied",
         appliedAt: new Date().toISOString(),
-        applicationData: {}, // Empty object for now
-        coverLetter: null // Optional field
+        applicationData: {},
+        statusHistory: [{ status: "Applied", date: new Date().toISOString() }],
+        lastStatusUpdate: new Date().toISOString(),
       };
 
       const res = await apiRequest("POST", "/api/applications", application);
@@ -91,6 +91,9 @@ export default function JobsPage() {
   });
 
   const filteredJobs = jobs.filter((job) => {
+    // Only show active jobs in the job listings
+    if (!job.isActive) return false;
+
     // Text search filter
     const matchesSearch =
       job.title.toLowerCase().includes(search.toLowerCase()) ||
@@ -201,9 +204,12 @@ export default function JobsPage() {
             <Card>
               <CardContent className="pt-6">
                 <h2 className="text-xl font-semibold mb-4">Featured Companies</h2>
-                {jobs.slice(0, 3).map((job) => (
-                  <CompanyCard key={job.id} job={job} />
-                ))}
+                {jobs
+                  .filter(job => job.isActive)
+                  .slice(0, 3)
+                  .map((job) => (
+                    <CompanyCard key={job.id} job={job} />
+                  ))}
               </CardContent>
             </Card>
           </div>
@@ -211,7 +217,7 @@ export default function JobsPage() {
           <div className="md:col-span-2 space-y-6">
             <div className="flex justify-between items-center">
               <p className="text-sm text-muted-foreground">
-                Found {filteredJobs.length} jobs
+                Found {filteredJobs.length} active jobs
               </p>
             </div>
 
@@ -224,7 +230,7 @@ export default function JobsPage() {
                   job={job}
                   onApply={() => applyMutation.mutate(job.id)}
                   isApplying={applyMutation.isPending && applyMutation.variables === job.id}
-                  isApplied={applications.some((app: Application) => app.jobId === job.id)}
+                  isApplied={applications.some((app) => app.jobId === job.id)}
                 />
               ))
             )}
@@ -232,7 +238,7 @@ export default function JobsPage() {
             {filteredJobs.length === 0 && !isLoading && (
               <div className="text-center py-8">
                 <p className="text-muted-foreground">
-                  No jobs found matching your criteria. Try adjusting your filters.
+                  No active jobs found matching your criteria. Try adjusting your filters.
                 </p>
               </div>
             )}

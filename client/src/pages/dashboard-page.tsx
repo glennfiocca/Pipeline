@@ -3,9 +3,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Application, Job } from "@shared/schema";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
-import { Loader2 } from "lucide-react";
+import { Loader2, AlertCircle } from "lucide-react";
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { cn } from "@/lib/utils";
 
 export default function DashboardPage() {
+  const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
+
   const { data: applications = [], isLoading: isLoadingApps } = useQuery<Application[]>({
     queryKey: ["/api/applications"],
   });
@@ -18,14 +24,14 @@ export default function DashboardPage() {
 
   const stats = {
     total: applications.length,
-    applied: applications.filter((app) => app.status === "applied").length,
-    interviewing: applications.filter((app) => app.status === "interviewing").length,
-    accepted: applications.filter((app) => app.status === "accepted").length,
-    rejected: applications.filter((app) => app.status === "rejected").length,
+    Applied: applications.filter((app) => app.status === "Applied").length,
+    Interviewing: applications.filter((app) => app.status === "Interviewing").length,
+    Accepted: applications.filter((app) => app.status === "Accepted").length,
+    Rejected: applications.filter((app) => app.status === "Rejected").length,
   };
 
   const getStatusColor = (status: string) => {
-    switch (status) {
+    switch (status.toLowerCase()) {
       case "applied":
         return "bg-blue-500/10 text-blue-500";
       case "interviewing":
@@ -39,6 +45,10 @@ export default function DashboardPage() {
     }
   };
 
+  const filteredApplications = selectedStatus
+    ? applications.filter((app) => app.status === selectedStatus)
+    : applications;
+
   if (isLoadingApps || isLoadingJobs) {
     return (
       <div className="flex items-center justify-center min-h-[calc(100vh-4rem)]">
@@ -49,87 +59,137 @@ export default function DashboardPage() {
 
   return (
     <div className="container py-10">
-      <h1 className="text-3xl font-bold mb-8">Application Dashboard</h1>
+      <div className="flex items-center justify-between mb-8">
+        <h1 className="text-3xl font-bold">Application Dashboard</h1>
+        {selectedStatus && (
+          <Button variant="ghost" onClick={() => setSelectedStatus(null)}>
+            Clear Filter
+          </Button>
+        )}
+      </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Applications</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.total}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Applied</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-500">{stats.applied}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Interviewing</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-yellow-500">{stats.interviewing}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Accepted</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-500">{stats.accepted}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Rejected</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-500">{stats.rejected}</div>
-          </CardContent>
-        </Card>
+        {Object.entries(stats).map(([status, count]) => (
+          <Card
+            key={status}
+            className={cn(
+              "cursor-pointer transition-all hover:shadow-md",
+              selectedStatus === status && "ring-2 ring-primary"
+            )}
+            onClick={() => setSelectedStatus(status === "total" ? null : status)}
+          >
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">
+                {status === "total" ? "Total Applications" : status}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className={cn(
+                "text-2xl font-bold",
+                status !== "total" && getStatusColor(status)
+              )}>
+                {count}
+              </div>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
       <Card className="mt-8">
         <CardHeader>
-          <CardTitle>Your Applications</CardTitle>
+          <CardTitle>
+            {selectedStatus ? `${selectedStatus} Applications` : "Your Applications"}
+          </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-6">
-            {applications.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                No applications yet. Start applying to jobs to track your progress here!
-              </div>
-            ) : (
-              applications.map((application) => {
-                const job = getJob(application.jobId);
-                if (!job) return null;
-                return (
-                  <div key={application.id} className="flex items-center justify-between p-4 rounded-lg border">
-                    <div className="space-y-1">
-                      <div className="font-medium">{job.title}</div>
-                      <div className="text-sm text-muted-foreground">{job.company}</div>
-                      <div className="text-xs text-muted-foreground">
-                        Applied on {format(new Date(application.appliedAt), "MMM d, yyyy")}
+          <ScrollArea className="h-[600px] pr-4">
+            <div className="space-y-4">
+              {filteredApplications.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  No applications {selectedStatus && `with status "${selectedStatus}"`} yet.
+                  {!selectedStatus && " Start applying to jobs to track your progress here!"}
+                </div>
+              ) : (
+                filteredApplications.map((application) => {
+                  const job = getJob(application.jobId);
+                  if (!job) return null;
+
+                  return (
+                    <div 
+                      key={application.id} 
+                      className={cn(
+                        "p-4 rounded-lg border space-y-3",
+                        !job.isActive && "bg-muted/30"
+                      )}
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="space-y-1">
+                          <div className="font-medium flex items-center gap-2">
+                            {job.title}
+                            {!job.isActive && (
+                              <div className="flex items-center text-muted-foreground text-sm">
+                                <AlertCircle className="h-4 w-4 mr-1" />
+                                Listing no longer active
+                              </div>
+                            )}
+                          </div>
+                          <div className="text-sm text-muted-foreground">{job.company}</div>
+                          <div className="text-xs text-muted-foreground">
+                            Applied on {format(new Date(application.appliedAt), "MMM d, yyyy")}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-4">
+                          <div className="text-sm text-muted-foreground">
+                            {job.location}
+                          </div>
+                          <Badge className={getStatusColor(application.status)}>
+                            {application.status}
+                          </Badge>
+                        </div>
                       </div>
+
+                      {application.statusHistory && application.statusHistory.length > 0 && (
+                        <div className="mt-2 text-sm">
+                          <div className="font-medium mb-1">Status History:</div>
+                          {(application.statusHistory as { status: string, date: string }[]).map((history, index) => (
+                            <div key={index} className="flex items-center text-muted-foreground">
+                              <span className="mr-2">
+                                {format(new Date(history.date), "MMM d, yyyy")}:
+                              </span>
+                              <Badge variant="outline" className={getStatusColor(history.status)}>
+                                {history.status}
+                              </Badge>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {application.notes && (
+                        <div className="mt-2 text-sm">
+                          <div className="font-medium">Notes:</div>
+                          <p className="text-muted-foreground">{application.notes}</p>
+                        </div>
+                      )}
+
+                      {application.nextStep && (
+                        <div className="mt-2 text-sm">
+                          <div className="font-medium">Next Step:</div>
+                          <p className="text-muted-foreground">
+                            {application.nextStep}
+                            {application.nextStepDueDate && (
+                              <span className="ml-2">
+                                (Due: {format(new Date(application.nextStepDueDate), "MMM d, yyyy")})
+                              </span>
+                            )}
+                          </p>
+                        </div>
+                      )}
                     </div>
-                    <div className="flex items-center gap-4">
-                      <div className="text-sm text-muted-foreground">
-                        {job.location}
-                      </div>
-                      <Badge className={getStatusColor(application.status)}>
-                        {application.status.charAt(0).toUpperCase() + application.status.slice(1)}
-                      </Badge>
-                    </div>
-                  </div>
-                );
-              })
-            )}
-          </div>
+                  );
+                })
+              )}
+            </div>
+          </ScrollArea>
         </CardContent>
       </Card>
     </div>

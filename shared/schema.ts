@@ -47,7 +47,10 @@ export const jobs = pgTable("jobs", {
   source: text("source").notNull(),
   sourceUrl: text("source_url").notNull(),
   type: text("type").notNull(),
-  published: boolean("published").default(true)
+  published: boolean("published").default(true),
+  isActive: boolean("is_active").default(true),
+  lastCheckedAt: text("last_checked_at").notNull().default(new Date().toISOString()),
+  deactivatedAt: text("deactivated_at")
 });
 
 export const profiles = pgTable("profiles", {
@@ -98,7 +101,12 @@ export const applications = pgTable("applications", {
   status: text("status").notNull(),
   appliedAt: text("applied_at").notNull(),
   coverLetter: text("cover_letter"),
-  applicationData: jsonb("application_data").notNull()
+  applicationData: jsonb("application_data").notNull(),
+  lastStatusUpdate: text("last_status_update").notNull().default(new Date().toISOString()),
+  statusHistory: jsonb("status_history").notNull().default([]),
+  notes: text("notes"),
+  nextStep: text("next_step"),
+  nextStepDueDate: text("next_step_due_date")
 });
 
 const educationSchema = z.object({
@@ -184,7 +192,19 @@ export const insertProfileSchema = createInsertSchema(profiles).extend({
 });
 
 export const insertJobSchema = createInsertSchema(jobs).omit({ id: true });
-export const insertApplicationSchema = createInsertSchema(applications).omit({ id: true });
+export const insertApplicationSchema = createInsertSchema(applications).omit({ 
+  id: true 
+}).extend({
+  status: z.enum([
+    "Applied",
+    "Screening",
+    "Interviewing",
+    "Offered",
+    "Accepted",
+    "Rejected",
+    "Withdrawn"
+  ])
+});
 
 export type Job = typeof jobs.$inferSelect;
 export type Profile = typeof profiles.$inferSelect;
