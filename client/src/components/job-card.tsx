@@ -2,6 +2,8 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { MapPin, Building2, DollarSign, Loader2 } from "lucide-react";
+import { Link } from "wouter";
+import { useAuth } from "@/hooks/use-auth";
 import type { Job } from "@shared/schema";
 
 interface JobCardProps {
@@ -13,6 +15,8 @@ interface JobCardProps {
 }
 
 export function JobCard({ job, onApply, onViewDetails, isApplied, isApplying }: JobCardProps) {
+  const { user } = useAuth();
+
   return (
     <Card className="w-full">
       <CardHeader>
@@ -41,22 +45,30 @@ export function JobCard({ job, onApply, onViewDetails, isApplied, isApplying }: 
         </div>
       </CardContent>
       <CardFooter className="flex gap-2">
-        <Button 
-          onClick={onApply} 
-          className="flex-1"
-          disabled={isApplied || isApplying}
-        >
-          {isApplying ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Applying...
-            </>
-          ) : isApplied ? (
-            "Applied"
-          ) : (
-            "Quick Apply"
-          )}
-        </Button>
+        {user ? (
+          <Button 
+            onClick={onApply} 
+            className="flex-1"
+            disabled={isApplied || isApplying}
+          >
+            {isApplying ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Applying...
+              </>
+            ) : isApplied ? (
+              "Applied"
+            ) : (
+              "Quick Apply"
+            )}
+          </Button>
+        ) : (
+          <Link href="/auth/login" className="flex-1">
+            <Button className="w-full">
+              Sign in to Apply
+            </Button>
+          </Link>
+        )}
         <Button 
           variant="outline" 
           onClick={onViewDetails}
