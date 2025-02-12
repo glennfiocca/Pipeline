@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Application, Job } from "@shared/schema";
 import { Badge } from "@/components/ui/badge";
@@ -8,9 +8,18 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import { queryClient } from "@/lib/queryClient";
+
+interface StatusHistoryItem {
+  status: string;
+  date: string;
+}
 
 export default function DashboardPage() {
   const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
+  const { toast } = useToast();
 
   const { data: applications = [], isLoading: isLoadingApps } = useQuery<Application[]>({
     queryKey: ["/api/applications"],
@@ -18,6 +27,10 @@ export default function DashboardPage() {
 
   const { data: jobs = [], isLoading: isLoadingJobs } = useQuery<Job[]>({
     queryKey: ["/api/jobs"],
+  });
+
+  const { data: profiles = [] } = useQuery({
+    queryKey: ["/api/profiles"],
   });
 
   const getJob = (jobId: number) => jobs.find((job) => job.id === jobId);
@@ -40,6 +53,8 @@ export default function DashboardPage() {
         return "bg-green-500/10 text-green-500";
       case "rejected":
         return "bg-red-500/10 text-red-500";
+      case "withdrawn":
+        return "bg-gray-500/10 text-gray-500";
       default:
         return "bg-gray-500/10 text-gray-500";
     }
@@ -48,6 +63,35 @@ export default function DashboardPage() {
   const filteredApplications = selectedStatus
     ? applications.filter((app) => app.status === selectedStatus)
     : applications;
+
+  const withdrawMutation = useMutation({
+    mutationFn: async (applicationId: number) => {
+      const res = await apiRequest(
+        "PATCH",
+        `/api/applications/${applicationId}/status`,
+        { status: "Withdrawn" }
+      );
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || "Failed to withdraw application");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/applications"] });
+      toast({
+        title: "Application withdrawn",
+        description: "Your application has been withdrawn successfully.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
 
   if (isLoadingApps || isLoadingJobs) {
     return (
@@ -115,8 +159,8 @@ export default function DashboardPage() {
                   if (!job) return null;
 
                   return (
-                    <div 
-                      key={application.id} 
+                    <div
+                      key={application.id}
                       className={cn(
                         "p-4 rounded-lg border space-y-3",
                         !job.isActive && "bg-muted/30"
@@ -145,13 +189,32 @@ export default function DashboardPage() {
                           <Badge className={getStatusColor(application.status)}>
                             {application.status}
                           </Badge>
+                          {application.status !== "Withdrawn" && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="text-red-500 hover:text-red-600"
+                              onClick={() => {
+                                if (window.confirm("Are you sure you want to withdraw this application?")) {
+                                  withdrawMutation.mutate(application.id);
+                                }
+                              }}
+                              disabled={withdrawMutation.isPending}
+                            >
+                              {withdrawMutation.isPending ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                "Withdraw"
+                              )}
+                            </Button>
+                          )}
                         </div>
                       </div>
 
-                      {application.statusHistory && application.statusHistory.length > 0 && (
+                      {application.statusHistory && Array.isArray(application.statusHistory) && application.statusHistory.length > 0 && (
                         <div className="mt-2 text-sm">
                           <div className="font-medium mb-1">Status History:</div>
-                          {(application.statusHistory as { status: string, date: string }[]).map((history, index) => (
+                          {(application.statusHistory as StatusHistoryItem[]).map((history, index) => (
                             <div key={index} className="flex items-center text-muted-foreground">
                               <span className="mr-2">
                                 {format(new Date(history.date), "MMM d, yyyy")}:

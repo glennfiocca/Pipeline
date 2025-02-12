@@ -107,14 +107,15 @@ export function registerRoutes(app: Express): Server {
 
   app.patch("/api/applications/:id/status", async (req, res) => {
     const { status } = req.body;
-    if (typeof status !== "string") {
-      return res.status(400).json({ error: "Status must be a string" });
+    if (typeof status !== "string" || !["Applied", "Screening", "Interviewing", "Offered", "Accepted", "Rejected", "Withdrawn"].includes(status)) {
+      return res.status(400).json({ error: "Invalid status" });
     }
 
     try {
       const application = await storage.updateApplicationStatus(
         parseInt(req.params.id),
-        status
+        status,
+        new Date().toISOString()
       );
       res.json(application);
     } catch (error) {
