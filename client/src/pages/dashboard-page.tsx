@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
+import { WithdrawDialog } from "@/components/WithdrawDialog";
 
 interface StatusHistoryItem {
   status: string;
@@ -190,23 +191,10 @@ export default function DashboardPage() {
                             {application.status}
                           </Badge>
                           {application.status !== "Withdrawn" && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="text-red-500 hover:text-red-600"
-                              onClick={() => {
-                                if (window.confirm("Are you sure you want to withdraw this application?")) {
-                                  withdrawMutation.mutate(application.id);
-                                }
-                              }}
-                              disabled={withdrawMutation.isPending}
-                            >
-                              {withdrawMutation.isPending ? (
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                              ) : (
-                                "Withdraw"
-                              )}
-                            </Button>
+                            <WithdrawDialog
+                              onWithdraw={() => withdrawMutation.mutate(application.id)}
+                              isPending={withdrawMutation.isPending}
+                            />
                           )}
                         </div>
                       </div>

@@ -158,11 +158,13 @@ export class DatabaseStorage implements IStorage {
         status,
         lastStatusUpdate: new Date().toISOString(),
         statusHistory: db.sql`
-          CASE 
-            WHEN status_history IS NULL THEN jsonb_build_array(jsonb_build_object('status', ${status}, 'date', ${new Date().toISOString()}))
-            ELSE status_history || jsonb_build_array(jsonb_build_object('status', ${status}, 'date', ${new Date().toISOString()}))
-          END
-        `
+          COALESCE(status_history, '[]'::jsonb) || 
+          jsonb_build_array(
+            jsonb_build_object(
+              'status', ${status}::text,
+              'date', ${new Date().toISOString()}::text
+            )
+          )`
       })
       .where(eq(applications.id, id))
       .returning();
