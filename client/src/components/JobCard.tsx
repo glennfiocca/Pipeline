@@ -17,7 +17,7 @@ export function JobCard({ job, onApply, onViewDetails, isApplied, isApplying }: 
     <Card className="w-full transition-shadow hover:shadow-md">
       <CardContent className="p-6">
         <div className="mb-4">
-          <h3 className="text-xl font-semibold text-primary mb-2">
+          <h3 className="text-xl font-semibold mb-2">
             {job.title}
           </h3>
           <div className="flex items-center text-muted-foreground">

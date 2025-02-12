@@ -52,8 +52,10 @@ export function JobList() {
             <JobCard
               key={job.id}
               job={job}
-              onApply={handleApply}
+              onApply={() => handleApply(job.id)}
               onViewDetails={() => setSelectedJob(job)}
+              isApplied={false}
+              isApplying={false}
             />
           ))}
         </div>
@@ -64,6 +66,8 @@ export function JobList() {
         isOpen={!!selectedJob}
         onClose={() => setSelectedJob(null)}
         onApply={handleApply}
+        isApplied={false}
+        isApplying={false}
       />
     </>
   );
