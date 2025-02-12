@@ -6,7 +6,7 @@ import type { Job } from "@shared/schema";
 
 interface JobCardProps {
   job: Job;
-  onApply: (jobId: number) => void;
+  onApply: () => void;
   onViewDetails: () => void;
   isApplied?: boolean;
   isApplying?: boolean;
@@ -17,9 +17,7 @@ export function JobCard({ job, onApply, onViewDetails, isApplied, isApplying }: 
     <Card className="w-full transition-shadow hover:shadow-md">
       <CardContent className="p-6">
         <div className="mb-4">
-          <h3 className="text-xl font-semibold mb-2">
-            {job.title}
-          </h3>
+          <h3 className="text-xl font-semibold mb-2">{job.title}</h3>
           <div className="flex items-center text-muted-foreground">
             <Building2 className="mr-2 h-4 w-4" />
             <span>{job.company}</span>
@@ -44,16 +42,19 @@ export function JobCard({ job, onApply, onViewDetails, isApplied, isApplying }: 
           {job.description}
         </p>
 
-        <div className="grid grid-cols-2 gap-4">
-          <Button
-            onClick={() => onApply(job.id)}
+        <div className="flex gap-2">
+          <Button 
+            variant="default"
+            onClick={onApply}
             disabled={isApplied || isApplying}
+            className="w-full"
           >
             {isApplied ? "Applied" : isApplying ? "Applying..." : "Quick Apply"}
           </Button>
           <Button
-            variant="outline"
+            variant="secondary"
             onClick={onViewDetails}
+            className="w-full"
           >
             View Details
           </Button>
