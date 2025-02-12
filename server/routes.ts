@@ -114,12 +114,12 @@ export function registerRoutes(app: Express): Server {
     try {
       const application = await storage.updateApplicationStatus(
         parseInt(req.params.id),
-        status,
-        new Date().toISOString()
+        status
       );
       res.json(application);
     } catch (error) {
-      res.status(404).json({ error: (error as Error).message });
+      console.error('Error updating application status:', error);
+      res.status(500).json({ error: (error as Error).message });
     }
   });
 

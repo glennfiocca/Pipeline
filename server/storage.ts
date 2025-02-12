@@ -154,16 +154,15 @@ export class DatabaseStorage implements IStorage {
   async updateApplicationStatus(id: number, status: string): Promise<Application> {
     const [application] = await db
       .update(applications)
-      .set({ 
+      .set({
         status,
         lastStatusUpdate: new Date().toISOString(),
-        statusHistory: db.raw(`
-          jsonb_set(
-            status_history,
-            '{-1}',
-            jsonb_build_object('status', ?, 'date', ?)
-          )
-        `, [status, new Date().toISOString()])
+        statusHistory: db.sql`
+          CASE 
+            WHEN status_history IS NULL THEN jsonb_build_array(jsonb_build_object('status', ${status}, 'date', ${new Date().toISOString()}))
+            ELSE status_history || jsonb_build_array(jsonb_build_object('status', ${status}, 'date', ${new Date().toISOString()}))
+          END
+        `
       })
       .where(eq(applications.id, id))
       .returning();
