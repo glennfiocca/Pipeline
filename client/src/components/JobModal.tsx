@@ -83,7 +83,7 @@ export function JobModal({ job, isOpen, onClose, onApply, isApplied, isApplying 
                 className="w-full"
               >
                 <CheckCircle2 className="h-4 w-4 mr-2" />
-                {isApplied ? "Applied" : isApplying ? "Applying..." : "Quick Apply"}
+                {isApplied ? "Applied" : isApplying ? "Applying..." : "Apply"}
               </Button>
             ) : (
               <Link href="/auth/login" className="w-full">

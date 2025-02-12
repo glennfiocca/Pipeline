@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 import { JobCard } from "./JobCard";
 import { JobModal } from "./JobModal";
@@ -22,6 +22,10 @@ export function JobList() {
   const { data: applications = [], isLoading: isLoadingApplications } = useQuery<Application[]>({
     queryKey: ["/api/applications"],
     enabled: !!user, // Only fetch applications if user is logged in
+    onSuccess: () => {
+      //Added onSuccess to ensure JobCard components re-render after application changes.
+      queryClient.invalidateQueries({ queryKey: ["/api/jobs"]});
+    }
   });
 
   const isJobApplied = (jobId: number) => {
@@ -31,32 +35,35 @@ export function JobList() {
     );
   };
 
-  const handleApply = async (jobId: number) => {
-    if (!user) return;
-
-    try {
-      await apiRequest("POST", "/api/applications", {
-        jobId,
-        profileId: user.id,
-        status: "Applied",
-        appliedAt: new Date().toISOString(),
-        applicationData: {}
-      });
-
-      // Invalidate the applications query to refetch the latest data
+  const applyMutation = useMutation(async (jobId: number) => {
+    await apiRequest("POST", "/api/applications", {
+      jobId,
+      profileId: user.id,
+      status: "Applied",
+      appliedAt: new Date().toISOString(),
+      applicationData: {}
+    });
+  }, {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/applications"] });
-
+      queryClient.invalidateQueries({ queryKey: ["/api/jobs"] }); // added to refresh job list after application
       toast({
         title: "Application submitted",
         description: "Your application has been successfully submitted.",
       });
-    } catch (error) {
+    },
+    onError: (error: any) => {
       toast({
         title: "Error",
         description: "Failed to submit application. Please try again.",
         variant: "destructive",
       });
     }
+  });
+
+
+  const handleApply = (jobId: number) => {
+    applyMutation.mutate(jobId);
   };
 
   if (isLoadingJobs) {
@@ -80,7 +87,7 @@ export function JobList() {
               onApply={() => handleApply(job.id)}
               onViewDetails={() => setSelectedJob(job)}
               isApplied={isJobApplied(job.id)}
-              isApplying={false}
+              isApplying={applyMutation.isLoading} //Added isApplying state
             />
           ))}
         </div>
@@ -92,7 +99,7 @@ export function JobList() {
         onClose={() => setSelectedJob(null)}
         onApply={handleApply}
         isApplied={selectedJob ? isJobApplied(selectedJob.id) : false}
-        isApplying={false}
+        isApplying={applyMutation.isLoading} //Added isApplying state
       />
     </>
   );
