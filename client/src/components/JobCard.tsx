@@ -1,4 +1,4 @@
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Building2, MapPin, DollarSign, CheckCircle2, Eye } from "lucide-react";
@@ -26,25 +26,28 @@ export function JobCard({ job, onApply, onViewDetails, isApplied, isApplying }: 
               <span>{job.company}</span>
             </div>
           </div>
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onViewDetails}
-            >
-              <Eye className="h-4 w-4 mr-2" />
-              View Details
-            </Button>
-            <Button
-              variant={isApplied ? "outline" : "default"}
-              size="sm"
-              onClick={() => onApply(job.id)}
-              disabled={isApplied || isApplying}
-            >
-              <CheckCircle2 className="h-4 w-4 mr-2" />
-              {isApplied ? "Applied" : isApplying ? "Applying..." : "Quick Apply"}
-            </Button>
-          </div>
+        </div>
+
+        <div className="flex gap-2 mt-4">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onViewDetails}
+            className="flex-1"
+          >
+            <Eye className="h-4 w-4 mr-2" />
+            View Details
+          </Button>
+          <Button
+            variant={isApplied ? "outline" : "default"}
+            size="sm"
+            onClick={() => onApply(job.id)}
+            disabled={isApplied || isApplying}
+            className="flex-1"
+          >
+            <CheckCircle2 className="h-4 w-4 mr-2" />
+            {isApplied ? "Applied" : isApplying ? "Applying..." : "Quick Apply"}
+          </Button>
         </div>
       </CardHeader>
 
@@ -63,31 +66,12 @@ export function JobCard({ job, onApply, onViewDetails, isApplied, isApplying }: 
           </Badge>
         </div>
 
-        <div className="space-y-4">
-          <div>
-            <h4 className="font-medium mb-2">Description</h4>
-            <p className="text-sm text-muted-foreground line-clamp-2">
-              {job.description}
-            </p>
-          </div>
+        <div>
+          <p className="text-sm text-muted-foreground">
+            {job.description}
+          </p>
         </div>
       </CardContent>
-
-      <CardFooter className="bg-muted/10 pt-6">
-        <div className="flex w-full justify-between items-center text-sm text-muted-foreground">
-          <span>Posted {new Date(job.lastCheckedAt).toLocaleDateString()}</span>
-          {job.source && (
-            <a 
-              href={job.sourceUrl} 
-              target="_blank" 
-              rel="noopener noreferrer" 
-              className="hover:underline"
-            >
-              View on {job.source}
-            </a>
-          )}
-        </div>
-      </CardFooter>
     </Card>
   );
 }
