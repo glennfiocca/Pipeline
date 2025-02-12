@@ -1,4 +1,4 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Building2, MapPin, DollarSign } from "lucide-react";
@@ -15,21 +15,17 @@ interface JobCardProps {
 export function JobCard({ job, onApply, onViewDetails, isApplied, isApplying }: JobCardProps) {
   return (
     <Card className="w-full transition-shadow hover:shadow-md">
-      <CardHeader>
-        <div className="flex items-start justify-between">
-          <div>
-            <CardTitle className="text-xl font-semibold text-primary">
-              {job.title}
-            </CardTitle>
-            <div className="mt-2 flex items-center text-muted-foreground">
-              <Building2 className="mr-2 h-4 w-4" />
-              <span>{job.company}</span>
-            </div>
+      <CardContent className="p-6">
+        <div className="mb-4">
+          <h3 className="text-xl font-semibold text-primary mb-2">
+            {job.title}
+          </h3>
+          <div className="flex items-center text-muted-foreground">
+            <Building2 className="mr-2 h-4 w-4" />
+            <span>{job.company}</span>
           </div>
         </div>
-      </CardHeader>
 
-      <CardContent>
         <div className="mb-4 flex flex-wrap gap-2">
           <Badge variant="secondary" className="flex items-center">
             <MapPin className="mr-2 h-3 w-3" />
@@ -44,7 +40,7 @@ export function JobCard({ job, onApply, onViewDetails, isApplied, isApplying }: 
           </Badge>
         </div>
 
-        <p className="text-sm text-muted-foreground mb-4">
+        <p className="text-sm text-muted-foreground mb-6">
           {job.description}
         </p>
 
