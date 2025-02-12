@@ -44,7 +44,7 @@ export function JobCard({ job, onApply, onViewDetails, isApplied, isApplying }: 
             : job.description}
         </p>
 
-        <div className="flex gap-2">
+        <div className="flex gap-4">
           <Button 
             variant="default" 
             onClick={onApply}
@@ -54,7 +54,7 @@ export function JobCard({ job, onApply, onViewDetails, isApplied, isApplying }: 
             {isApplied ? "Applied" : isApplying ? "Applying..." : "Quick Apply"}
           </Button>
           <Button
-            variant="secondary"
+            variant="outline"
             onClick={onViewDetails}
             className="flex-1"
           >
