@@ -39,22 +39,24 @@ export function JobCard({ job, onApply, onViewDetails, isApplied, isApplying }: 
         </div>
 
         <p className="text-sm text-muted-foreground mb-6">
-          {job.description}
+          {job.description.length > 150 
+            ? `${job.description.substring(0, 150)}...` 
+            : job.description}
         </p>
 
         <div className="flex gap-2">
           <Button 
-            variant="default"
+            variant="default" 
             onClick={onApply}
             disabled={isApplied || isApplying}
-            className="w-full"
+            className="flex-1"
           >
             {isApplied ? "Applied" : isApplying ? "Applying..." : "Quick Apply"}
           </Button>
           <Button
             variant="secondary"
             onClick={onViewDetails}
-            className="w-full"
+            className="flex-1"
           >
             View Details
           </Button>

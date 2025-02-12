@@ -65,7 +65,7 @@ export function JobList() {
         job={selectedJob}
         isOpen={!!selectedJob}
         onClose={() => setSelectedJob(null)}
-        onApply={handleApply}
+        onApply={(jobId) => handleApply(jobId)}
         isApplied={false}
         isApplying={false}
       />
