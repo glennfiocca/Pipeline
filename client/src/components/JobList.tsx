@@ -34,10 +34,6 @@ export function JobList() {
     console.log("Applying for job:", jobId);
   };
 
-  const handleSave = (jobId: number) => {
-    console.log("Saving job:", jobId);
-  };
-
   if (isLoading) {
     return (
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -57,8 +53,7 @@ export function JobList() {
               key={job.id}
               job={job}
               onApply={handleApply}
-              onSave={handleSave}
-              onClick={() => setSelectedJob(job)}
+              onViewDetails={() => setSelectedJob(job)}
             />
           ))}
         </div>
@@ -69,7 +64,6 @@ export function JobList() {
         isOpen={!!selectedJob}
         onClose={() => setSelectedJob(null)}
         onApply={handleApply}
-        onSave={handleSave}
       />
     </>
   );
