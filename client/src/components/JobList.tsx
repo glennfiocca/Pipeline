@@ -22,10 +22,6 @@ export function JobList() {
   const { data: applications = [], isLoading: isLoadingApplications } = useQuery<Application[]>({
     queryKey: ["/api/applications"],
     enabled: !!user, // Only fetch applications if user is logged in
-    onSuccess: () => {
-      //Added onSuccess to ensure JobCard components re-render after application changes.
-      queryClient.invalidateQueries({ queryKey: ["/api/jobs"]});
-    }
   });
 
   const isJobApplied = (jobId: number) => {
@@ -35,36 +31,40 @@ export function JobList() {
     );
   };
 
-  const applyMutation = useMutation(async (jobId: number) => {
-    await apiRequest("POST", "/api/applications", {
-      jobId,
-      profileId: user.id,
-      status: "Applied",
-      appliedAt: new Date().toISOString(),
-      applicationData: {}
-    });
-  }, {
+  const applyMutation = useMutation({
+    mutationFn: async (jobId: number) => {
+      const res = await apiRequest(
+        "POST",
+        "/api/applications",
+        {
+          jobId,
+          profileId: user!.id,
+          status: "Applied",
+          appliedAt: new Date().toISOString(),
+          applicationData: {}
+        }
+      );
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || "Failed to submit application");
+      }
+      return res.json();
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/applications"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/jobs"] }); // added to refresh job list after application
       toast({
         title: "Application submitted",
         description: "Your application has been successfully submitted.",
       });
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast({
         title: "Error",
-        description: "Failed to submit application. Please try again.",
+        description: error.message,
         variant: "destructive",
       });
-    }
+    },
   });
-
-
-  const handleApply = (jobId: number) => {
-    applyMutation.mutate(jobId);
-  };
 
   if (isLoadingJobs) {
     return (
@@ -84,10 +84,10 @@ export function JobList() {
             <JobCard
               key={job.id}
               job={job}
-              onApply={() => handleApply(job.id)}
+              onApply={() => applyMutation.mutate(job.id)}
               onViewDetails={() => setSelectedJob(job)}
               isApplied={isJobApplied(job.id)}
-              isApplying={applyMutation.isLoading} //Added isApplying state
+              isApplying={applyMutation.isPending}
             />
           ))}
         </div>
@@ -97,9 +97,9 @@ export function JobList() {
         job={selectedJob}
         isOpen={!!selectedJob}
         onClose={() => setSelectedJob(null)}
-        onApply={handleApply}
+        onApply={(jobId) => applyMutation.mutate(jobId)}
         isApplied={selectedJob ? isJobApplied(selectedJob.id) : false}
-        isApplying={applyMutation.isLoading} //Added isApplying state
+        isApplying={applyMutation.isPending}
       />
     </>
   );
