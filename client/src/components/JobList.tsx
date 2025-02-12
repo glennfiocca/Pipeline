@@ -4,14 +4,34 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Job } from "@shared/schema";
 
+// Mock data for testing
+const mockJob: Job = {
+  id: 1,
+  title: "Leveraged Finance Analyst",
+  company: "J.P. Morgan",
+  location: "New York, New York, USA",
+  type: "Full Time",
+  salary: "$225k/yr",
+  description: "A global leader in investment banking, consumer and small business banking, commercial banking, financial...",
+  requirements: "Bachelor's degree in Engineering, Economics, Finance, Business Administration, Accounting, or related field;2+ years of experience in investment finance or related occupation;Strong analytical and problem-solving skills",
+  source: "Bloomberg",
+  sourceUrl: "https://bloomberg.com/careers",
+  createdAt: new Date().toISOString(),
+  updatedAt: new Date().toISOString(),
+  isActive: true
+};
+
 export function JobList() {
-  const { data: jobs, isLoading } = useQuery<Job[]>({
+  const { data: jobs = [mockJob], isLoading } = useQuery<Job[]>({
     queryKey: ["/api/jobs"],
   });
 
   const handleApply = (jobId: number) => {
-    // TODO: Implement job application logic
     console.log("Applying for job:", jobId);
+  };
+
+  const handleSave = (jobId: number) => {
+    console.log("Saving job:", jobId);
   };
 
   if (isLoading) {
@@ -32,6 +52,7 @@ export function JobList() {
             key={job.id}
             job={job}
             onApply={handleApply}
+            onSave={handleSave}
           />
         ))}
       </div>

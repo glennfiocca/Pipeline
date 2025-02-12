@@ -1,15 +1,17 @@
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Building2, MapPin, DollarSign, Briefcase } from "lucide-react";
+import { Building2, MapPin, DollarSign, BookmarkPlus, CheckCircle2 } from "lucide-react";
 import type { Job } from "@shared/schema";
 
 interface JobCardProps {
   job: Job;
   onApply: (jobId: number) => void;
+  onSave?: (jobId: number) => void;
+  isApplied?: boolean;
 }
 
-export function JobCard({ job, onApply }: JobCardProps) {
+export function JobCard({ job, onApply, onSave, isApplied }: JobCardProps) {
   return (
     <Card className="w-full transition-shadow hover:shadow-md">
       <CardHeader>
@@ -23,51 +25,71 @@ export function JobCard({ job, onApply }: JobCardProps) {
               <span>{job.company}</span>
             </div>
           </div>
-          <Badge variant={job.type === "Full-time" ? "default" : "secondary"}>
+          <div className="flex gap-2">
+            {onSave && (
+              <Button variant="outline" size="sm" onClick={() => onSave(job.id)}>
+                <BookmarkPlus className="h-4 w-4 mr-2" />
+                Save
+              </Button>
+            )}
+            <Button
+              variant={isApplied ? "outline" : "default"}
+              size="sm"
+              onClick={() => onApply(job.id)}
+              disabled={isApplied}
+            >
+              <CheckCircle2 className="h-4 w-4 mr-2" />
+              {isApplied ? "Applied" : "Apply"}
+            </Button>
+          </div>
+        </div>
+      </CardHeader>
+
+      <CardContent>
+        <div className="mb-4 flex flex-wrap gap-2">
+          <Badge variant="secondary" className="flex items-center">
+            <MapPin className="mr-2 h-3 w-3" />
+            {job.location}
+          </Badge>
+          <Badge variant="secondary" className="flex items-center">
+            <DollarSign className="mr-2 h-3 w-3" />
+            {job.salary}
+          </Badge>
+          <Badge variant="default">
             {job.type}
           </Badge>
         </div>
-      </CardHeader>
-      
-      <CardContent>
-        <div className="mb-4 space-y-2">
-          <div className="flex items-center text-sm text-muted-foreground">
-            <MapPin className="mr-2 h-4 w-4" />
-            <span>{job.location}</span>
-          </div>
-          <div className="flex items-center text-sm text-muted-foreground">
-            <DollarSign className="mr-2 h-4 w-4" />
-            <span>{job.salary}</span>
-          </div>
-          <div className="flex items-center text-sm text-muted-foreground">
-            <Briefcase className="mr-2 h-4 w-4" />
-            <span>{job.source}</span>
-          </div>
-        </div>
 
-        <CardDescription className="mt-4">
-          {job.description}
-        </CardDescription>
+        <div className="space-y-4">
+          <div>
+            <h4 className="font-medium mb-2">Description</h4>
+            <p className="text-sm text-muted-foreground">
+              {job.description}
+            </p>
+          </div>
 
-        <div className="mt-4">
-          <h4 className="mb-2 font-medium">Requirements:</h4>
-          <ul className="list-inside list-disc space-y-1 text-sm text-muted-foreground">
-            {job.requirements.split(';').map((req, index) => (
-              <li key={index} className="ml-2">
-                {req.trim()}
-              </li>
-            ))}
-          </ul>
+          <div>
+            <h4 className="font-medium mb-2">Requirements</h4>
+            <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
+              {job.requirements.split(';').map((req, index) => (
+                <li key={index}>
+                  {req.trim()}
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
       </CardContent>
 
-      <CardFooter className="flex justify-end gap-2 bg-muted/10 pt-6">
-        <Button variant="outline" onClick={() => window.open(job.sourceUrl, '_blank')}>
-          View Original
-        </Button>
-        <Button onClick={() => onApply(job.id)}>
-          Apply Now
-        </Button>
+      <CardFooter className="bg-muted/10 pt-6">
+        <div className="flex w-full justify-between items-center text-sm text-muted-foreground">
+          <span>Posted {new Date(job.createdAt).toLocaleDateString()}</span>
+          {job.source && (
+            <a href={job.sourceUrl} target="_blank" rel="noopener noreferrer" className="hover:underline">
+              View on {job.source}
+            </a>
+          )}
+        </div>
       </CardFooter>
     </Card>
   );
