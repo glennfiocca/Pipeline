@@ -83,7 +83,7 @@ export function JobCard({ job, onApply, onSave, isApplied }: JobCardProps) {
 
       <CardFooter className="bg-muted/10 pt-6">
         <div className="flex w-full justify-between items-center text-sm text-muted-foreground">
-          <span>Posted {new Date(job.createdAt).toLocaleDateString()}</span>
+          <span>Posted {new Date(job.lastCheckedAt).toLocaleDateString()}</span>
           {job.source && (
             <a href={job.sourceUrl} target="_blank" rel="noopener noreferrer" className="hover:underline">
               View on {job.source}

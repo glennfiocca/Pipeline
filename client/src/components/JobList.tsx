@@ -16,9 +16,10 @@ const mockJob: Job = {
   requirements: "Bachelor's degree in Engineering, Economics, Finance, Business Administration, Accounting, or related field;2+ years of experience in investment finance or related occupation;Strong analytical and problem-solving skills",
   source: "Bloomberg",
   sourceUrl: "https://bloomberg.com/careers",
-  createdAt: new Date().toISOString(),
-  updatedAt: new Date().toISOString(),
-  isActive: true
+  published: true,
+  isActive: true,
+  lastCheckedAt: new Date().toISOString(),
+  deactivatedAt: null
 };
 
 export function JobList() {
