@@ -5,40 +5,55 @@ import { JobModal } from "./JobModal";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/use-auth";
-import type { Job } from "@shared/schema";
-
-// Mock data for testing
-const mockJob: Job = {
-  id: 1,
-  title: "Leveraged Finance Analyst",
-  company: "J.P. Morgan",
-  location: "New York, New York, USA",
-  type: "Full Time",
-  salary: "$225k/yr",
-  description: "A global leader in investment banking, consumer and small business banking, commercial banking, financial...",
-  requirements: "Bachelor's degree in Engineering, Economics, Finance, Business Administration, Accounting, or related field;2+ years of experience in investment finance or related occupation;Strong analytical and problem-solving skills",
-  source: "Bloomberg",
-  sourceUrl: "https://bloomberg.com/careers",
-  published: true,
-  isActive: true,
-  lastCheckedAt: new Date().toISOString(),
-  deactivatedAt: null
-};
+import type { Job, Application } from "@shared/schema";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 export function JobList() {
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const { user } = useAuth();
+  const { toast } = useToast();
 
-  const { data: jobs = [mockJob], isLoading } = useQuery<Job[]>({
+  const { data: jobs = [], isLoading: isLoadingJobs } = useQuery<Job[]>({
     queryKey: ["/api/jobs"],
   });
 
-  const handleApply = (jobId: number) => {
-    if (!user) return;
-    console.log("Applying for job:", jobId);
+  const { data: applications = [], isLoading: isLoadingApplications } = useQuery<Application[]>({
+    queryKey: ["/api/applications"],
+    enabled: !!user, // Only fetch applications if user is logged in
+  });
+
+  const isJobApplied = (jobId: number) => {
+    if (!user) return false;
+    return applications.some(app => app.jobId === jobId);
   };
 
-  if (isLoading) {
+  const handleApply = async (jobId: number) => {
+    if (!user) return;
+
+    try {
+      await apiRequest("POST", "/api/applications", {
+        jobId,
+        profileId: user.id,
+        status: "Applied",
+        appliedAt: new Date().toISOString(),
+        applicationData: {}
+      });
+
+      toast({
+        title: "Application submitted",
+        description: "Your application has been successfully submitted.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to submit application. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  if (isLoadingJobs) {
     return (
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {[...Array(6)].map((_, i) => (
@@ -58,7 +73,7 @@ export function JobList() {
               job={job}
               onApply={() => handleApply(job.id)}
               onViewDetails={() => setSelectedJob(job)}
-              isApplied={false}
+              isApplied={isJobApplied(job.id)}
               isApplying={false}
             />
           ))}
@@ -69,8 +84,8 @@ export function JobList() {
         job={selectedJob}
         isOpen={!!selectedJob}
         onClose={() => setSelectedJob(null)}
-        onApply={(jobId) => handleApply(jobId)}
-        isApplied={false}
+        onApply={handleApply}
+        isApplied={selectedJob ? isJobApplied(selectedJob.id) : false}
         isApplying={false}
       />
     </>
