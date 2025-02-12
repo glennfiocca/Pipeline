@@ -5,7 +5,7 @@ export function Footer() {
 
   return (
     <footer className="border-t mt-auto">
-      <div className="container py-8">
+      <div className="container mx-auto max-w-7xl py-8 px-4">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           <div className="space-y-3">
             <h3 className="font-semibold">Pipeline</h3>
