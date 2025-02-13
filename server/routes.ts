@@ -58,7 +58,6 @@ export function registerRoutes(app: Express): Server {
     res.json(profile);
   });
 
-  // Handle both POST (create) and PATCH (update) for profiles
   app.post("/api/profiles", async (req, res) => {
     try {
       const parsed = insertProfileSchema.safeParse(req.body);
@@ -71,7 +70,6 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Add specific PATCH route for profile updates
   app.patch("/api/profiles/:id", async (req, res) => {
     try {
       console.log('Received PATCH request for profile:', req.params.id);
@@ -103,17 +101,31 @@ export function registerRoutes(app: Express): Server {
       const parsed = insertApplicationSchema.safeParse(req.body);
       if (!parsed.success) return res.status(400).json(parsed.error);
 
-      // Check if there's an existing active application
+      // Get all applications for this job by this user
       const existingApplications = await storage.getApplications();
-      const latestApplication = existingApplications
-        .filter(app => app.jobId === parsed.data.jobId && app.profileId === parsed.data.profileId)
-        .sort((a, b) => new Date(b.appliedAt).getTime() - new Date(a.appliedAt).getTime())[0];
+      const userApplications = existingApplications.filter(
+        app => app.jobId === parsed.data.jobId && app.profileId === parsed.data.profileId
+      );
 
+      // Sort by date to get the latest application
+      const latestApplication = userApplications.sort(
+        (a, b) => new Date(b.appliedAt).getTime() - new Date(a.appliedAt).getTime()
+      )[0];
+
+      // Only block if there's an active application (not withdrawn)
       if (latestApplication && latestApplication.status !== "Withdrawn") {
         return res.status(400).json({ message: "You have already applied to this job" });
       }
 
-      const application = await storage.createApplication(parsed.data);
+      // Create new application
+      const application = await storage.createApplication({
+        ...parsed.data,
+        statusHistory: [{
+          status: parsed.data.status,
+          date: parsed.data.appliedAt
+        }]
+      });
+
       res.status(201).json(application);
     } catch (error) {
       console.error('Application creation error:', error);
