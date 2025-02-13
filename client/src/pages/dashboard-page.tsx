@@ -12,6 +12,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
 import { WithdrawDialog } from "@/components/WithdrawDialog";
+import { ApplicationCreditsCard } from "@/components/ApplicationCreditsCard";
 
 interface StatusHistoryItem {
   status: string;
@@ -106,11 +107,14 @@ export default function DashboardPage() {
     <div className="container py-10">
       <div className="flex items-center justify-between mb-8">
         <h1 className="text-3xl font-bold">Application Dashboard</h1>
-        {selectedStatus && (
-          <Button variant="ghost" onClick={() => setSelectedStatus(null)}>
-            Clear Filter
-          </Button>
-        )}
+        <div className="flex items-center gap-4">
+          <ApplicationCreditsCard />
+          {selectedStatus && (
+            <Button variant="ghost" onClick={() => setSelectedStatus(null)}>
+              Clear Filter
+            </Button>
+          )}
+        </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">

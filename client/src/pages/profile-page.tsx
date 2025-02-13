@@ -13,6 +13,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2, Plus, X } from "lucide-react";
 import { useEffect } from 'react';
+import { ApplicationCreditsCard } from "@/components/ApplicationCreditsCard";
 
 export default function ProfilePage() {
   const { toast } = useToast();
@@ -154,6 +155,10 @@ export default function ProfilePage() {
 
   return (
     <div className="container py-10">
+      <div className="flex items-center justify-between mb-8">
+        <h1 className="text-3xl font-bold">Profile</h1>
+        <ApplicationCreditsCard />
+      </div>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
           <Tabs defaultValue="personal" className="w-full">

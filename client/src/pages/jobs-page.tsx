@@ -13,6 +13,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useState } from "react";
 import { JobModal } from "@/components/JobModal";
 import { Loader2 } from "lucide-react";
+import { ApplicationCreditsCard } from "@/components/ApplicationCreditsCard";
 
 const INDUSTRY_TYPES = ["All", "STEM", "Finance", "Healthcare", "Consulting", "Legal Tech", "Clean Tech"];
 const LOCATIONS = [
@@ -118,12 +119,15 @@ export default function JobsPage() {
       <div className="flex flex-col gap-8">
         <div className="flex items-center justify-between">
           <h1 className="text-3xl font-bold">Jobs</h1>
-          <Input
-            placeholder="Search jobs..."
-            className="max-w-sm"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
+          <div className="flex items-center gap-4">
+            <ApplicationCreditsCard />
+            <Input
+              placeholder="Search jobs..."
+              className="max-w-sm"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
