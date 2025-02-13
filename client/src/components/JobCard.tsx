@@ -68,7 +68,7 @@ export function JobCard({
             <Button 
               variant="default" 
               onClick={onApply}
-              disabled={isApplied || isApplying}
+              disabled={isApplying || (isApplied && !previouslyApplied)}
               className="flex-1"
             >
               {isApplying ? (

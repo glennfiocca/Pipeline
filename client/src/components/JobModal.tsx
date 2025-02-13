@@ -93,9 +93,9 @@ export function JobModal({
           <div className="flex items-center justify-between pt-6 border-t">
             {user ? (
               <Button
-                variant={isApplied ? "outline" : "default"}
+                variant={isApplied && !previouslyApplied ? "outline" : "default"}
                 onClick={() => onApply(job.id)}
-                disabled={isApplied || isApplying}
+                disabled={isApplying || (isApplied && !previouslyApplied)}
                 className="w-full"
               >
                 {isApplying ? (
