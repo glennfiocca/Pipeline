@@ -33,16 +33,13 @@ export function JobList() {
           jobId,
           profileId: user!.id,
           status: "Applied",
-          appliedAt: new Date().toISOString(),
           applicationData: {}
         }
       );
-
       if (!res.ok) {
         const error = await res.json();
         throw new Error(error.message || "Failed to submit application");
       }
-
       return res.json();
     },
     onSuccess: () => {
@@ -63,29 +60,22 @@ export function JobList() {
   });
 
   const getApplicationStatus = (jobId: number) => {
-    if (!applications?.length || !user) {
+    if (!user || !applications.length) {
       return { isApplied: false, previouslyApplied: false };
     }
 
-    // Get the most recent application for this job
-    const userApplications = applications.filter(
-      app => app.jobId === jobId && app.profileId === user.id
-    );
+    const latestApplication = applications
+      .filter(app => app.jobId === jobId && app.profileId === user.id)
+      .sort((a, b) => new Date(b.appliedAt).getTime() - new Date(a.appliedAt).getTime())[0];
 
-    if (!userApplications.length) {
+    if (!latestApplication) {
       return { isApplied: false, previouslyApplied: false };
     }
 
-    const latestApplication = userApplications.sort(
-      (a, b) => new Date(b.appliedAt).getTime() - new Date(a.appliedAt).getTime()
-    )[0];
-
-    // If the application is withdrawn, treat it as not applied
-    if (latestApplication.status === "Withdrawn") {
-      return { isApplied: false, previouslyApplied: true };
-    }
-
-    return { isApplied: true, previouslyApplied: false };
+    return { 
+      isApplied: latestApplication.status !== "Withdrawn",
+      previouslyApplied: latestApplication.status === "Withdrawn"
+    };
   };
 
   if (isLoadingJobs) {
