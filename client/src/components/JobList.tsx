@@ -26,26 +26,25 @@ export function JobList() {
     refetchOnWindowFocus: true,
   });
 
-  const hasActiveApplication = (jobId: number) => {
-    // Get all applications for this job
+  const getLatestApplication = (jobId: number) => {
     const jobApplications = applications.filter(app => app.jobId === jobId);
+    if (jobApplications.length === 0) return null;
 
-    if (jobApplications.length === 0) return false;
-
-    // Get the most recent application
-    const latestApplication = jobApplications.reduce((latest, current) => {
+    return jobApplications.reduce((latest, current) => {
       return new Date(current.appliedAt) > new Date(latest.appliedAt) ? current : latest;
     }, jobApplications[0]);
+  };
 
-    // Return false if the most recent application is withdrawn
-    if (latestApplication.status === "Withdrawn") return false;
-
-    // Return true only if the application is in an active state
-    return ["Applied", "Screening", "Interviewing", "Offered", "Accepted"].includes(latestApplication.status);
+  const hasActiveApplication = (jobId: number) => {
+    const latest = getLatestApplication(jobId);
+    if (!latest) return false;
+    return latest.status !== "Withdrawn";
   };
 
   const hasPreviouslyApplied = (jobId: number) => {
-    return applications.some(app => app.jobId === jobId && app.status === "Withdrawn");
+    const latest = getLatestApplication(jobId);
+    if (!latest) return false;
+    return latest.status === "Withdrawn";
   };
 
   const applyMutation = useMutation({
