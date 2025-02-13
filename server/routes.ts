@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertJobSchema, insertProfileSchema, insertApplicationSchema } from "@shared/schema";
+import { insertJobSchema, insertApplicationSchema } from "@shared/schema";
 import { ScraperManager } from './services/scraper/manager';
 
 export function registerRoutes(app: Express): Server {
@@ -26,15 +26,12 @@ export function registerRoutes(app: Express): Server {
     res.json(job);
   });
 
-  // Update the scraper endpoint
   app.post("/api/jobs/scrape", async (_req, res) => {
     try {
       console.log('Starting job scraping process...');
       const manager = new ScraperManager();
       const jobs = await manager.runScrapers();
-
       console.log('Scraping completed, found jobs:', jobs?.length || 0);
-
       res.json({ 
         message: "Job scraping completed successfully", 
         jobCount: jobs?.length || 0,
@@ -46,56 +43,13 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Profiles
-  app.get("/api/profiles", async (_req, res) => {
-    const profiles = await storage.getProfiles();
-    res.json(profiles);
-  });
-
-  app.get("/api/profiles/:id", async (req, res) => {
-    const profile = await storage.getProfile(parseInt(req.params.id));
-    if (!profile) return res.sendStatus(404);
-    res.json(profile);
-  });
-
-  app.post("/api/profiles", async (req, res) => {
-    try {
-      const parsed = insertProfileSchema.safeParse(req.body);
-      if (!parsed.success) return res.status(400).json(parsed.error);
-      const profile = await storage.createProfile(parsed.data);
-      res.status(201).json(profile);
-    } catch (error) {
-      console.error('Profile creation error:', error);
-      res.status(500).json({ message: (error as Error).message });
-    }
-  });
-
-  app.patch("/api/profiles/:id", async (req, res) => {
-    try {
-      console.log('Received PATCH request for profile:', req.params.id);
-      console.log('Request body:', req.body);
-
-      const parsed = insertProfileSchema.safeParse(req.body);
-      if (!parsed.success) {
-        console.error('Validation error:', parsed.error);
-        return res.status(400).json(parsed.error);
-      }
-
-      const profile = await storage.updateProfile(parseInt(req.params.id), parsed.data);
-      console.log('Updated profile:', profile);
-      res.json(profile);
-    } catch (error) {
-      console.error('Profile update error:', error);
-      res.status(500).json({ message: (error as Error).message });
-    }
-  });
-
   // Applications
   app.get("/api/applications", async (_req, res) => {
     const applications = await storage.getApplications();
     res.json(applications);
   });
 
+  // Simplified application creation endpoint
   app.post("/api/applications", async (req, res) => {
     try {
       const parsed = insertApplicationSchema.safeParse(req.body);
@@ -130,6 +84,7 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Simplified status update endpoint
   app.patch("/api/applications/:id/status", async (req, res) => {
     try {
       const { status } = req.body;

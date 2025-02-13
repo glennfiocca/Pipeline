@@ -76,14 +76,17 @@ export function JobList() {
       return { isApplied: false, previouslyApplied: false };
     }
 
-    // Sort to get the most recent application
+    // Get the latest application based on appliedAt date
     const latestApplication = userApplications.sort(
       (a, b) => new Date(b.appliedAt).getTime() - new Date(a.appliedAt).getTime()
     )[0];
 
+    // If the latest application is withdrawn, user can reapply
+    const isWithdrawn = latestApplication.status === "Withdrawn";
+
     return {
-      isApplied: latestApplication.status !== "Withdrawn",
-      previouslyApplied: latestApplication.status === "Withdrawn"
+      isApplied: !isWithdrawn,
+      previouslyApplied: isWithdrawn
     };
   };
 
