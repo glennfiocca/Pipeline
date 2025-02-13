@@ -22,26 +22,27 @@ export function JobList() {
   const { data: applications = [], isLoading: isLoadingApplications } = useQuery<Application[]>({
     queryKey: ["/api/applications"],
     enabled: !!user,
-    refetchInterval: 1000,
-    refetchOnWindowFocus: true,
   });
 
-  const getLatestApplication = (jobId: number) => {
+  const getApplicationStatus = (jobId: number) => {
+    if (!applications.length) return { isApplied: false, previouslyApplied: false };
+
+    // Get all applications for this job, sorted by date
     const jobApplications = applications
       .filter(app => app.jobId === jobId)
       .sort((a, b) => new Date(b.appliedAt).getTime() - new Date(a.appliedAt).getTime());
 
-    return jobApplications[0] || null;
-  };
+    if (!jobApplications.length) return { isApplied: false, previouslyApplied: false };
 
-  const hasActiveApplication = (jobId: number) => {
-    const latest = getLatestApplication(jobId);
-    return latest !== null && latest.status !== "Withdrawn";
-  };
+    const latestApplication = jobApplications[0];
 
-  const hasPreviouslyApplied = (jobId: number) => {
-    const latest = getLatestApplication(jobId);
-    return latest !== null && latest.status === "Withdrawn";
+    // If the latest application is withdrawn, user can reapply
+    if (latestApplication.status === "Withdrawn") {
+      return { isApplied: false, previouslyApplied: true };
+    }
+
+    // If the latest application is not withdrawn, user has an active application
+    return { isApplied: true, previouslyApplied: false };
   };
 
   const applyMutation = useMutation({
@@ -93,17 +94,20 @@ export function JobList() {
     <>
       <ScrollArea className="h-[calc(100vh-4rem)] w-full px-4">
         <div className="grid gap-4 pb-4 md:grid-cols-2 lg:grid-cols-3">
-          {jobs?.map((job) => (
-            <JobCard
-              key={job.id}
-              job={job}
-              onApply={() => applyMutation.mutate(job.id)}
-              onViewDetails={() => setSelectedJob(job)}
-              isApplied={hasActiveApplication(job.id)}
-              isApplying={applyMutation.isPending}
-              previouslyApplied={hasPreviouslyApplied(job.id)}
-            />
-          ))}
+          {jobs?.map((job) => {
+            const { isApplied, previouslyApplied } = getApplicationStatus(job.id);
+            return (
+              <JobCard
+                key={job.id}
+                job={job}
+                onApply={() => applyMutation.mutate(job.id)}
+                onViewDetails={() => setSelectedJob(job)}
+                isApplied={isApplied}
+                isApplying={applyMutation.isPending}
+                previouslyApplied={previouslyApplied}
+              />
+            );
+          })}
         </div>
       </ScrollArea>
 
@@ -112,9 +116,9 @@ export function JobList() {
         isOpen={!!selectedJob}
         onClose={() => setSelectedJob(null)}
         onApply={(jobId) => applyMutation.mutate(jobId)}
-        isApplied={selectedJob ? hasActiveApplication(selectedJob.id) : false}
+        isApplied={selectedJob ? getApplicationStatus(selectedJob.id).isApplied : false}
         isApplying={applyMutation.isPending}
-        previouslyApplied={selectedJob ? hasPreviouslyApplied(selectedJob.id) : false}
+        previouslyApplied={selectedJob ? getApplicationStatus(selectedJob.id).previouslyApplied : false}
       />
     </>
   );

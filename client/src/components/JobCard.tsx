@@ -32,6 +32,12 @@ export function JobCard({
     return "Apply";
   };
 
+  const getButtonVariant = () => {
+    if (previouslyApplied) return "default";
+    if (isApplied) return "outline";
+    return "default";
+  };
+
   return (
     <Card className="w-full transition-shadow hover:shadow-md">
       <CardContent className="p-6">
@@ -66,7 +72,7 @@ export function JobCard({
         <div className="flex gap-4">
           {user ? (
             <Button 
-              variant={previouslyApplied ? "default" : (isApplied ? "outline" : "default")}
+              variant={getButtonVariant()}
               onClick={onApply}
               disabled={isApplying || (isApplied && !previouslyApplied)}
               className="flex-1"
