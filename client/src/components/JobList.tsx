@@ -19,7 +19,7 @@ export function JobList() {
     queryKey: ["/api/jobs"],
   });
 
-  const { data: applications = [], isLoading: isLoadingApplications } = useQuery<Application[]>({
+  const { data: applications = [] } = useQuery<Application[]>({
     queryKey: ["/api/applications"],
     enabled: !!user,
   });
@@ -67,7 +67,7 @@ export function JobList() {
       return { isApplied: false, previouslyApplied: false };
     }
 
-    // Get only applications for this job by the current user
+    // Get the most recent application for this job
     const userApplications = applications.filter(
       app => app.jobId === jobId && app.profileId === user.id
     );
@@ -76,18 +76,16 @@ export function JobList() {
       return { isApplied: false, previouslyApplied: false };
     }
 
-    // Get the latest application based on appliedAt date
     const latestApplication = userApplications.sort(
       (a, b) => new Date(b.appliedAt).getTime() - new Date(a.appliedAt).getTime()
     )[0];
 
-    // If the latest application is withdrawn, user can reapply
-    const isWithdrawn = latestApplication.status === "Withdrawn";
+    // If the application is withdrawn, treat it as not applied
+    if (latestApplication.status === "Withdrawn") {
+      return { isApplied: false, previouslyApplied: true };
+    }
 
-    return {
-      isApplied: !isWithdrawn,
-      previouslyApplied: isWithdrawn
-    };
+    return { isApplied: true, previouslyApplied: false };
   };
 
   if (isLoadingJobs) {
