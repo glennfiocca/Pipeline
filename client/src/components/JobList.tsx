@@ -25,43 +25,25 @@ export function JobList() {
   });
 
   const getApplicationStatus = (jobId: number) => {
-    if (!applications?.length) {
-      console.log(`No applications found for job ${jobId}`);
-      return { isApplied: false, previouslyApplied: false };
-    }
-
-    // Get all applications for this job
     const jobApplications = applications.filter(app => app.jobId === jobId);
 
-    if (!jobApplications.length) {
-      console.log(`No applications found for specific job ${jobId}`);
+    if (jobApplications.length === 0) {
       return { isApplied: false, previouslyApplied: false };
     }
 
-    // Sort by date, most recent first
-    const sortedApplications = [...jobApplications].sort(
-      (a, b) => new Date(b.appliedAt).getTime() - new Date(a.appliedAt).getTime()
-    );
-
-    const latestApplication = sortedApplications[0];
-    console.log(`Job ${jobId} latest application:`, {
-      id: latestApplication.id,
-      status: latestApplication.status,
-      appliedAt: latestApplication.appliedAt
+    // Get the most recent application
+    const latestApplication = jobApplications.reduce((latest, current) => {
+      return new Date(current.appliedAt) > new Date(latest.appliedAt) ? current : latest;
     });
 
-    if (latestApplication.status === "Withdrawn") {
-      console.log(`Job ${jobId}: Application is withdrawn, enabling reapplication`);
-      return { isApplied: false, previouslyApplied: true };
-    }
-
-    console.log(`Job ${jobId}: Application is active with status ${latestApplication.status}`);
-    return { isApplied: true, previouslyApplied: false };
+    return {
+      isApplied: latestApplication.status !== "Withdrawn",
+      previouslyApplied: latestApplication.status === "Withdrawn"
+    };
   };
 
   const applyMutation = useMutation({
     mutationFn: async (jobId: number) => {
-      console.log('Starting application process for job:', jobId);
       const res = await apiRequest(
         "POST",
         "/api/applications",
@@ -113,7 +95,6 @@ export function JobList() {
         <div className="grid gap-4 pb-4 md:grid-cols-2 lg:grid-cols-3">
           {jobs?.map((job) => {
             const { isApplied, previouslyApplied } = getApplicationStatus(job.id);
-            console.log(`Rendering job ${job.id} card:`, { isApplied, previouslyApplied });
 
             return (
               <JobCard

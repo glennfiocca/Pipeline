@@ -25,25 +25,24 @@ export function JobCard({
 }: JobCardProps) {
   const { user } = useAuth();
 
-  const getButtonText = () => {
-    if (isApplying) return "Applying...";
-    if (previouslyApplied) return "Reapply";
-    if (isApplied) return "Applied";
-    return "Apply";
-  };
+  // Button text based on application state
+  const buttonText = isApplying 
+    ? "Applying..." 
+    : previouslyApplied 
+    ? "Reapply" 
+    : isApplied 
+    ? "Applied" 
+    : "Apply";
 
-  const getButtonVariant = () => {
-    if (previouslyApplied) return "default";
-    if (isApplied) return "outline";
-    return "default";
-  };
+  // Button variant based on application state
+  const buttonVariant = previouslyApplied 
+    ? "default"
+    : isApplied 
+    ? "outline" 
+    : "default";
 
-  const isButtonDisabled = () => {
-    if (isApplying) return true;
-    if (previouslyApplied) return false;
-    if (isApplied) return true;
-    return false;
-  };
+  // Button disabled state
+  const isDisabled = isApplying || (isApplied && !previouslyApplied);
 
   return (
     <Card className="w-full transition-shadow hover:shadow-md">
@@ -79,19 +78,13 @@ export function JobCard({
         <div className="flex gap-4">
           {user ? (
             <Button 
-              variant={getButtonVariant()}
+              variant={buttonVariant}
               onClick={onApply}
-              disabled={isButtonDisabled()}
+              disabled={isDisabled}
               className="flex-1"
             >
-              {isApplying ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Applying...
-                </>
-              ) : (
-                getButtonText()
-              )}
+              {isApplying && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {buttonText}
             </Button>
           ) : (
             <Link href="/auth/login" className="flex-1">
