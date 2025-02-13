@@ -21,15 +21,15 @@ export function JobList() {
 
   const { data: applications = [], isLoading: isLoadingApplications } = useQuery<Application[]>({
     queryKey: ["/api/applications"],
-    enabled: !!user, // Only fetch applications if user is logged in
-    staleTime: 0, // Always fetch fresh data
-    cacheTime: 0  // Don't cache the data
+    enabled: !!user,
+    staleTime: 0,
+    cacheTime: 0
   });
 
   const hasActiveApplication = (jobId: number) => {
     return applications.some(app => 
       app.jobId === jobId && 
-      app.status !== "Withdrawn"
+      ["Applied", "Screening", "Interviewing", "Offered", "Accepted"].includes(app.status)
     );
   };
 
