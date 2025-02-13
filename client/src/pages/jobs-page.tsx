@@ -56,10 +56,11 @@ export default function JobsPage() {
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const { toast } = useToast();
 
-  // Use mock data directly
+  // Use mock data directly and prevent refetching
   const { data: jobs = mockJobs, isLoading } = useQuery<Job[]>({
     queryKey: ["/api/jobs"],
-    initialData: mockJobs
+    initialData: mockJobs,
+    enabled: false // This prevents the query from fetching from the API
   });
 
   const { data: applications = [] } = useQuery<Application[]>({
