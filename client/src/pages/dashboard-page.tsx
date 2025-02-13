@@ -38,12 +38,17 @@ export default function DashboardPage() {
   const getJob = (jobId: number) => jobs.find((job) => job.id === jobId);
 
   const stats = {
-    total: applications.length,
     Applied: applications.filter((app) => app.status === "Applied").length,
     Interviewing: applications.filter((app) => app.status === "Interviewing").length,
     Accepted: applications.filter((app) => app.status === "Accepted").length,
     Rejected: applications.filter((app) => app.status === "Rejected").length,
+    total: 0, // Will be calculated below
   };
+
+  // Calculate total as sum of all status counts
+  stats.total = Object.entries(stats)
+    .filter(([key]) => key !== 'total') // Exclude the total field itself
+    .reduce((sum, [_, count]) => sum + count, 0);
 
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
