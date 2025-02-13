@@ -29,7 +29,7 @@ const LOCATIONS = [
 ];
 
 // Mock data for testing
-const mockJobs: Job[] = [
+export const mockJobs: Job[] = [
   {
     id: 1,
     title: "Senior Software Engineer",
@@ -144,6 +144,9 @@ const mockJobs: Job[] = [
   }
 ];
 
+// Pre-populate the jobs cache
+queryClient.setQueryData(["/api/jobs"], mockJobs);
+
 export default function JobsPage() {
   const [search, setSearch] = useState("");
   const [industryType, setIndustryType] = useState("All");
@@ -152,11 +155,11 @@ export default function JobsPage() {
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const { toast } = useToast();
 
-  // Use mock data directly and prevent refetching
-  const { data: jobs = mockJobs, isLoading } = useQuery<Job[]>({
+  const { data: jobs = [], isLoading } = useQuery<Job[]>({
     queryKey: ["/api/jobs"],
-    initialData: mockJobs,
-    enabled: false // This prevents the query from fetching from the API
+    placeholderData: mockJobs,
+    staleTime: Infinity, // Never mark the data as stale
+    cacheTime: Infinity, // Keep the data cached indefinitely
   });
 
   const { data: applications = [] } = useQuery<Application[]>({
