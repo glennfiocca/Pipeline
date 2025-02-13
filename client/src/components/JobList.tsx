@@ -25,12 +25,12 @@ export function JobList() {
   });
 
   const getApplicationStatus = (jobId: number) => {
-    if (!applications?.length) {
+    if (!applications?.length || !user) {
       return { isApplied: false, previouslyApplied: false };
     }
 
-    // Get all applications for this job
-    const jobApplications = applications.filter(app => app.jobId === jobId);
+    // Get all applications for this job by the current user
+    const jobApplications = applications.filter(app => app.jobId === jobId && app.profileId === user?.id);
 
     if (!jobApplications.length) {
       return { isApplied: false, previouslyApplied: false };
@@ -41,7 +41,6 @@ export function JobList() {
       return new Date(current.appliedAt) > new Date(latest.appliedAt) ? current : latest;
     });
 
-    // Case-insensitive status check
     const isWithdrawn = latestApplication.status.toLowerCase() === 'withdrawn';
 
     return {

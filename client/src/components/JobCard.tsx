@@ -41,8 +41,8 @@ export function JobCard({
     ? "outline" 
     : "default";
 
-  // Button disabled state
-  const isDisabled = isApplying || (isApplied && !previouslyApplied);
+  // Button disabled state - only disable when actively applying
+  const isDisabled = isApplying;
 
   return (
     <Card className="w-full transition-shadow hover:shadow-md">
