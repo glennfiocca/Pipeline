@@ -26,6 +26,16 @@ export function JobList() {
 
   const applyMutation = useMutation({
     mutationFn: async (jobId: number) => {
+      // Get today's applications count
+      const today = new Date().toISOString().split('T')[0];
+      const applicationsToday = applications.filter(app => 
+        app.appliedAt.startsWith(today)
+      ).length;
+
+      if (applicationsToday >= 10) {
+        throw new Error("You've reached your daily application limit of 10 applications.");
+      }
+
       const res = await apiRequest(
         "POST",
         "/api/applications",
