@@ -1,5 +1,5 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { JobCard } from "@/components/job-card";
+import { JobCard } from "@/components/JobCard";  // Updated import path
 import { CompanyCard } from "@/components/company-card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -50,7 +50,7 @@ const mockJobs: Job[] = [
     title: "Leveraged Finance Analyst",
     company: "J.P. Morgan",
     location: "New York, NY",
-    type: "Full Time",
+    type: "Full-Time",
     salary: "$225k/yr",
     description: "A global leader in investment banking, consumer and small business banking, commercial banking, financial...",
     requirements: "Bachelor's degree in Engineering, Economics, Finance, Business Administration, Accounting, or related field;2+ years of experience in investment finance or related occupation;Strong analytical and problem-solving skills",
@@ -71,23 +71,19 @@ export default function JobsPage() {
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const { toast } = useToast();
 
+  // For testing, use mockJobs directly
   const { data: jobs = mockJobs, isLoading } = useQuery<Job[]>({
     queryKey: ["/api/jobs"],
+    initialData: mockJobs // Add this line to ensure mock data is always available
   });
 
-  const { data: applications = [] } = useQuery<Application[]>({
+  const { data: applications = [], isLoading: isLoadingApplications } = useQuery<Application[]>({
     queryKey: ["/api/applications"],
   });
 
   const { data: profiles = [] } = useQuery<Profile[]>({
     queryKey: ["/api/profiles"],
   });
-
-  const parseSalary = (salaryStr: string): [number, number] => {
-    const matches = salaryStr.match(/\$(\d{1,3}(?:,\d{3})*)/g);
-    if (!matches || matches.length !== 2) return [0, 0];
-    return matches.map(s => parseInt(s.replace(/[$,]/g, ''))) as [number, number];
-  };
 
   const applyMutation = useMutation({
     mutationFn: async (jobId: number) => {
@@ -121,6 +117,7 @@ export default function JobsPage() {
         title: "Application submitted",
         description: "Your application has been submitted successfully.",
       });
+      setSelectedJob(null);
     },
     onError: (error: Error) => {
       toast({
@@ -263,7 +260,7 @@ export default function JobsPage() {
                   job={job}
                   onApply={() => applyMutation.mutate(job.id)}
                   onViewDetails={() => setSelectedJob(job)}
-                  isApplying={applyMutation.isPending && applyMutation.variables === job.id}
+                  isApplying={applyMutation.isPending && selectedJob?.id === job.id}
                   isApplied={applications.some((app) => app.jobId === job.id)}
                 />
               ))
@@ -276,18 +273,18 @@ export default function JobsPage() {
                 </p>
               </div>
             )}
-
-            <JobModal
-              job={selectedJob}
-              isOpen={!!selectedJob}
-              onClose={() => setSelectedJob(null)}
-              onApply={(jobId) => applyMutation.mutate(jobId)}
-              isApplied={selectedJob ? applications.some((app) => app.jobId === selectedJob.id) : false}
-              isApplying={applyMutation.isPending}
-            />
           </div>
         </div>
       </div>
+
+      <JobModal
+        job={selectedJob}
+        isOpen={!!selectedJob}
+        onClose={() => setSelectedJob(null)}
+        onApply={(jobId) => applyMutation.mutate(jobId)}
+        isApplied={selectedJob ? applications.some((app) => app.jobId === selectedJob.id) : false}
+        isApplying={applyMutation.isPending}
+      />
     </div>
   );
 }
