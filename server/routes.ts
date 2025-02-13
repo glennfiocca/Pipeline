@@ -49,7 +49,6 @@ export function registerRoutes(app: Express): Server {
     res.json(applications);
   });
 
-  // Simplified application creation endpoint
   app.post("/api/applications", async (req, res) => {
     try {
       const parsed = insertApplicationSchema.safeParse(req.body);
@@ -57,11 +56,7 @@ export function registerRoutes(app: Express): Server {
         return res.status(400).json(parsed.error);
       }
 
-      const application = await storage.createApplication({
-        ...parsed.data,
-        status: "Applied" // Always set initial status to Applied
-      });
-
+      const application = await storage.createApplication(parsed.data);
       res.status(201).json(application);
     } catch (error) {
       console.error('Application creation error:', error);
@@ -69,12 +64,12 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Simplified status update endpoint
   app.patch("/api/applications/:id/status", async (req, res) => {
     try {
       const { status } = req.body;
+      const validStatuses = ["Applied", "Screening", "Interviewing", "Offered", "Accepted", "Rejected", "Withdrawn"];
 
-      if (!status || !["Applied", "Screening", "Interviewing", "Offered", "Accepted", "Rejected", "Withdrawn"].includes(status)) {
+      if (!status || !validStatuses.includes(status)) {
         return res.status(400).json({ error: "Invalid status" });
       }
 
