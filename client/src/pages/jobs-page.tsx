@@ -1,5 +1,5 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { JobCard } from "@/components/JobCard";  // Updated import path
+import { JobCard } from "@/components/JobCard";
 import { CompanyCard } from "@/components/company-card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -13,6 +13,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useState } from "react";
 import { JobModal } from "@/components/JobModal";
 
+// Sample industry types and locations
 const INDUSTRY_TYPES = ["All", "STEM", "Finance", "Healthcare", "Consulting", "Legal Tech", "Clean Tech"];
 const LOCATIONS = [
   "All",
@@ -44,22 +45,6 @@ const mockJobs: Job[] = [
     isActive: true,
     lastCheckedAt: new Date().toISOString(),
     deactivatedAt: null
-  },
-  {
-    id: 2,
-    title: "Leveraged Finance Analyst",
-    company: "J.P. Morgan",
-    location: "New York, NY",
-    type: "Full-Time",
-    salary: "$225k/yr",
-    description: "A global leader in investment banking, consumer and small business banking, commercial banking, financial...",
-    requirements: "Bachelor's degree in Engineering, Economics, Finance, Business Administration, Accounting, or related field;2+ years of experience in investment finance or related occupation;Strong analytical and problem-solving skills",
-    source: "Bloomberg",
-    sourceUrl: "https://bloomberg.com/careers",
-    published: true,
-    isActive: true,
-    lastCheckedAt: new Date().toISOString(),
-    deactivatedAt: null
   }
 ];
 
@@ -71,18 +56,18 @@ export default function JobsPage() {
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const { toast } = useToast();
 
-  // For testing, use mockJobs directly
+  // Use mock data directly
   const { data: jobs = mockJobs, isLoading } = useQuery<Job[]>({
     queryKey: ["/api/jobs"],
-    initialData: mockJobs // Add this line to ensure mock data is always available
+    initialData: mockJobs
   });
 
-  const { data: applications = [], isLoading: isLoadingApplications } = useQuery<Application[]>({
-    queryKey: ["/api/applications"],
+  const { data: applications = [] } = useQuery<Application[]>({
+    queryKey: ["/api/applications"]
   });
 
   const { data: profiles = [] } = useQuery<Profile[]>({
-    queryKey: ["/api/profiles"],
+    queryKey: ["/api/profiles"]
   });
 
   const applyMutation = useMutation({
@@ -92,7 +77,7 @@ export default function JobsPage() {
       }
 
       const res = await apiRequest(
-        "POST", 
+        "POST",
         "/api/applications",
         {
           jobId,
@@ -101,7 +86,7 @@ export default function JobsPage() {
           appliedAt: new Date().toISOString(),
           applicationData: {},
           statusHistory: [{ status: "Applied", date: new Date().toISOString() }],
-          lastStatusUpdate: new Date().toISOString(),
+          lastStatusUpdate: new Date().toISOString()
         }
       );
 
@@ -115,7 +100,7 @@ export default function JobsPage() {
       queryClient.invalidateQueries({ queryKey: ["/api/applications"] });
       toast({
         title: "Application submitted",
-        description: "Your application has been submitted successfully.",
+        description: "Your application has been successfully submitted."
       });
       setSelectedJob(null);
     },
@@ -123,9 +108,9 @@ export default function JobsPage() {
       toast({
         title: "Error",
         description: error.message,
-        variant: "destructive",
+        variant: "destructive"
       });
-    },
+    }
   });
 
   const filteredJobs = jobs.filter((job) => {
@@ -157,6 +142,7 @@ export default function JobsPage() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* Filters Section */}
           <div className="space-y-6">
             <Card>
               <CardContent className="pt-6 space-y-4">
@@ -234,16 +220,14 @@ export default function JobsPage() {
             <Card>
               <CardContent className="pt-6">
                 <h2 className="text-xl font-semibold mb-4">Featured Companies</h2>
-                {jobs
-                  .filter(job => job.isActive)
-                  .slice(0, 3)
-                  .map((job) => (
-                    <CompanyCard key={job.id} job={job} />
-                  ))}
+                {filteredJobs.slice(0, 3).map((job) => (
+                  <CompanyCard key={job.id} job={job} />
+                ))}
               </CardContent>
             </Card>
           </div>
 
+          {/* Jobs List Section */}
           <div className="md:col-span-2 space-y-6">
             <div className="flex justify-between items-center">
               <p className="text-sm text-muted-foreground">
