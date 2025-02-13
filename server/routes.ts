@@ -57,26 +57,11 @@ export function registerRoutes(app: Express): Server {
         return res.status(400).json(parsed.error);
       }
 
-      // Get all applications for this job by this user
-      const existingApplications = await storage.getApplications();
-      const userApplications = existingApplications.filter(
-        app => app.jobId === parsed.data.jobId && app.profileId === parsed.data.profileId
-      );
+      const application = await storage.createApplication({
+        ...parsed.data,
+        status: "Applied" // Always set initial status to Applied
+      });
 
-      // Sort by date to get the latest application
-      const latestApplication = userApplications.sort(
-        (a, b) => new Date(b.appliedAt).getTime() - new Date(a.appliedAt).getTime()
-      )[0];
-
-      // Only block if the latest application is not withdrawn
-      if (latestApplication && latestApplication.status !== "Withdrawn") {
-        return res.status(400).json({ 
-          message: "You have already applied to this job and your application is still active" 
-        });
-      }
-
-      // Create new application
-      const application = await storage.createApplication(parsed.data);
       res.status(201).json(application);
     } catch (error) {
       console.error('Application creation error:', error);

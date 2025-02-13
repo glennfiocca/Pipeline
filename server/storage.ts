@@ -147,17 +147,17 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createApplication(insertApplication: InsertApplication): Promise<Application> {
-    const statusHistory = [{
-      status: insertApplication.status,
-      date: insertApplication.appliedAt
-    }];
-
+    const now = new Date().toISOString();
     const [application] = await db
       .insert(applications)
       .values({
         ...insertApplication,
-        statusHistory,
-        lastStatusUpdate: insertApplication.appliedAt
+        appliedAt: now,
+        lastStatusUpdate: now,
+        statusHistory: [{
+          status: "Applied",
+          date: now
+        }]
       })
       .returning();
 
