@@ -306,9 +306,9 @@ export default function AdminDashboardPage() {
                 </Button>
                 <Button
                   onClick={handleSubmit}
-                  disabled={Object.keys(formData).length === 0}
+                  disabled={Object.keys(formData).length === 0 || updateApplicationMutation.isPending}
                 >
-                  Save Changes
+                  {updateApplicationMutation.isPending ? "Saving..." : "Save Changes"}
                 </Button>
               </div>
             </div>
