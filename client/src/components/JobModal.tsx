@@ -48,12 +48,6 @@ export function JobModal({
 
   const isButtonDisabled = isApplying || (isApplied && !previouslyApplied);
 
-  const handleApplyClick = () => {
-    if (!isButtonDisabled) {
-      setShowCreditsDialog(true);
-    }
-  };
-
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
@@ -107,7 +101,7 @@ export function JobModal({
               {user ? (
                 <Button
                   variant={previouslyApplied ? "default" : isApplied ? "outline" : "default"}
-                  onClick={handleApplyClick}
+                  onClick={() => setShowCreditsDialog(true)}
                   disabled={isButtonDisabled}
                   className="w-full"
                 >

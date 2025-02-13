@@ -11,6 +11,7 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { CreditCard } from "lucide-react";
+import type { Application } from "@shared/schema";
 
 interface ApplicationCreditsDialogProps {
   isOpen: boolean;
@@ -26,7 +27,7 @@ export function ApplicationCreditsDialog({
   jobTitle,
 }: ApplicationCreditsDialogProps) {
   // Get today's applications
-  const { data: applications = [] } = useQuery({
+  const { data: applications = [] } = useQuery<Application[]>({
     queryKey: ["/api/applications"],
   });
 

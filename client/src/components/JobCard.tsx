@@ -38,12 +38,6 @@ export function JobCard({
 
   const isButtonDisabled = isApplying || (isApplied && !previouslyApplied);
 
-  const handleApplyClick = () => {
-    if (!isButtonDisabled) {
-      setShowCreditsDialog(true);
-    }
-  };
-
   return (
     <>
       <Card className="w-full transition-shadow hover:shadow-md">
@@ -80,7 +74,7 @@ export function JobCard({
             {user ? (
               <Button 
                 variant={previouslyApplied ? "default" : isApplied ? "outline" : "default"}
-                onClick={handleApplyClick}
+                onClick={() => setShowCreditsDialog(true)}
                 disabled={isButtonDisabled}
                 className="flex-1"
               >

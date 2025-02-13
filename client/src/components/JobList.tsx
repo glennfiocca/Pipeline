@@ -26,16 +26,6 @@ export function JobList() {
 
   const applyMutation = useMutation({
     mutationFn: async (jobId: number) => {
-      // Get today's applications count
-      const today = new Date().toISOString().split('T')[0];
-      const applicationsToday = applications.filter(app => 
-        app.appliedAt.startsWith(today)
-      ).length;
-
-      if (applicationsToday >= 10) {
-        throw new Error("You've reached your daily application limit of 10 applications.");
-      }
-
       const res = await apiRequest(
         "POST",
         "/api/applications",
@@ -80,7 +70,6 @@ export function JobList() {
       return { isApplied: false, previouslyApplied: false };
     }
 
-    // Sort applications by date, newest first
     const sortedApplications = userApplications.sort(
       (a, b) => new Date(b.appliedAt).getTime() - new Date(a.appliedAt).getTime()
     );
@@ -88,11 +77,28 @@ export function JobList() {
     const latestApplication = sortedApplications[0];
     const isWithdrawn = latestApplication.status === "Withdrawn";
 
-    // If withdrawn, allow reapply
     return {
       isApplied: !isWithdrawn,
       previouslyApplied: isWithdrawn
     };
+  };
+
+  const handleApply = (jobId: number) => {
+    const today = new Date().toISOString().split('T')[0];
+    const applicationsToday = applications.filter(app => 
+      app.appliedAt.startsWith(today)
+    ).length;
+
+    if (applicationsToday >= 10) {
+      toast({
+        title: "Daily limit reached",
+        description: "You've reached your daily application limit of 10 applications.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    applyMutation.mutate(jobId);
   };
 
   if (isLoadingJobs) {
@@ -116,7 +122,7 @@ export function JobList() {
               <JobCard
                 key={job.id}
                 job={job}
-                onApply={() => applyMutation.mutate(job.id)}
+                onApply={() => handleApply(job.id)}
                 onViewDetails={() => setSelectedJob(job)}
                 isApplied={isApplied}
                 isApplying={applyMutation.isPending && selectedJob?.id === job.id}
@@ -131,7 +137,7 @@ export function JobList() {
         job={selectedJob}
         isOpen={!!selectedJob}
         onClose={() => setSelectedJob(null)}
-        onApply={(jobId) => applyMutation.mutate(jobId)}
+        onApply={(jobId) => handleApply(jobId)}
         isApplied={selectedJob ? getApplicationStatus(selectedJob.id).isApplied : false}
         isApplying={applyMutation.isPending}
         previouslyApplied={selectedJob ? getApplicationStatus(selectedJob.id).previouslyApplied : false}
