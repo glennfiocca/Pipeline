@@ -12,10 +12,25 @@ interface JobCardProps {
   onViewDetails: () => void;
   isApplied?: boolean;
   isApplying?: boolean;
+  previouslyApplied?: boolean;
 }
 
-export function JobCard({ job, onApply, onViewDetails, isApplied, isApplying }: JobCardProps) {
+export function JobCard({ 
+  job, 
+  onApply, 
+  onViewDetails, 
+  isApplied, 
+  isApplying,
+  previouslyApplied 
+}: JobCardProps) {
   const { user } = useAuth();
+
+  const getButtonText = () => {
+    if (isApplying) return "Applying...";
+    if (isApplied) return "Applied";
+    if (previouslyApplied) return "Reapply";
+    return "Apply";
+  };
 
   return (
     <Card className="w-full transition-shadow hover:shadow-md">
@@ -61,10 +76,8 @@ export function JobCard({ job, onApply, onViewDetails, isApplied, isApplying }: 
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Applying...
                 </>
-              ) : isApplied ? (
-                "Applied"
               ) : (
-                "Apply"
+                getButtonText()
               )}
             </Button>
           ) : (

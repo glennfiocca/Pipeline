@@ -44,6 +44,10 @@ export function JobList() {
     return ["Applied", "Screening", "Interviewing", "Offered", "Accepted"].includes(latestApplication.status);
   };
 
+  const hasPreviouslyApplied = (jobId: number) => {
+    return applications.some(app => app.jobId === jobId && app.status === "Withdrawn");
+  };
+
   const applyMutation = useMutation({
     mutationFn: async (jobId: number) => {
       const res = await apiRequest(
@@ -101,6 +105,7 @@ export function JobList() {
               onViewDetails={() => setSelectedJob(job)}
               isApplied={hasActiveApplication(job.id)}
               isApplying={applyMutation.isPending}
+              previouslyApplied={hasPreviouslyApplied(job.id)}
             />
           ))}
         </div>
@@ -113,6 +118,7 @@ export function JobList() {
         onApply={(jobId) => applyMutation.mutate(jobId)}
         isApplied={selectedJob ? hasActiveApplication(selectedJob.id) : false}
         isApplying={applyMutation.isPending}
+        previouslyApplied={selectedJob ? hasPreviouslyApplied(selectedJob.id) : false}
       />
     </>
   );

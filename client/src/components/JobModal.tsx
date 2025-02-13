@@ -7,7 +7,7 @@ import {
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Building2, MapPin, DollarSign, CheckCircle2, ExternalLink } from "lucide-react";
+import { Building2, MapPin, DollarSign, CheckCircle2, ExternalLink, Loader2 } from "lucide-react";
 import { Link } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import type { Job } from "@shared/schema";
@@ -19,12 +19,28 @@ interface JobModalProps {
   onApply: (jobId: number) => void;
   isApplied?: boolean;
   isApplying?: boolean;
+  previouslyApplied?: boolean;
 }
 
-export function JobModal({ job, isOpen, onClose, onApply, isApplied, isApplying }: JobModalProps) {
+export function JobModal({ 
+  job, 
+  isOpen, 
+  onClose, 
+  onApply, 
+  isApplied, 
+  isApplying,
+  previouslyApplied
+}: JobModalProps) {
   const { user } = useAuth();
 
   if (!job) return null;
+
+  const getButtonText = () => {
+    if (isApplying) return "Applying...";
+    if (isApplied) return "Applied";
+    if (previouslyApplied) return "Reapply";
+    return "Apply";
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -82,8 +98,17 @@ export function JobModal({ job, isOpen, onClose, onApply, isApplied, isApplying 
                 disabled={isApplied || isApplying}
                 className="w-full"
               >
-                <CheckCircle2 className="h-4 w-4 mr-2" />
-                {isApplied ? "Applied" : isApplying ? "Applying..." : "Apply"}
+                {isApplying ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Applying...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 className="h-4 w-4 mr-2" />
+                    {getButtonText()}
+                  </>
+                )}
               </Button>
             ) : (
               <Link href="/auth/login" className="w-full">
