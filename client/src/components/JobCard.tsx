@@ -66,7 +66,7 @@ export function JobCard({
         <div className="flex gap-4">
           {user ? (
             <Button 
-              variant="default" 
+              variant={previouslyApplied ? "default" : (isApplied ? "outline" : "default")}
               onClick={onApply}
               disabled={isApplying || (isApplied && !previouslyApplied)}
               className="flex-1"

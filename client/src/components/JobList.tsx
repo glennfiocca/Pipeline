@@ -31,17 +31,17 @@ export function JobList() {
       .filter(app => app.jobId === jobId)
       .sort((a, b) => new Date(b.appliedAt).getTime() - new Date(a.appliedAt).getTime());
 
-    return jobApplications.length > 0 ? jobApplications[0] : null;
+    return jobApplications[0] || null;
   };
 
   const hasActiveApplication = (jobId: number) => {
     const latest = getLatestApplication(jobId);
-    return latest?.status !== "Withdrawn" && latest !== null;
+    return latest !== null && latest.status !== "Withdrawn";
   };
 
   const hasPreviouslyApplied = (jobId: number) => {
     const latest = getLatestApplication(jobId);
-    return latest?.status === "Withdrawn";
+    return latest !== null && latest.status === "Withdrawn";
   };
 
   const applyMutation = useMutation({
