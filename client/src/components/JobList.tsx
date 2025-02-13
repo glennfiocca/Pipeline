@@ -26,12 +26,16 @@ export function JobList() {
 
   const applyMutation = useMutation({
     mutationFn: async (jobId: number) => {
-      const res = await apiRequest("POST", "/api/applications", {
-        jobId,
-        profileId: user!.id,
-        status: "Applied",
-        applicationData: {}
-      });
+      const res = await apiRequest(
+        "POST",
+        "/api/applications",
+        {
+          jobId,
+          profileId: user!.id,
+          status: "Applied",
+          applicationData: {}
+        }
+      );
       if (!res.ok) {
         const error = await res.json();
         throw new Error(error.message || "Failed to submit application");
@@ -56,19 +60,19 @@ export function JobList() {
   });
 
   const getApplicationStatus = (jobId: number) => {
-    if (!user) return { isApplied: false, previouslyApplied: false };
-
-    // Get all applications for this job by the current user, sorted by date
-    const jobApplications = applications
-      .filter(app => app.jobId === jobId && app.profileId === user.id)
-      .sort((a, b) => new Date(b.appliedAt).getTime() - new Date(a.appliedAt).getTime());
-
-    if (!jobApplications.length) {
+    if (!user || !applications.length) {
       return { isApplied: false, previouslyApplied: false };
     }
 
-    const latestApplication = jobApplications[0];
-    return {
+    const latestApplication = applications
+      .filter(app => app.jobId === jobId && app.profileId === user.id)
+      .sort((a, b) => new Date(b.appliedAt).getTime() - new Date(a.appliedAt).getTime())[0];
+
+    if (!latestApplication) {
+      return { isApplied: false, previouslyApplied: false };
+    }
+
+    return { 
       isApplied: latestApplication.status !== "Withdrawn",
       previouslyApplied: latestApplication.status === "Withdrawn"
     };
@@ -90,6 +94,7 @@ export function JobList() {
         <div className="grid gap-4 pb-4 md:grid-cols-2 lg:grid-cols-3">
           {jobs.map((job) => {
             const { isApplied, previouslyApplied } = getApplicationStatus(job.id);
+
             return (
               <JobCard
                 key={job.id}

@@ -180,6 +180,7 @@ export class DatabaseStorage implements IStorage {
       date: now
     };
 
+    // Ensure statusHistory is always an array
     const currentHistory = Array.isArray(currentApp.statusHistory) ? currentApp.statusHistory : [];
     const updatedHistory = [...currentHistory, newHistoryEntry];
 
