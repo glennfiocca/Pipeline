@@ -27,24 +27,21 @@ export function JobList() {
   });
 
   const getLatestApplication = (jobId: number) => {
-    const jobApplications = applications.filter(app => app.jobId === jobId);
-    if (jobApplications.length === 0) return null;
+    const jobApplications = applications
+      .filter(app => app.jobId === jobId)
+      .sort((a, b) => new Date(b.appliedAt).getTime() - new Date(a.appliedAt).getTime());
 
-    return jobApplications.reduce((latest, current) => {
-      return new Date(current.appliedAt) > new Date(latest.appliedAt) ? current : latest;
-    }, jobApplications[0]);
+    return jobApplications.length > 0 ? jobApplications[0] : null;
   };
 
   const hasActiveApplication = (jobId: number) => {
     const latest = getLatestApplication(jobId);
-    if (!latest) return false;
-    return latest.status !== "Withdrawn";
+    return latest?.status !== "Withdrawn" && latest !== null;
   };
 
   const hasPreviouslyApplied = (jobId: number) => {
     const latest = getLatestApplication(jobId);
-    if (!latest) return false;
-    return latest.status === "Withdrawn";
+    return latest?.status === "Withdrawn";
   };
 
   const applyMutation = useMutation({

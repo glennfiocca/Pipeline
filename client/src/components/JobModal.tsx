@@ -37,8 +37,8 @@ export function JobModal({
 
   const getButtonText = () => {
     if (isApplying) return "Applying...";
-    if (isApplied) return "Applied";
     if (previouslyApplied) return "Reapply";
+    if (isApplied) return "Applied";
     return "Apply";
   };
 
@@ -93,9 +93,9 @@ export function JobModal({
           <div className="flex items-center justify-between pt-6 border-t">
             {user ? (
               <Button
-                variant={(!previouslyApplied && isApplied) ? "outline" : "default"}
+                variant={previouslyApplied ? "default" : (isApplied ? "outline" : "default")}
                 onClick={() => onApply(job.id)}
-                disabled={isApplying || (!previouslyApplied && isApplied)}
+                disabled={isApplying || (isApplied && !previouslyApplied)}
                 className="w-full"
               >
                 {isApplying ? (
