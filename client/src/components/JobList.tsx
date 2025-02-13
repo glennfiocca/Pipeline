@@ -22,7 +22,7 @@ export function JobList() {
   const { data: applications = [], isLoading: isLoadingApplications } = useQuery<Application[]>({
     queryKey: ["/api/applications"],
     enabled: !!user,
-    refetchInterval: 1000, // Refetch every second to ensure we have latest data
+    refetchInterval: 1000,
     refetchOnWindowFocus: true,
   });
 

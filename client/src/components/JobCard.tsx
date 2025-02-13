@@ -27,8 +27,8 @@ export function JobCard({
 
   const getButtonText = () => {
     if (isApplying) return "Applying...";
-    if (isApplied) return "Applied";
     if (previouslyApplied) return "Reapply";
+    if (isApplied) return "Applied";
     return "Apply";
   };
 
@@ -68,7 +68,7 @@ export function JobCard({
             <Button 
               variant="default" 
               onClick={onApply}
-              disabled={isApplying || (!previouslyApplied && isApplied)}
+              disabled={isApplying || (isApplied && !previouslyApplied)}
               className="flex-1"
             >
               {isApplying ? (
