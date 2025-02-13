@@ -134,6 +134,28 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  app.patch("/api/profiles/:id", async (req, res) => {
+    try {
+      const profileId = parseInt(req.params.id);
+      if (isNaN(profileId)) {
+        return res.status(400).json({ error: "Invalid profile ID" });
+      }
+
+      const parsed = insertProfileSchema.partial().safeParse(req.body);
+      if (!parsed.success) {
+        console.error('Profile update validation error:', parsed.error);
+        return res.status(400).json(parsed.error);
+      }
+
+      const profile = await storage.updateProfile(profileId, parsed.data);
+      res.json(profile);
+    } catch (error) {
+      console.error('Profile update error:', error);
+      res.status(500).json({ message: (error as Error).message });
+    }
+  });
+
+
   // Applications
   app.get("/api/applications", async (req: any, res) => {
     try {

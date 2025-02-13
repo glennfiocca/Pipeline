@@ -90,31 +90,23 @@ export default function ProfilePage() {
         willingToRelocate: Boolean(values.willingToRelocate)
       } as InsertProfile;
 
-      const response = await apiRequest(
-        profile?.id ? "PATCH" : "POST",
-        profile?.id ? `/api/profiles/${profile.id}` : "/api/profiles",
-        formData
-      );
+      const method = profile?.id ? "PATCH" : "POST";
+      const endpoint = profile?.id ? `/api/profiles/${profile.id}` : "/api/profiles";
 
-      const responseData = await response.json();
+      const response = await apiRequest(method, endpoint, formData);
 
       if (!response.ok) {
-        let errorMessage = "Failed to save profile";
-        if (responseData.message) {
-          if (responseData.message.includes("duplicate key")) {
-            errorMessage = "This email address is already registered with another profile";
-          } else {
-            errorMessage = responseData.message;
-          }
-        }
-        throw new Error(errorMessage);
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to save profile');
       }
+
+      const responseData = await response.json();
 
       await queryClient.invalidateQueries({ queryKey: ["/api/profiles"] });
 
       toast({
         title: "Success!",
-        description: "Your profile has been saved successfully.",
+        description: `Your profile has been ${profile?.id ? 'updated' : 'created'} successfully.`,
       });
     } catch (error) {
       console.error("Form submission error:", error);
