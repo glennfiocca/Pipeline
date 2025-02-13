@@ -99,7 +99,9 @@ export function registerRoutes(app: Express): Server {
   app.post("/api/applications", async (req, res) => {
     try {
       const parsed = insertApplicationSchema.safeParse(req.body);
-      if (!parsed.success) return res.status(400).json(parsed.error);
+      if (!parsed.success) {
+        return res.status(400).json(parsed.error);
+      }
 
       // Get all applications for this job by this user
       const existingApplications = await storage.getApplications();
@@ -112,20 +114,15 @@ export function registerRoutes(app: Express): Server {
         (a, b) => new Date(b.appliedAt).getTime() - new Date(a.appliedAt).getTime()
       )[0];
 
-      // Only block if there's an active application (not withdrawn)
+      // Only block if the latest application is not withdrawn
       if (latestApplication && latestApplication.status !== "Withdrawn") {
-        return res.status(400).json({ message: "You have already applied to this job" });
+        return res.status(400).json({ 
+          message: "You have already applied to this job and your application is still active" 
+        });
       }
 
       // Create new application
-      const application = await storage.createApplication({
-        ...parsed.data,
-        statusHistory: [{
-          status: parsed.data.status,
-          date: parsed.data.appliedAt
-        }]
-      });
-
+      const application = await storage.createApplication(parsed.data);
       res.status(201).json(application);
     } catch (error) {
       console.error('Application creation error:', error);
@@ -134,16 +131,14 @@ export function registerRoutes(app: Express): Server {
   });
 
   app.patch("/api/applications/:id/status", async (req, res) => {
-    const { status } = req.body;
-    if (typeof status !== "string" || !["Applied", "Screening", "Interviewing", "Offered", "Accepted", "Rejected", "Withdrawn"].includes(status)) {
-      return res.status(400).json({ error: "Invalid status" });
-    }
-
     try {
-      const application = await storage.updateApplicationStatus(
-        parseInt(req.params.id),
-        status
-      );
+      const { status } = req.body;
+
+      if (!status || !["Applied", "Screening", "Interviewing", "Offered", "Accepted", "Rejected", "Withdrawn"].includes(status)) {
+        return res.status(400).json({ error: "Invalid status" });
+      }
+
+      const application = await storage.updateApplicationStatus(parseInt(req.params.id), status);
       res.json(application);
     } catch (error) {
       console.error('Error updating application status:', error);

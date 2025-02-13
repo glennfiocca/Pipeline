@@ -67,6 +67,7 @@ export function JobList() {
       return { isApplied: false, previouslyApplied: false };
     }
 
+    // Get only applications for this job by the current user
     const userApplications = applications.filter(
       app => app.jobId === jobId && app.profileId === user.id
     );
@@ -75,9 +76,10 @@ export function JobList() {
       return { isApplied: false, previouslyApplied: false };
     }
 
-    const latestApplication = userApplications.reduce((latest, current) => {
-      return new Date(current.appliedAt) > new Date(latest.appliedAt) ? current : latest;
-    });
+    // Sort to get the most recent application
+    const latestApplication = userApplications.sort(
+      (a, b) => new Date(b.appliedAt).getTime() - new Date(a.appliedAt).getTime()
+    )[0];
 
     return {
       isApplied: latestApplication.status !== "Withdrawn",

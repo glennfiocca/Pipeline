@@ -147,7 +147,20 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createApplication(insertApplication: InsertApplication): Promise<Application> {
-    const [application] = await db.insert(applications).values(insertApplication).returning();
+    const statusHistory = [{
+      status: insertApplication.status,
+      date: insertApplication.appliedAt
+    }];
+
+    const [application] = await db
+      .insert(applications)
+      .values({
+        ...insertApplication,
+        statusHistory,
+        lastStatusUpdate: insertApplication.appliedAt
+      })
+      .returning();
+
     return application;
   }
 
@@ -167,9 +180,9 @@ export class DatabaseStorage implements IStorage {
       date: now
     };
 
-    const updatedHistory = currentApp.statusHistory 
-      ? [...(currentApp.statusHistory as any[]), newHistoryEntry]
-      : [newHistoryEntry];
+    // Ensure statusHistory is always an array
+    const currentHistory = Array.isArray(currentApp.statusHistory) ? currentApp.statusHistory : [];
+    const updatedHistory = [...currentHistory, newHistoryEntry];
 
     const [application] = await db
       .update(applications)
