@@ -1,6 +1,6 @@
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { BriefcaseIcon, HomeIcon, UserCircleIcon, BarChartIcon, LogOutIcon } from "lucide-react";
+import { BriefcaseIcon, HomeIcon, UserCircleIcon, BarChartIcon, LogOutIcon, ShieldIcon } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 
 export function NavBar() {
@@ -46,6 +46,14 @@ export function NavBar() {
                     Dashboard
                   </Button>
                 </Link>
+                {user.isAdmin && (
+                  <Link href="/admin/dashboard">
+                    <Button variant="ghost" size="sm">
+                      <ShieldIcon className="h-4 w-4 mr-2" />
+                      Admin
+                    </Button>
+                  </Link>
+                )}
               </>
             )}
           </div>

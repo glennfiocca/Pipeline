@@ -7,6 +7,7 @@ import HomePage from "@/pages/home-page";
 import JobsPage from "@/pages/jobs-page";
 import ProfilePage from "@/pages/profile-page";
 import DashboardPage from "@/pages/dashboard-page";
+import AdminDashboardPage from "@/pages/admin-dashboard-page";
 import LoginPage from "@/pages/login-page";
 import RegisterPage from "@/pages/register-page";
 import NotFound from "@/pages/not-found";
@@ -22,6 +23,7 @@ function Router() {
       <Route path="/jobs" component={JobsPage} />
       <Route path="/profile" component={ProfilePage} />
       <Route path="/dashboard" component={DashboardPage} />
+      <Route path="/admin/dashboard" component={AdminDashboardPage} />
       <Route component={NotFound} />
     </Switch>
   );
