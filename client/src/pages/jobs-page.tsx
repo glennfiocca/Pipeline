@@ -12,8 +12,8 @@ import { Job, Application, Profile } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useState } from "react";
 import { JobModal } from "@/components/JobModal";
+import { Loader2 } from "lucide-react";
 
-// Sample industry types and locations
 const INDUSTRY_TYPES = ["All", "STEM", "Finance", "Healthcare", "Consulting", "Legal Tech", "Clean Tech"];
 const LOCATIONS = [
   "All",
@@ -28,125 +28,6 @@ const LOCATIONS = [
   "Washington, DC"
 ];
 
-// Mock data for testing
-export const mockJobs: Job[] = [
-  {
-    id: 1,
-    title: "Senior Software Engineer",
-    company: "Google",
-    location: "Mountain View, CA",
-    type: "Full-Time",
-    salary: "$200k-$350k/yr",
-    description: "Join our team to work on cutting-edge technology that impacts billions of users...",
-    requirements: "Bachelor's degree in Computer Science;5+ years of experience in software development;Strong coding skills in multiple languages",
-    source: "Google Careers",
-    sourceUrl: "https://careers.google.com",
-    published: true,
-    isActive: true,
-    lastCheckedAt: new Date().toISOString(),
-    deactivatedAt: null
-  },
-  {
-    id: 2,
-    title: "Leveraged Finance Analyst",
-    company: "J.P. Morgan",
-    location: "New York, NY",
-    type: "Full-Time",
-    salary: "$225k/yr",
-    description: "A global leader in investment banking, consumer and small business banking, commercial banking, financial...",
-    requirements: "Bachelor's degree in Engineering, Economics, Finance, Business Administration, Accounting, or related field;2+ years of experience in investment finance or related occupation;Strong analytical and problem-solving skills",
-    source: "Bloomberg",
-    sourceUrl: "https://bloomberg.com/careers",
-    published: true,
-    isActive: true,
-    lastCheckedAt: new Date().toISOString(),
-    deactivatedAt: null
-  },
-  {
-    id: 3,
-    title: "Product Manager",
-    company: "Meta",
-    location: "Menlo Park, CA",
-    type: "Full-Time",
-    salary: "$180k-$250k/yr",
-    description: "Shape the future of social connection by leading product development at Meta...",
-    requirements: "5+ years of product management experience;Experience with consumer products;Strong analytical and communication skills",
-    source: "Meta Careers",
-    sourceUrl: "https://metacareers.com",
-    published: true,
-    isActive: true,
-    lastCheckedAt: new Date().toISOString(),
-    deactivatedAt: null
-  },
-  {
-    id: 4,
-    title: "Data Scientist",
-    company: "Netflix",
-    location: "Los Gatos, CA",
-    type: "Full-Time",
-    salary: "$170k-$280k/yr",
-    description: "Help shape the future of entertainment by leveraging data to drive decisions...",
-    requirements: "PhD or Master's in Computer Science, Statistics, or related field;3+ years of experience with machine learning;Expert in Python and SQL",
-    source: "Netflix Jobs",
-    sourceUrl: "https://jobs.netflix.com",
-    published: true,
-    isActive: true,
-    lastCheckedAt: new Date().toISOString(),
-    deactivatedAt: null
-  },
-  {
-    id: 5,
-    title: "Cloud Solutions Architect",
-    company: "Amazon Web Services",
-    location: "Seattle, WA",
-    type: "Full-Time",
-    salary: "$160k-$270k/yr",
-    description: "Design and implement scalable cloud solutions for enterprise customers...",
-    requirements: "Bachelor's degree in Computer Science or related field;5+ years of experience with cloud platforms;Strong system design skills",
-    source: "AWS Careers",
-    sourceUrl: "https://aws.amazon.com/careers",
-    published: true,
-    isActive: true,
-    lastCheckedAt: new Date().toISOString(),
-    deactivatedAt: null
-  },
-  {
-    id: 6,
-    title: "Machine Learning Engineer",
-    company: "OpenAI",
-    location: "San Francisco, CA",
-    type: "Full-Time",
-    salary: "$200k-$400k/yr",
-    description: "Work on cutting-edge AI research and development to advance artificial general intelligence...",
-    requirements: "PhD in Computer Science, Machine Learning, or related field;Strong background in deep learning;Publications in top-tier conferences",
-    source: "OpenAI Careers",
-    sourceUrl: "https://openai.com/careers",
-    published: true,
-    isActive: true,
-    lastCheckedAt: new Date().toISOString(),
-    deactivatedAt: null
-  },
-  {
-    id: 7,
-    title: "VP of Machine Learning",
-    company: "Scale AI",
-    location: "San Francisco, CA",
-    type: "Full-Time",
-    salary: "$300k-$500k/yr",
-    description: "Scale AI is seeking a visionary VP of Machine Learning to lead our AI initiatives. You'll drive the development of cutting-edge ML solutions, oversee a team of talented engineers, and shape the future of AI infrastructure.",
-    requirements: "Ph.D. in Computer Science, Machine Learning, or related field;10+ years of experience in ML/AI;Proven track record of leading large-scale AI initiatives;Strong publication record in top-tier conferences",
-    source: "Scale AI Careers",
-    sourceUrl: "https://scale.ai/careers",
-    published: true,
-    isActive: true,
-    lastCheckedAt: new Date().toISOString(),
-    deactivatedAt: null
-  }
-];
-
-// Pre-populate the jobs cache
-queryClient.setQueryData(["/api/jobs"], mockJobs);
-
 export default function JobsPage() {
   const [search, setSearch] = useState("");
   const [industryType, setIndustryType] = useState("All");
@@ -155,11 +36,8 @@ export default function JobsPage() {
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const { toast } = useToast();
 
-  const { data: jobs = [], isLoading } = useQuery<Job[]>({
-    queryKey: ["/api/jobs"],
-    placeholderData: mockJobs,
-    staleTime: Infinity, // Never mark the data as stale
-    cacheTime: Infinity, // Keep the data cached indefinitely
+  const { data: jobs = [], isLoading: isLoadingJobs } = useQuery<Job[]>({
+    queryKey: ["/api/jobs"]
   });
 
   const { data: applications = [] } = useQuery<Application[]>({
@@ -223,10 +101,17 @@ export default function JobsPage() {
 
     const matchesIndustry = industryType === "All" || job.type === industryType;
     const matchesLocation = location === "All" || job.location === location;
-    const matchesSalary = true; // For testing purposes
 
-    return matchesSearch && matchesIndustry && matchesLocation && matchesSalary;
+    return matchesSearch && matchesIndustry && matchesLocation;
   });
+
+  if (isLoadingJobs) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="container py-10">
@@ -335,22 +220,18 @@ export default function JobsPage() {
               </p>
             </div>
 
-            {isLoading ? (
-              <div>Loading...</div>
-            ) : (
-              filteredJobs.map((job) => (
-                <JobCard
-                  key={job.id}
-                  job={job}
-                  onApply={() => applyMutation.mutate(job.id)}
-                  onViewDetails={() => setSelectedJob(job)}
-                  isApplying={applyMutation.isPending && selectedJob?.id === job.id}
-                  isApplied={applications.some((app) => app.jobId === job.id)}
-                />
-              ))
-            )}
+            {filteredJobs.map((job) => (
+              <JobCard
+                key={job.id}
+                job={job}
+                onApply={() => applyMutation.mutate(job.id)}
+                onViewDetails={() => setSelectedJob(job)}
+                isApplying={applyMutation.isPending && selectedJob?.id === job.id}
+                isApplied={applications.some((app) => app.jobId === job.id)}
+              />
+            ))}
 
-            {filteredJobs.length === 0 && !isLoading && (
+            {filteredJobs.length === 0 && !isLoadingJobs && (
               <div className="text-center py-8">
                 <p className="text-muted-foreground">
                   No active jobs found matching your criteria. Try adjusting your filters.

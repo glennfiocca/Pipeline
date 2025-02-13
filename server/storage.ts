@@ -11,6 +11,7 @@ export interface IStorage {
   getJobs(): Promise<Job[]>;
   getJob(id: number): Promise<Job | undefined>;
   createJob(job: InsertJob): Promise<Job>;
+  getActiveJobs(): Promise<Job[]>;
 
   // Profiles
   getProfiles(): Promise<Profile[]>;
@@ -99,13 +100,22 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(jobs);
   }
 
+  async getActiveJobs(): Promise<Job[]> {
+    return await db.select().from(jobs).where(eq(jobs.isActive, true));
+  }
+
   async getJob(id: number): Promise<Job | undefined> {
     const [job] = await db.select().from(jobs).where(eq(jobs.id, id));
     return job;
   }
 
   async createJob(insertJob: InsertJob): Promise<Job> {
-    const [job] = await db.insert(jobs).values(insertJob).returning();
+    const [job] = await db.insert(jobs).values({
+      ...insertJob,
+      lastCheckedAt: new Date().toISOString(),
+      published: true,
+      isActive: true
+    }).returning();
     return job;
   }
 
