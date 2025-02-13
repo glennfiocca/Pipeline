@@ -4,11 +4,17 @@ import { storage } from "./storage";
 import { insertJobSchema, insertApplicationSchema, insertProfileSchema } from "@shared/schema";
 import { ScraperManager } from './services/scraper/manager';
 
-// Middleware to check if user is admin
+// Enhanced admin middleware with specific user check
 const isAdmin = (req: any, res: any, next: any) => {
-  if (!req.isAuthenticated() || !req.user?.isAdmin) {
+  if (!req.isAuthenticated()) {
+    return res.status(401).json({ error: "Authentication required" });
+  }
+
+  // Check both admin status and specific username
+  if (!req.user?.isAdmin || req.user?.username !== 'glennfiocca') {
     return res.status(403).json({ error: "Unauthorized. Admin access required." });
   }
+
   next();
 };
 
@@ -90,10 +96,10 @@ export function registerRoutes(app: Express): Server {
       const manager = new ScraperManager();
       const jobs = await manager.runScrapers();
       console.log('Scraping completed, found jobs:', jobs?.length || 0);
-      res.json({ 
-        message: "Job scraping completed successfully", 
+      res.json({
+        message: "Job scraping completed successfully",
         jobCount: jobs?.length || 0,
-        jobs: jobs 
+        jobs: jobs
       });
     } catch (error) {
       console.error('Error running scrapers:', error);
@@ -136,8 +142,8 @@ export function registerRoutes(app: Express): Server {
       }
       const applications = await storage.getApplications();
       // Filter applications for regular users to only see their own
-      const userApplications = req.user.isAdmin 
-        ? applications 
+      const userApplications = req.user.isAdmin
+        ? applications
         : applications.filter((app: any) => app.profileId === req.user.id);
       res.json(userApplications);
     } catch (error) {

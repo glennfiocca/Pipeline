@@ -28,8 +28,8 @@ export default function AdminDashboardPage() {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
 
-  // Redirect non-admin users
-  if (!user?.isAdmin) {
+  // Enhanced admin check
+  if (!user?.isAdmin || user?.username !== 'glennfiocca') {
     setLocation("/");
     return null;
   }
