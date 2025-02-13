@@ -35,18 +35,22 @@ export function JobList() {
     if (!jobApplications.length) return { isApplied: false, previouslyApplied: false };
 
     const latestApplication = jobApplications[0];
+    console.log(`Job ${jobId} latest application status:`, latestApplication.status);
 
     // If the latest application is withdrawn, user can reapply
     if (latestApplication.status === "Withdrawn") {
+      console.log(`Job ${jobId} is withdrawn, allowing reapplication`);
       return { isApplied: false, previouslyApplied: true };
     }
 
     // If the latest application is not withdrawn, user has an active application
+    console.log(`Job ${jobId} has active application`);
     return { isApplied: true, previouslyApplied: false };
   };
 
   const applyMutation = useMutation({
     mutationFn: async (jobId: number) => {
+      console.log('Applying for job:', jobId);
       const res = await apiRequest(
         "POST",
         "/api/applications",
@@ -96,6 +100,7 @@ export function JobList() {
         <div className="grid gap-4 pb-4 md:grid-cols-2 lg:grid-cols-3">
           {jobs?.map((job) => {
             const { isApplied, previouslyApplied } = getApplicationStatus(job.id);
+            console.log(`Rendering job ${job.id}:`, { isApplied, previouslyApplied });
             return (
               <JobCard
                 key={job.id}
