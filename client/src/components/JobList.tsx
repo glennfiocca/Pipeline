@@ -60,21 +60,28 @@ export function JobList() {
   });
 
   const getApplicationStatus = (jobId: number) => {
-    if (!user || !applications.length) {
+    if (!user) return { isApplied: false, previouslyApplied: false };
+
+    const userApplications = applications.filter(app => 
+      app.jobId === jobId && app.profileId === user.id
+    );
+
+    if (userApplications.length === 0) {
       return { isApplied: false, previouslyApplied: false };
     }
 
-    const latestApplication = applications
-      .filter(app => app.jobId === jobId && app.profileId === user.id)
-      .sort((a, b) => new Date(b.appliedAt).getTime() - new Date(a.appliedAt).getTime())[0];
+    // Sort applications by date, newest first
+    const sortedApplications = userApplications.sort(
+      (a, b) => new Date(b.appliedAt).getTime() - new Date(a.appliedAt).getTime()
+    );
 
-    if (!latestApplication) {
-      return { isApplied: false, previouslyApplied: false };
-    }
+    const latestApplication = sortedApplications[0];
+    const isWithdrawn = latestApplication.status === "Withdrawn";
 
-    return { 
-      isApplied: latestApplication.status !== "Withdrawn",
-      previouslyApplied: latestApplication.status === "Withdrawn"
+    // If withdrawn, allow reapply
+    return {
+      isApplied: !isWithdrawn,
+      previouslyApplied: isWithdrawn
     };
   };
 
@@ -102,7 +109,7 @@ export function JobList() {
                 onApply={() => applyMutation.mutate(job.id)}
                 onViewDetails={() => setSelectedJob(job)}
                 isApplied={isApplied}
-                isApplying={applyMutation.isPending}
+                isApplying={applyMutation.isPending && selectedJob?.id === job.id}
                 previouslyApplied={previouslyApplied}
               />
             );

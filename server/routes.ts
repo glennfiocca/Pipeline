@@ -99,6 +99,7 @@ export function registerRoutes(app: Express): Server {
         return res.status(400).json(parsed.error);
       }
 
+      // Create new application regardless of previous status
       const application = await storage.createApplication({
         ...parsed.data,
         status: "Applied"
