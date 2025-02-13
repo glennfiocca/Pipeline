@@ -31,7 +31,7 @@ const LOCATIONS = [
 // Mock data for testing
 const mockJobs: Job[] = [
   {
-    id: 1,
+    id: 7,
     title: "VP of Machine Learning",
     company: "Scale AI",
     location: "San Francisco, CA",
