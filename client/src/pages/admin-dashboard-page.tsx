@@ -19,18 +19,18 @@ import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
 import { apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
-import { useNavigate } from "wouter";
+import { useLocation } from "wouter";
 
 export default function AdminDashboardPage() {
   const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
   const [selectedApplication, setSelectedApplication] = useState<Application | null>(null);
   const { toast } = useToast();
   const { user } = useAuth();
-  const navigate = useNavigate();
+  const [, setLocation] = useLocation();
 
   // Redirect non-admin users
   if (!user?.isAdmin) {
-    navigate("/");
+    setLocation("/");
     return null;
   }
 
@@ -126,6 +126,14 @@ export default function AdminDashboardPage() {
     Rejected: applications.filter((app) => app.status === "Rejected").length,
     Withdrawn: applications.filter((app) => app.status === "Withdrawn").length,
   };
+
+  if (isLoadingApps) {
+    return (
+      <div className="flex items-center justify-center min-h-[calc(100vh-4rem)]">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+      </div>
+    );
+  }
 
   return (
     <div className="container py-10">
