@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Job, Application, type InsertApplication } from "@shared/schema";
+import { Job, Application, Profile } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useState } from "react";
 import { JobModal } from "@/components/JobModal";
@@ -28,22 +28,40 @@ const LOCATIONS = [
 ];
 
 // Mock data for testing
-const mockJobs: Job[] = [{
-  id: 1,
-  title: "Leveraged Finance Analyst",
-  company: "J.P. Morgan",
-  location: "New York, NY",
-  type: "Full Time",
-  salary: "$225k/yr",
-  description: "A global leader in investment banking, consumer and small business banking, commercial banking, financial...",
-  requirements: "Bachelor's degree in Engineering, Economics, Finance, Business Administration, Accounting, or related field;2+ years of experience in investment finance or related occupation;Strong analytical and problem-solving skills",
-  source: "Bloomberg",
-  sourceUrl: "https://bloomberg.com/careers",
-  published: true,
-  isActive: true,
-  lastCheckedAt: new Date().toISOString(),
-  deactivatedAt: null
-}];
+const mockJobs: Job[] = [
+  {
+    id: 1,
+    title: "VP of Machine Learning",
+    company: "Scale AI",
+    location: "San Francisco, CA",
+    type: "Full-Time",
+    salary: "$300k-$500k/yr",
+    description: "Scale AI is seeking a visionary VP of Machine Learning to lead our AI initiatives. You'll drive the development of cutting-edge ML solutions, oversee a team of talented engineers, and shape the future of AI infrastructure.",
+    requirements: "Ph.D. in Computer Science, Machine Learning, or related field;10+ years of experience in ML/AI;Proven track record of leading large-scale AI initiatives;Strong publication record in top-tier conferences",
+    source: "Scale AI Careers",
+    sourceUrl: "https://scale.ai/careers",
+    published: true,
+    isActive: true,
+    lastCheckedAt: new Date().toISOString(),
+    deactivatedAt: null
+  },
+  {
+    id: 2,
+    title: "Leveraged Finance Analyst",
+    company: "J.P. Morgan",
+    location: "New York, NY",
+    type: "Full Time",
+    salary: "$225k/yr",
+    description: "A global leader in investment banking, consumer and small business banking, commercial banking, financial...",
+    requirements: "Bachelor's degree in Engineering, Economics, Finance, Business Administration, Accounting, or related field;2+ years of experience in investment finance or related occupation;Strong analytical and problem-solving skills",
+    source: "Bloomberg",
+    sourceUrl: "https://bloomberg.com/careers",
+    published: true,
+    isActive: true,
+    lastCheckedAt: new Date().toISOString(),
+    deactivatedAt: null
+  }
+];
 
 export default function JobsPage() {
   const [search, setSearch] = useState("");
@@ -61,7 +79,7 @@ export default function JobsPage() {
     queryKey: ["/api/applications"],
   });
 
-  const { data: profiles = [] } = useQuery({
+  const { data: profiles = [] } = useQuery<Profile[]>({
     queryKey: ["/api/profiles"],
   });
 
@@ -77,17 +95,20 @@ export default function JobsPage() {
         throw new Error("Please create a profile before applying to jobs");
       }
 
-      const application: InsertApplication = {
-        jobId,
-        profileId: profiles[0].id,
-        status: "Applied",
-        appliedAt: new Date().toISOString(),
-        applicationData: {},
-        statusHistory: [{ status: "Applied", date: new Date().toISOString() }],
-        lastStatusUpdate: new Date().toISOString(),
-      };
+      const res = await apiRequest(
+        "POST", 
+        "/api/applications",
+        {
+          jobId,
+          profileId: profiles[0].id,
+          status: "Applied",
+          appliedAt: new Date().toISOString(),
+          applicationData: {},
+          statusHistory: [{ status: "Applied", date: new Date().toISOString() }],
+          lastStatusUpdate: new Date().toISOString(),
+        }
+      );
 
-      const res = await apiRequest("POST", "/api/applications", application);
       if (!res.ok) {
         const error = await res.json();
         throw new Error(error.message || "Failed to submit application");
@@ -119,11 +140,8 @@ export default function JobsPage() {
       job.description.toLowerCase().includes(search.toLowerCase());
 
     const matchesIndustry = industryType === "All" || job.type === industryType;
-
     const matchesLocation = location === "All" || job.location === location;
-
-    // For testing, let's consider the mock job always matches salary range
-    const matchesSalary = true;
+    const matchesSalary = true; // For testing purposes
 
     return matchesSearch && matchesIndustry && matchesLocation && matchesSalary;
   });

@@ -199,7 +199,7 @@ export default function DashboardPage() {
                         </div>
                       </div>
 
-                      {application.statusHistory && Array.isArray(application.statusHistory) && application.statusHistory.length > 0 && (
+                      {application.statusHistory && Array.isArray(application.statusHistory) && (
                         <div className="mt-2 text-sm">
                           <div className="font-medium mb-1">Status History:</div>
                           {(application.statusHistory as StatusHistoryItem[]).map((history, index) => (
