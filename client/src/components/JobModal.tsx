@@ -35,24 +35,17 @@ export function JobModal({
 
   if (!job) return null;
 
-  const getButtonText = () => {
-    if (isApplying) return "Applying...";
-    if (previouslyApplied) return "Reapply";
-    if (isApplied) return "Applied";
-    return "Apply";
-  };
+  // Simplified button logic matching JobCard
+  const buttonText = isApplying 
+    ? "Applying..." 
+    : previouslyApplied 
+    ? "Reapply" 
+    : isApplied 
+    ? "Applied" 
+    : "Apply";
 
-  const getButtonVariant = () => {
-    if (previouslyApplied) return "default";
-    if (isApplied) return "outline";
-    return "default";
-  };
-
-  const isButtonDisabled = () => {
-    if (isApplying) return true;
-    if (isApplied && !previouslyApplied) return true;
-    return false;
-  };
+  // Only disable the button when actively applying or if there's an active application
+  const isButtonDisabled = isApplying || (isApplied && !previouslyApplied);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -105,9 +98,9 @@ export function JobModal({
           <div className="flex items-center justify-between pt-6 border-t">
             {user ? (
               <Button
-                variant={getButtonVariant()}
+                variant={previouslyApplied ? "default" : isApplied ? "outline" : "default"}
                 onClick={() => onApply(job.id)}
-                disabled={isButtonDisabled()}
+                disabled={isButtonDisabled}
                 className="w-full"
               >
                 {isApplying ? (
@@ -118,7 +111,7 @@ export function JobModal({
                 ) : (
                   <>
                     <CheckCircle2 className="h-4 w-4 mr-2" />
-                    {getButtonText()}
+                    {buttonText}
                   </>
                 )}
               </Button>

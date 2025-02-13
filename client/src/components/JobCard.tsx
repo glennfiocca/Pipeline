@@ -25,24 +25,17 @@ export function JobCard({
 }: JobCardProps) {
   const { user } = useAuth();
 
-  const getButtonText = () => {
-    if (isApplying) return "Applying...";
-    if (previouslyApplied) return "Reapply";
-    if (isApplied) return "Applied";
-    return "Apply";
-  };
+  // Simplified button logic - only care about applying state and withdrawn status
+  const buttonText = isApplying 
+    ? "Applying..." 
+    : previouslyApplied 
+    ? "Reapply" 
+    : isApplied 
+    ? "Applied" 
+    : "Apply";
 
-  const getButtonVariant = () => {
-    if (previouslyApplied) return "default";
-    if (isApplied) return "outline";
-    return "default";
-  };
-
-  const isButtonDisabled = () => {
-    if (isApplying) return true;
-    if (isApplied && !previouslyApplied) return true;
-    return false;
-  };
+  // Only disable the button when actively applying or if there's an active application
+  const isButtonDisabled = isApplying || (isApplied && !previouslyApplied);
 
   return (
     <Card className="w-full transition-shadow hover:shadow-md">
@@ -78,13 +71,13 @@ export function JobCard({
         <div className="flex gap-4">
           {user ? (
             <Button 
-              variant={getButtonVariant()}
+              variant={previouslyApplied ? "default" : isApplied ? "outline" : "default"}
               onClick={onApply}
-              disabled={isButtonDisabled()}
+              disabled={isButtonDisabled}
               className="flex-1"
             >
               {isApplying && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {getButtonText()}
+              {buttonText}
             </Button>
           ) : (
             <Link href="/auth/login" className="flex-1">
