@@ -38,6 +38,13 @@ export function JobCard({
     return "default";
   };
 
+  const isButtonDisabled = () => {
+    if (isApplying) return true;
+    if (previouslyApplied) return false;
+    if (isApplied) return true;
+    return false;
+  };
+
   return (
     <Card className="w-full transition-shadow hover:shadow-md">
       <CardContent className="p-6">
@@ -74,7 +81,7 @@ export function JobCard({
             <Button 
               variant={getButtonVariant()}
               onClick={onApply}
-              disabled={isApplying || (isApplied && !previouslyApplied)}
+              disabled={isButtonDisabled()}
               className="flex-1"
             >
               {isApplying ? (

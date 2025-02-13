@@ -25,32 +25,43 @@ export function JobList() {
   });
 
   const getApplicationStatus = (jobId: number) => {
-    if (!applications.length) return { isApplied: false, previouslyApplied: false };
+    if (!applications?.length) {
+      console.log(`No applications found for job ${jobId}`);
+      return { isApplied: false, previouslyApplied: false };
+    }
 
-    // Get all applications for this job, sorted by date
-    const jobApplications = applications
-      .filter(app => app.jobId === jobId)
-      .sort((a, b) => new Date(b.appliedAt).getTime() - new Date(a.appliedAt).getTime());
+    // Get all applications for this job
+    const jobApplications = applications.filter(app => app.jobId === jobId);
 
-    if (!jobApplications.length) return { isApplied: false, previouslyApplied: false };
+    if (!jobApplications.length) {
+      console.log(`No applications found for specific job ${jobId}`);
+      return { isApplied: false, previouslyApplied: false };
+    }
 
-    const latestApplication = jobApplications[0];
-    console.log(`Job ${jobId} latest application status:`, latestApplication.status);
+    // Sort by date, most recent first
+    const sortedApplications = [...jobApplications].sort(
+      (a, b) => new Date(b.appliedAt).getTime() - new Date(a.appliedAt).getTime()
+    );
 
-    // If the latest application is withdrawn, user can reapply
+    const latestApplication = sortedApplications[0];
+    console.log(`Job ${jobId} latest application:`, {
+      id: latestApplication.id,
+      status: latestApplication.status,
+      appliedAt: latestApplication.appliedAt
+    });
+
     if (latestApplication.status === "Withdrawn") {
-      console.log(`Job ${jobId} is withdrawn, allowing reapplication`);
+      console.log(`Job ${jobId}: Application is withdrawn, enabling reapplication`);
       return { isApplied: false, previouslyApplied: true };
     }
 
-    // If the latest application is not withdrawn, user has an active application
-    console.log(`Job ${jobId} has active application`);
+    console.log(`Job ${jobId}: Application is active with status ${latestApplication.status}`);
     return { isApplied: true, previouslyApplied: false };
   };
 
   const applyMutation = useMutation({
     mutationFn: async (jobId: number) => {
-      console.log('Applying for job:', jobId);
+      console.log('Starting application process for job:', jobId);
       const res = await apiRequest(
         "POST",
         "/api/applications",
@@ -62,10 +73,12 @@ export function JobList() {
           applicationData: {}
         }
       );
+
       if (!res.ok) {
         const error = await res.json();
         throw new Error(error.message || "Failed to submit application");
       }
+
       return res.json();
     },
     onSuccess: () => {
@@ -100,7 +113,8 @@ export function JobList() {
         <div className="grid gap-4 pb-4 md:grid-cols-2 lg:grid-cols-3">
           {jobs?.map((job) => {
             const { isApplied, previouslyApplied } = getApplicationStatus(job.id);
-            console.log(`Rendering job ${job.id}:`, { isApplied, previouslyApplied });
+            console.log(`Rendering job ${job.id} card:`, { isApplied, previouslyApplied });
+
             return (
               <JobCard
                 key={job.id}

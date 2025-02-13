@@ -42,6 +42,19 @@ export function JobModal({
     return "Apply";
   };
 
+  const getButtonVariant = () => {
+    if (previouslyApplied) return "default";
+    if (isApplied) return "outline";
+    return "default";
+  };
+
+  const isButtonDisabled = () => {
+    if (isApplying) return true;
+    if (previouslyApplied) return false;
+    if (isApplied) return true;
+    return false;
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -93,9 +106,9 @@ export function JobModal({
           <div className="flex items-center justify-between pt-6 border-t">
             {user ? (
               <Button
-                variant={previouslyApplied ? "default" : (isApplied ? "outline" : "default")}
+                variant={getButtonVariant()}
                 onClick={() => onApply(job.id)}
-                disabled={isApplying || (isApplied && !previouslyApplied)}
+                disabled={isButtonDisabled()}
                 className="w-full"
               >
                 {isApplying ? (
