@@ -4,6 +4,14 @@ import { storage } from "./storage";
 import { insertJobSchema, insertApplicationSchema, insertProfileSchema } from "@shared/schema";
 import { ScraperManager } from './services/scraper/manager';
 
+// Middleware to check if user is admin
+const isAdmin = (req: any, res: any, next: any) => {
+  if (!req.isAuthenticated() || !req.user?.isAdmin) {
+    return res.status(403).json({ error: "Unauthorized. Admin access required." });
+  }
+  next();
+};
+
 export function registerRoutes(app: Express): Server {
   // Jobs
   app.get("/api/jobs", async (_req, res) => {
@@ -26,6 +34,56 @@ export function registerRoutes(app: Express): Server {
     res.json(job);
   });
 
+  // Admin routes
+  app.get("/api/admin/applications", isAdmin, async (_req, res) => {
+    try {
+      const applications = await storage.getApplications();
+      res.json(applications);
+    } catch (error) {
+      console.error('Error fetching applications:', error);
+      res.status(500).json({ error: "Failed to fetch applications" });
+    }
+  });
+
+  app.get("/api/admin/profiles", isAdmin, async (_req, res) => {
+    try {
+      const profiles = await storage.getProfiles();
+      res.json(profiles);
+    } catch (error) {
+      console.error('Error fetching profiles:', error);
+      res.status(500).json({ error: "Failed to fetch profiles" });
+    }
+  });
+
+  app.patch("/api/admin/applications/:id", isAdmin, async (req, res) => {
+    try {
+      const { status, notes, nextStep, nextStepDueDate } = req.body;
+      const applicationId = parseInt(req.params.id);
+
+      if (isNaN(applicationId)) {
+        return res.status(400).json({ error: "Invalid application ID" });
+      }
+
+      const application = await storage.getApplication(applicationId);
+      if (!application) {
+        return res.status(404).json({ error: "Application not found" });
+      }
+
+      const updatedApplication = await storage.updateApplication(applicationId, {
+        status,
+        notes,
+        nextStep,
+        nextStepDueDate
+      });
+
+      res.json(updatedApplication);
+    } catch (error) {
+      console.error('Error updating application:', error);
+      res.status(500).json({ error: "Failed to update application" });
+    }
+  });
+
+  // Regular routes continue...
   app.post("/api/jobs/scrape", async (_req, res) => {
     try {
       console.log('Starting job scraping process...');
@@ -70,26 +128,22 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  app.patch("/api/profiles/:id", async (req, res) => {
-    try {
-      const parsed = insertProfileSchema.safeParse(req.body);
-      if (!parsed.success) {
-        console.error('Profile validation error:', parsed.error);
-        return res.status(400).json(parsed.error);
-      }
-
-      const profile = await storage.updateProfile(parseInt(req.params.id), parsed.data);
-      res.json(profile);
-    } catch (error) {
-      console.error('Profile update error:', error);
-      res.status(500).json({ message: (error as Error).message });
-    }
-  });
-
   // Applications
-  app.get("/api/applications", async (_req, res) => {
-    const applications = await storage.getApplications();
-    res.json(applications);
+  app.get("/api/applications", async (req: any, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ error: "Authentication required" });
+      }
+      const applications = await storage.getApplications();
+      // Filter applications for regular users to only see their own
+      const userApplications = req.user.isAdmin 
+        ? applications 
+        : applications.filter((app: any) => app.profileId === req.user.id);
+      res.json(userApplications);
+    } catch (error) {
+      console.error('Error fetching applications:', error);
+      res.status(500).json({ error: "Failed to fetch applications" });
+    }
   });
 
   app.post("/api/applications", async (req, res) => {
@@ -99,7 +153,6 @@ export function registerRoutes(app: Express): Server {
         return res.status(400).json(parsed.error);
       }
 
-      // Create new application regardless of previous status
       const application = await storage.createApplication({
         ...parsed.data,
         status: "Applied"

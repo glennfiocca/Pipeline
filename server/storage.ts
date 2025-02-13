@@ -25,6 +25,15 @@ export interface IStorage {
   getApplication(id: number): Promise<Application | undefined>;
   createApplication(application: InsertApplication): Promise<Application>;
   updateApplicationStatus(id: number, status: string): Promise<Application>;
+  updateApplication(
+    id: number,
+    updates: {
+      status?: string;
+      notes?: string;
+      nextStep?: string;
+      nextStepDueDate?: string;
+    }
+  ): Promise<Application>;
 
   // User-related interfaces
   getUser(id: number): Promise<User | undefined>;
@@ -201,6 +210,50 @@ export class DatabaseStorage implements IStorage {
         lastStatusUpdate: now,
         statusHistory: updatedHistory
       })
+      .where(eq(applications.id, id))
+      .returning();
+
+    return application;
+  }
+  async updateApplication(
+    id: number,
+    updates: {
+      status?: string;
+      notes?: string;
+      nextStep?: string;
+      nextStepDueDate?: string;
+    }
+  ): Promise<Application> {
+    const [currentApp] = await db
+      .select()
+      .from(applications)
+      .where(eq(applications.id, id));
+
+    if (!currentApp) {
+      throw new Error("Application not found");
+    }
+
+    const now = new Date().toISOString();
+    const updateData: any = { ...updates };
+
+    if (updates.status && updates.status !== currentApp.status) {
+      const currentHistory = Array.isArray(currentApp.statusHistory)
+        ? currentApp.statusHistory
+        : [];
+
+      updateData.statusHistory = [
+        ...currentHistory,
+        {
+          status: updates.status,
+          date: now
+        }
+      ];
+      updateData.lastStatusUpdate = now;
+    }
+
+    const [application] = await db
+      .update(applications)
+      .set(updateData)
       .where(eq(applications.id, id))
       .returning();
 
