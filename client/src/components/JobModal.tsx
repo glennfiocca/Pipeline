@@ -50,8 +50,7 @@ export function JobModal({
 
   const isButtonDisabled = () => {
     if (isApplying) return true;
-    if (previouslyApplied) return false;
-    if (isApplied) return true;
+    if (isApplied && !previouslyApplied) return true;
     return false;
   };
 

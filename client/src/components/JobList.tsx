@@ -51,7 +51,7 @@ export function JobList() {
         title: "Application submitted",
         description: "Your application has been successfully submitted.",
       });
-      setSelectedJob(null); // Close the modal after successful application
+      setSelectedJob(null);
     },
     onError: (error: Error) => {
       toast({
@@ -67,26 +67,21 @@ export function JobList() {
       return { isApplied: false, previouslyApplied: false };
     }
 
-    // Get all applications for this job by the current user
-    const jobApplications = applications.filter(
-      app => app.jobId === jobId && app.profileId === user?.id
+    const userApplications = applications.filter(
+      app => app.jobId === jobId && app.profileId === user.id
     );
 
-    if (!jobApplications.length) {
+    if (!userApplications.length) {
       return { isApplied: false, previouslyApplied: false };
     }
 
-    // Find the latest application by date
-    const latestApplication = jobApplications.reduce((latest, current) => {
+    const latestApplication = userApplications.reduce((latest, current) => {
       return new Date(current.appliedAt) > new Date(latest.appliedAt) ? current : latest;
     });
 
-    // Consider an application withdrawn only if the latest status is "Withdrawn"
-    const isWithdrawn = latestApplication.status === "Withdrawn";
-
     return {
-      isApplied: !isWithdrawn,
-      previouslyApplied: isWithdrawn,
+      isApplied: latestApplication.status !== "Withdrawn",
+      previouslyApplied: latestApplication.status === "Withdrawn"
     };
   };
 
@@ -104,7 +99,7 @@ export function JobList() {
     <>
       <ScrollArea className="h-[calc(100vh-4rem)] w-full px-4">
         <div className="grid gap-4 pb-4 md:grid-cols-2 lg:grid-cols-3">
-          {jobs?.map((job) => {
+          {jobs.map((job) => {
             const { isApplied, previouslyApplied } = getApplicationStatus(job.id);
 
             return (
