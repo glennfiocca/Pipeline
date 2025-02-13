@@ -136,7 +136,6 @@ export default function AdminDashboardPage() {
     : applications;
 
   const stats = {
-    Total: applications.length,
     Applied: applications.filter((app) => app.status === "Applied").length,
     Screening: applications.filter((app) => app.status === "Screening").length,
     Interviewing: applications.filter((app) => app.status === "Interviewing").length,
@@ -145,6 +144,9 @@ export default function AdminDashboardPage() {
     Rejected: applications.filter((app) => app.status === "Rejected").length,
     Withdrawn: applications.filter((app) => app.status === "Withdrawn").length,
   };
+
+  // Calculate total as sum of all status counts
+  stats.Total = Object.values(stats).reduce((sum, count) => sum + count, 0);
 
   if (isLoadingApps) {
     return (
