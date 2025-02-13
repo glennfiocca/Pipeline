@@ -21,16 +21,23 @@ export function JobList() {
 
   const { data: applications = [], isLoading: isLoadingApplications } = useQuery<Application[]>({
     queryKey: ["/api/applications"],
-    enabled: !!user,
-    staleTime: 0,
-    cacheTime: 0
+    enabled: !!user
   });
 
   const hasActiveApplication = (jobId: number) => {
-    return applications.some(app => 
-      app.jobId === jobId && 
-      ["Applied", "Screening", "Interviewing", "Offered", "Accepted"].includes(app.status)
+    // Get all applications for this job
+    const jobApplications = applications.filter(app => app.jobId === jobId);
+
+    if (jobApplications.length === 0) return false;
+
+    // Sort by appliedAt date in descending order to get the most recent application
+    const sortedApplications = jobApplications.sort((a, b) => 
+      new Date(b.appliedAt).getTime() - new Date(a.appliedAt).getTime()
     );
+
+    // Check the status of the most recent application
+    const mostRecentStatus = sortedApplications[0].status;
+    return ["Applied", "Screening", "Interviewing", "Offered", "Accepted"].includes(mostRecentStatus);
   };
 
   const applyMutation = useMutation({
