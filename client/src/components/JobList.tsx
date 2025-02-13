@@ -25,20 +25,28 @@ export function JobList() {
   });
 
   const getApplicationStatus = (jobId: number) => {
-    const jobApplications = applications.filter(app => app.jobId === jobId);
-
-    if (jobApplications.length === 0) {
+    if (!applications?.length) {
       return { isApplied: false, previouslyApplied: false };
     }
 
-    // Get the most recent application
+    // Get all applications for this job
+    const jobApplications = applications.filter(app => app.jobId === jobId);
+
+    if (!jobApplications.length) {
+      return { isApplied: false, previouslyApplied: false };
+    }
+
+    // Find the latest application by date
     const latestApplication = jobApplications.reduce((latest, current) => {
       return new Date(current.appliedAt) > new Date(latest.appliedAt) ? current : latest;
     });
 
+    // Case-insensitive status check
+    const isWithdrawn = latestApplication.status.toLowerCase() === 'withdrawn';
+
     return {
-      isApplied: latestApplication.status !== "Withdrawn",
-      previouslyApplied: latestApplication.status === "Withdrawn"
+      isApplied: !isWithdrawn,
+      previouslyApplied: isWithdrawn
     };
   };
 
