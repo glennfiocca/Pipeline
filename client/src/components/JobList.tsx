@@ -21,7 +21,9 @@ export function JobList() {
 
   const { data: applications = [], isLoading: isLoadingApplications } = useQuery<Application[]>({
     queryKey: ["/api/applications"],
-    enabled: !!user
+    enabled: !!user,
+    refetchInterval: 1000, // Refetch every second to ensure we have latest data
+    refetchOnWindowFocus: true,
   });
 
   const hasActiveApplication = (jobId: number) => {
@@ -30,14 +32,16 @@ export function JobList() {
 
     if (jobApplications.length === 0) return false;
 
-    // Sort by appliedAt date in descending order to get the most recent application
-    const sortedApplications = jobApplications.sort((a, b) => 
-      new Date(b.appliedAt).getTime() - new Date(a.appliedAt).getTime()
-    );
+    // Get the most recent application
+    const latestApplication = jobApplications.reduce((latest, current) => {
+      return new Date(current.appliedAt) > new Date(latest.appliedAt) ? current : latest;
+    }, jobApplications[0]);
 
-    // Check the status of the most recent application
-    const mostRecentStatus = sortedApplications[0].status;
-    return ["Applied", "Screening", "Interviewing", "Offered", "Accepted"].includes(mostRecentStatus);
+    // Return false if the most recent application is withdrawn
+    if (latestApplication.status === "Withdrawn") return false;
+
+    // Return true only if the application is in an active state
+    return ["Applied", "Screening", "Interviewing", "Offered", "Accepted"].includes(latestApplication.status);
   };
 
   const applyMutation = useMutation({
