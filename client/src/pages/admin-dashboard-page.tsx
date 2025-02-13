@@ -21,9 +21,17 @@ import { apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
 import { useLocation } from "wouter";
 
+type ApplicationUpdateForm = {
+  status?: string;
+  notes?: string;
+  nextStep?: string;
+  nextStepDueDate?: string;
+};
+
 export default function AdminDashboardPage() {
   const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
   const [selectedApplication, setSelectedApplication] = useState<Application | null>(null);
+  const [formData, setFormData] = useState<ApplicationUpdateForm>({});
   const { toast } = useToast();
   const { user } = useAuth();
   const [, setLocation] = useLocation();
@@ -49,21 +57,15 @@ export default function AdminDashboardPage() {
   const updateApplicationMutation = useMutation({
     mutationFn: async ({
       id,
-      status,
-      notes,
-      nextStep,
-      nextStepDueDate,
+      data,
     }: {
       id: number;
-      status?: string;
-      notes?: string;
-      nextStep?: string;
-      nextStepDueDate?: string;
+      data: ApplicationUpdateForm;
     }) => {
       const res = await apiRequest(
         "PATCH",
         `/api/admin/applications/${id}`,
-        { status, notes, nextStep, nextStepDueDate }
+        data
       );
       if (!res.ok) {
         const error = await res.json();
@@ -78,6 +80,7 @@ export default function AdminDashboardPage() {
         description: "The application has been updated successfully.",
       });
       setSelectedApplication(null);
+      setFormData({});
     },
     onError: (error: Error) => {
       toast({
@@ -87,6 +90,22 @@ export default function AdminDashboardPage() {
       });
     },
   });
+
+  const handleInputChange = (field: keyof ApplicationUpdateForm, value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const handleSubmit = () => {
+    if (!selectedApplication || Object.keys(formData).length === 0) return;
+
+    updateApplicationMutation.mutate({
+      id: selectedApplication.id,
+      data: formData
+    });
+  };
 
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
@@ -229,12 +248,7 @@ export default function AdminDashboardPage() {
                 <label className="text-sm font-medium">Status</label>
                 <Select
                   defaultValue={selectedApplication.status}
-                  onValueChange={(value) =>
-                    updateApplicationMutation.mutate({
-                      id: selectedApplication.id,
-                      status: value,
-                    })
-                  }
+                  onValueChange={(value) => handleInputChange('status', value)}
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -256,12 +270,7 @@ export default function AdminDashboardPage() {
                 <Textarea
                   defaultValue={selectedApplication.notes || ""}
                   placeholder="Add notes about the application..."
-                  onChange={(e) =>
-                    updateApplicationMutation.mutate({
-                      id: selectedApplication.id,
-                      notes: e.target.value,
-                    })
-                  }
+                  onChange={(e) => handleInputChange('notes', e.target.value)}
                 />
               </div>
 
@@ -270,12 +279,7 @@ export default function AdminDashboardPage() {
                 <Input
                   defaultValue={selectedApplication.nextStep || ""}
                   placeholder="e.g., Technical Interview"
-                  onChange={(e) =>
-                    updateApplicationMutation.mutate({
-                      id: selectedApplication.id,
-                      nextStep: e.target.value,
-                    })
-                  }
+                  onChange={(e) => handleInputChange('nextStep', e.target.value)}
                 />
               </div>
 
@@ -284,21 +288,25 @@ export default function AdminDashboardPage() {
                 <Input
                   type="date"
                   defaultValue={selectedApplication.nextStepDueDate?.split("T")[0] || ""}
-                  onChange={(e) =>
-                    updateApplicationMutation.mutate({
-                      id: selectedApplication.id,
-                      nextStepDueDate: e.target.value,
-                    })
-                  }
+                  onChange={(e) => handleInputChange('nextStepDueDate', e.target.value)}
                 />
               </div>
 
               <div className="flex justify-end gap-2">
                 <Button
                   variant="outline"
-                  onClick={() => setSelectedApplication(null)}
+                  onClick={() => {
+                    setSelectedApplication(null);
+                    setFormData({});
+                  }}
                 >
-                  Close
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleSubmit}
+                  disabled={Object.keys(formData).length === 0}
+                >
+                  Save Changes
                 </Button>
               </div>
             </div>
