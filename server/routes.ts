@@ -99,10 +99,26 @@ export function registerRoutes(app: Express): Server {
   });
 
   app.post("/api/applications", async (req, res) => {
-    const parsed = insertApplicationSchema.safeParse(req.body);
-    if (!parsed.success) return res.status(400).json(parsed.error);
-    const application = await storage.createApplication(parsed.data);
-    res.status(201).json(application);
+    try {
+      const parsed = insertApplicationSchema.safeParse(req.body);
+      if (!parsed.success) return res.status(400).json(parsed.error);
+
+      // Check if there's an existing active application
+      const existingApplications = await storage.getApplications();
+      const latestApplication = existingApplications
+        .filter(app => app.jobId === parsed.data.jobId && app.profileId === parsed.data.profileId)
+        .sort((a, b) => new Date(b.appliedAt).getTime() - new Date(a.appliedAt).getTime())[0];
+
+      if (latestApplication && latestApplication.status !== "Withdrawn") {
+        return res.status(400).json({ message: "You have already applied to this job" });
+      }
+
+      const application = await storage.createApplication(parsed.data);
+      res.status(201).json(application);
+    } catch (error) {
+      console.error('Application creation error:', error);
+      res.status(500).json({ message: (error as Error).message });
+    }
   });
 
   app.patch("/api/applications/:id/status", async (req, res) => {

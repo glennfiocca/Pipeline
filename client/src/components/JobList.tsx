@@ -24,31 +24,6 @@ export function JobList() {
     enabled: !!user,
   });
 
-  const getApplicationStatus = (jobId: number) => {
-    if (!applications?.length || !user) {
-      return { isApplied: false, previouslyApplied: false };
-    }
-
-    // Get all applications for this job by the current user
-    const jobApplications = applications.filter(app => app.jobId === jobId && app.profileId === user?.id);
-
-    if (!jobApplications.length) {
-      return { isApplied: false, previouslyApplied: false };
-    }
-
-    // Find the latest application by date
-    const latestApplication = jobApplications.reduce((latest, current) => {
-      return new Date(current.appliedAt) > new Date(latest.appliedAt) ? current : latest;
-    });
-
-    const isWithdrawn = latestApplication.status.toLowerCase() === 'withdrawn';
-
-    return {
-      isApplied: !isWithdrawn,
-      previouslyApplied: isWithdrawn
-    };
-  };
-
   const applyMutation = useMutation({
     mutationFn: async (jobId: number) => {
       const res = await apiRequest(
@@ -76,6 +51,7 @@ export function JobList() {
         title: "Application submitted",
         description: "Your application has been successfully submitted.",
       });
+      setSelectedJob(null); // Close the modal after successful application
     },
     onError: (error: Error) => {
       toast({
@@ -85,6 +61,34 @@ export function JobList() {
       });
     },
   });
+
+  const getApplicationStatus = (jobId: number) => {
+    if (!applications?.length || !user) {
+      return { isApplied: false, previouslyApplied: false };
+    }
+
+    // Get all applications for this job by the current user
+    const jobApplications = applications.filter(
+      app => app.jobId === jobId && app.profileId === user?.id
+    );
+
+    if (!jobApplications.length) {
+      return { isApplied: false, previouslyApplied: false };
+    }
+
+    // Find the latest application by date
+    const latestApplication = jobApplications.reduce((latest, current) => {
+      return new Date(current.appliedAt) > new Date(latest.appliedAt) ? current : latest;
+    });
+
+    // Consider an application withdrawn only if the latest status is "Withdrawn"
+    const isWithdrawn = latestApplication.status === "Withdrawn";
+
+    return {
+      isApplied: !isWithdrawn,
+      previouslyApplied: isWithdrawn,
+    };
+  };
 
   if (isLoadingJobs) {
     return (
