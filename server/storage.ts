@@ -177,14 +177,18 @@ export class DatabaseStorage implements IStorage {
 
   async createApplication(insertApplication: InsertApplication): Promise<Application> {
     const now = new Date().toISOString();
+    // Capitalize the first letter of status to ensure consistency
+    const status = insertApplication.status.charAt(0).toUpperCase() + insertApplication.status.slice(1).toLowerCase();
+
     const [application] = await db
       .insert(applications)
       .values({
         ...insertApplication,
+        status, // Use normalized status
         appliedAt: now,
         lastStatusUpdate: now,
         statusHistory: [{
-          status: "Applied",
+          status,
           date: now
         }]
       })
@@ -204,19 +208,21 @@ export class DatabaseStorage implements IStorage {
     }
 
     const now = new Date().toISOString();
+    // Normalize status case
+    const normalizedStatus = status.charAt(0).toUpperCase() + status.slice(1).toLowerCase();
+
     const newHistoryEntry = {
-      status,
+      status: normalizedStatus,
       date: now
     };
 
-    // Ensure statusHistory is always an array
     const currentHistory = Array.isArray(currentApp.statusHistory) ? currentApp.statusHistory : [];
     const updatedHistory = [...currentHistory, newHistoryEntry];
 
     const [application] = await db
       .update(applications)
       .set({
-        status,
+        status: normalizedStatus,
         lastStatusUpdate: now,
         statusHistory: updatedHistory
       })

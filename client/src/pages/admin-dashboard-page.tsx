@@ -170,7 +170,7 @@ export default function AdminDashboardPage() {
     };
   });
 
-  // Calculate statistics
+  // Calculate statistics with case-insensitive matching
   const stats = {
     TotalUsers: profiles.length,
     TotalApplications: applications.length,
