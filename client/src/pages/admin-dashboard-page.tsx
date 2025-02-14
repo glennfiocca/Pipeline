@@ -56,12 +56,14 @@ export default function AdminDashboardPage() {
 
   const { data: profiles = [], isLoading: isLoadingProfiles } = useQuery<Profile[]>({
     queryKey: ["/api/admin/profiles"],
-    enabled: !!user?.isAdmin
+    enabled: !!user?.isAdmin,
+    retry: false
   });
 
   const { data: users = [], isLoading: isLoadingUsers } = useQuery<User[]>({
     queryKey: ["/api/admin/users"],
-    enabled: !!user?.isAdmin
+    enabled: !!user?.isAdmin,
+    retry: false
   });
 
   // Check for admin access after loading user
@@ -76,6 +78,14 @@ export default function AdminDashboardPage() {
   if (!user.isAdmin) {
     setLocation("/");
     return null;
+  }
+
+  if (isLoadingUsers || isLoadingProfiles || isLoadingApps || isLoadingJobs) {
+    return (
+      <div className="flex items-center justify-center min-h-[calc(100vh-4rem)]">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+      </div>
+    );
   }
 
   const updateApplicationMutation = useMutation({
@@ -151,13 +161,6 @@ export default function AdminDashboardPage() {
     Withdrawn: applications.filter(app => app.status.toLowerCase() === "withdrawn").length,
   };
 
-  if (isLoadingApps || isLoadingJobs || isLoadingProfiles || isLoadingUsers) {
-    return (
-      <div className="flex items-center justify-center min-h-[calc(100vh-4rem)]">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-      </div>
-    );
-  }
 
   return (
     <div className="container py-10">

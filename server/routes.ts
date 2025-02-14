@@ -3,6 +3,8 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertJobSchema, insertApplicationSchema, insertProfileSchema, insertMessageSchema } from "@shared/schema";
 import { ScraperManager } from './services/scraper/manager';
+import { db } from './db';
+import { users } from '@shared/schema';
 
 // Enhanced admin middleware with specific user check
 const isAdmin = (req: any, res: any, next: any) => {
@@ -11,7 +13,7 @@ const isAdmin = (req: any, res: any, next: any) => {
   }
 
   // Check both admin status and specific username
-  if (!req.user?.isAdmin || req.user?.username !== 'glennfiocca') {
+  if (!req.user?.isAdmin) {
     return res.status(403).json({ error: "Unauthorized. Admin access required." });
   }
 
@@ -88,6 +90,17 @@ export function registerRoutes(app: Express): Server {
       res.status(500).json({ error: "Failed to update application" });
     }
   });
+
+  app.get("/api/admin/users", isAdmin, async (_req, res) => {
+    try {
+      const usersList = await db.select().from(users);
+      res.json(usersList);
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      res.status(500).json({ error: "Failed to fetch users" });
+    }
+  });
+
 
   // Regular routes continue...
   app.post("/api/jobs/scrape", async (_req, res) => {
