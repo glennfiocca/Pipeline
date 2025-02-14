@@ -64,6 +64,7 @@ export interface IStorage {
   // Add new methods for job management
   updateJob(id: number, updates: Partial<InsertJob>): Promise<Job>;
   deactivateJob(id: number): Promise<Job>;
+  updateUser(id: number, updates: Partial<User>): Promise<User>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -434,6 +435,14 @@ export class DatabaseStorage implements IStorage {
       .where(eq(jobs.id, id))
       .returning();
     return job;
+  }
+  async updateUser(id: number, updates: Partial<User>): Promise<User> {
+    const [user] = await db
+      .update(users)
+      .set(updates)
+      .where(eq(users.id, id))
+      .returning();
+    return user;
   }
 }
 

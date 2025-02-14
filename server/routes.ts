@@ -102,6 +102,28 @@ export function registerRoutes(app: Express): Server {
   });
 
 
+  // Admin route for updating users
+  app.patch("/api/admin/users/:id", isAdmin, async (req, res) => {
+    try {
+      const userId = parseInt(req.params.id);
+      if (isNaN(userId)) {
+        return res.status(400).json({ error: "Invalid user ID" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      // Update the user using the storage interface
+      const updatedUser = await storage.updateUser(userId, req.body);
+      res.json(updatedUser);
+    } catch (error) {
+      console.error('Error updating user:', error);
+      res.status(500).json({ error: "Failed to update user" });
+    }
+  });
+
   // Admin routes for database management
   app.patch("/api/admin/jobs/:id", isAdmin, async (req, res) => {
     try {

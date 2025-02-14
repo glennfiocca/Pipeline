@@ -47,6 +47,12 @@ type JobUpdateForm = {
   isActive?: boolean;
 };
 
+type UserUpdateForm = {
+  username?: string;
+  email?: string;
+  isAdmin?: boolean;
+};
+
 export default function AdminDashboardPage() {
   const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
   const [selectedApplication, setSelectedApplication] = useState<Application | null>(null);
@@ -56,6 +62,8 @@ export default function AdminDashboardPage() {
   const [, setLocation] = useLocation();
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [jobFormData, setJobFormData] = useState<JobUpdateForm>({});
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [userFormData, setUserFormData] = useState<UserUpdateForm>({});
 
   const { data: applications = [], isLoading: isLoadingApps } = useQuery<Application[]>({
     queryKey: ["/api/admin/applications"],
@@ -159,6 +167,33 @@ export default function AdminDashboardPage() {
     },
   });
 
+  const updateUserMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: number; data: UserUpdateForm }) => {
+      const res = await apiRequest("PATCH", `/api/admin/users/${id}`, data);
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || "Failed to update user");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      toast({
+        title: "User updated",
+        description: "The user has been updated successfully.",
+      });
+      setSelectedUser(null);
+      setUserFormData({});
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   if (!user || isLoadingUsers || isLoadingProfiles || isLoadingApps || isLoadingJobs) {
     return (
       <div className="flex items-center justify-center min-h-[calc(100vh-4rem)]">
@@ -226,6 +261,21 @@ export default function AdminDashboardPage() {
     updateJobMutation.mutate({
       id: selectedJob.id,
       data: jobFormData
+    });
+  };
+
+  const handleUserInputChange = (field: keyof UserUpdateForm, value: string | boolean) => {
+    setUserFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const handleUserSubmit = () => {
+    if (!selectedUser || Object.keys(userFormData).length === 0) return;
+    updateUserMutation.mutate({
+      id: selectedUser.id,
+      data: userFormData
     });
   };
 
@@ -482,7 +532,11 @@ export default function AdminDashboardPage() {
                             <UserIcon className="h-4 w-4 text-muted-foreground" />
                             <span className="font-medium">{user.username}</span>
                           </div>
-                          <Button variant="outline" size="icon">
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={() => setSelectedUser(user)}
+                          >
                             <Edit className="h-4 w-4" />
                           </Button>
                         </div>
@@ -601,77 +655,61 @@ export default function AdminDashboardPage() {
         </Dialog>
       )}
 
-      {selectedApplication && (
-        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm">
-          <div className="fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg duration-200 sm:rounded-lg">
-            <h2 className="text-lg font-semibold">Update Application Status</h2>
-            <div className="space-y-4">
+      {selectedUser && (
+        <Dialog open={!!selectedUser} onOpenChange={(open) => !open && setSelectedUser(null)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Edit User</DialogTitle>
+              <DialogDescription>
+                Make changes to user information here. Click save when you're done.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
               <div className="space-y-2">
-                <label className="text-sm font-medium">Status</label>
-                <Select
-                  defaultValue={selectedApplication.status}
-                  onValueChange={(value) => handleInputChange('status', value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Applied">Applied</SelectItem>
-                    <SelectItem value="Interviewing">Interviewing</SelectItem>
-                    <SelectItem value="Accepted">Accepted</SelectItem>
-                    <SelectItem value="Rejected">Rejected</SelectItem>
-                    <SelectItem value="Withdrawn">Withdrawn</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Notes</label>
-                <Textarea
-                  defaultValue={selectedApplication.notes || ""}
-                  placeholder="Add notes about the application..."
-                  onChange={(e) => handleInputChange('notes', e.target.value)}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Next Step</label>
+                <Label htmlFor="username">Username</Label>
                 <Input
-                  defaultValue={selectedApplication.nextStep || ""}
-                  placeholder="e.g., Technical Interview"
-                  onChange={(e) => handleInputChange('nextStep', e.target.value)}
+                  id="username"
+                  defaultValue={selectedUser.username}
+                  onChange={(e) => handleUserInputChange('username', e.target.value)}
                 />
               </div>
-
               <div className="space-y-2">
-                <label className="text-sm font-medium">Next Step Due Date</label>
+                <Label htmlFor="email">Email</Label>
                 <Input
-                  type="date"
-                  defaultValue={selectedApplication.nextStepDueDate?.split("T")[0] || ""}
-                  onChange={(e) => handleInputChange('nextStepDueDate', e.target.value)}
+                  id="email"
+                  type="email"
+                  defaultValue={selectedUser.email}
+                  onChange={(e) => handleUserInputChange('email', e.target.value)}
                 />
               </div>
-
-              <div className="flex justify-end gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setSelectedApplication(null);
-                    setFormData({});
-                  }}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  onClick={handleSubmit}
-                  disabled={Object.keys(formData).length === 0 || updateApplicationMutation.isPending}
-                >
-                  {updateApplicationMutation.isPending ? "Saving..." : "Save Changes"}
-                </Button>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="isAdmin"
+                  defaultChecked={selectedUser.isAdmin}
+                  onCheckedChange={(checked: boolean) => handleUserInputChange('isAdmin', checked)}
+                />
+                <Label htmlFor="isAdmin">Administrator</Label>
               </div>
             </div>
-          </div>
-        </div>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setSelectedUser(null);
+                  setUserFormData({});
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleUserSubmit}
+                disabled={Object.keys(userFormData).length === 0 || updateUserMutation.isPending}
+              >
+                {updateUserMutation.isPending ? "Saving..." : "Save Changes"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       )}
     </div>
   );
