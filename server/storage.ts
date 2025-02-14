@@ -275,7 +275,7 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(messages)
       .where(eq(messages.applicationId, applicationId))
-      .orderBy(desc(messages.createdAt));
+      .orderBy(messages.createdAt); // Remove desc() to show oldest messages first
   }
 
   async getMessage(id: number): Promise<Message | undefined> {

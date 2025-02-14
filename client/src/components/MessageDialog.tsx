@@ -107,7 +107,12 @@ export function MessageDialog({ applicationId, jobTitle, company, isAdmin }: Mes
           </DialogTitle>
         </DialogHeader>
         <div className="flex flex-col h-full">
-          <ScrollArea className="flex-1 pr-4">
+          <ScrollArea className="flex-1 pr-4" viewportRef={(ref) => {
+            // Auto-scroll to bottom when messages change
+            if (ref) {
+              ref.scrollTop = ref.scrollHeight;
+            }
+          }}>
             <div className="space-y-4">
               {messages.length === 0 ? (
                 <p className="text-center text-muted-foreground py-4">
@@ -131,7 +136,7 @@ export function MessageDialog({ applicationId, jobTitle, company, isAdmin }: Mes
                   >
                     <div className="flex justify-between items-start mb-2">
                       <span className="font-medium">
-                        {message.isFromAdmin ? company : user?.username || "You"}
+                        {message.isFromAdmin ? company : (user?.username || "You")}
                       </span>
                       <span className="text-xs text-muted-foreground">
                         {format(new Date(message.createdAt), "MMM d, yyyy h:mm a")}
