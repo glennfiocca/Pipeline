@@ -100,8 +100,8 @@ export function MessageDialog({ applicationId, jobTitle, company, isAdmin }: Mes
       // Admin messages come from the company
       return company;
     } else {
-      // For user messages, always show the actual username
-      return message.senderUsername || user?.username || "You";
+      // For user messages, always show the actual sender's username
+      return message.senderUsername || "Unknown User";
     }
   };
 
