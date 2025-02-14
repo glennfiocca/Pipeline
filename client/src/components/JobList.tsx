@@ -26,6 +26,7 @@ export function JobList() {
 
   const applyMutation = useMutation({
     mutationFn: async (jobId: number) => {
+      const now = new Date().toISOString();
       const res = await apiRequest(
         "POST",
         "/api/applications",
@@ -33,7 +34,19 @@ export function JobList() {
           jobId,
           profileId: user!.id,
           status: "Applied",
-          applicationData: {}
+          appliedAt: now,
+          applicationData: {
+            submittedDate: now,
+            source: "Pipeline Platform"
+          },
+          notes: "",
+          statusHistory: [
+            {
+              status: "Applied",
+              date: now
+            }
+          ],
+          lastStatusUpdate: now
         }
       );
       if (!res.ok) {

@@ -55,6 +55,7 @@ export default function JobsPage() {
         throw new Error("Please create a profile before applying to jobs");
       }
 
+      const now = new Date().toISOString();
       const res = await apiRequest(
         "POST",
         "/api/applications",
@@ -62,10 +63,19 @@ export default function JobsPage() {
           jobId,
           profileId: profiles[0].id,
           status: "Applied",
-          appliedAt: new Date().toISOString(),
-          applicationData: {},
-          statusHistory: [{ status: "Applied", date: new Date().toISOString() }],
-          lastStatusUpdate: new Date().toISOString()
+          appliedAt: now,
+          applicationData: {
+            submittedDate: now,
+            source: "Pipeline Platform"
+          },
+          notes: "",
+          statusHistory: [
+            {
+              status: "Applied",
+              date: now
+            }
+          ],
+          lastStatusUpdate: now
         }
       );
 
