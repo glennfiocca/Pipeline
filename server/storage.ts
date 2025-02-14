@@ -1,10 +1,11 @@
-import { jobs, profiles, applications, users, type Job, type Profile, type Application, type User, type InsertJob, type InsertProfile, type InsertApplication, type InsertUser } from "@shared/schema";
-import { db } from "./db";
+import { Pool, neonConfig } from '@neondatabase/serverless';
+import { drizzle } from 'drizzle-orm/neon-serverless';
 import { eq, desc, and } from "drizzle-orm";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
-import { messages, type Message } from "@shared/schema";
-import { type InsertMessage } from "@shared/schema";
+import { messages, applications, jobs, type Message, type InsertMessage } from "@shared/schema";
+import { jobs, profiles, applications, users, type Job, type Profile, type Application, type User, type InsertJob, type InsertProfile, type InsertApplication, type InsertUser } from "@shared/schema";
+import { db } from "./db";
 
 const PostgresSessionStore = connectPg(session);
 
@@ -270,35 +271,45 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getMessages(applicationId: number): Promise<Message[]> {
-    // Get the application to fetch the job details
-    const [application] = await db
-      .select()
-      .from(applications)
-      .where(eq(applications.id, applicationId));
+    try {
+      // Get the application to fetch the job details
+      const [application] = await db
+        .select()
+        .from(applications)
+        .where(eq(applications.id, applicationId));
 
-    if (!application) {
-      throw new Error("Application not found");
+      if (!application) {
+        console.error(`Application not found for ID: ${applicationId}`);
+        return [];
+      }
+
+      // Get the job to get the company name
+      const [job] = await db
+        .select()
+        .from(jobs)
+        .where(eq(jobs.id, application.jobId));
+
+      if (!job) {
+        console.error(`Job not found for ID: ${application.jobId}`);
+        return [];
+      }
+
+      // Get all messages for this application
+      const applicationMessages = await db
+        .select()
+        .from(messages)
+        .where(eq(messages.applicationId, applicationId))
+        .orderBy(desc(messages.createdAt));
+
+      // Map and enhance messages with sender information
+      return applicationMessages.map(message => ({
+        ...message,
+        senderUsername: message.isFromAdmin ? job.company : message.senderUsername
+      }));
+    } catch (error) {
+      console.error('Error fetching messages:', error);
+      throw error;
     }
-
-    // Get the job to get the company name
-    const [job] = await db
-      .select()
-      .from(jobs)
-      .where(eq(jobs.id, application.jobId));
-
-    // Get all messages for this application
-    const applicationMessages = await db
-      .select()
-      .from(messages)
-      .where(eq(messages.applicationId, applicationId))
-      .orderBy(desc(messages.createdAt));
-
-    // Enhance messages with sender information
-    return applicationMessages.map(message => ({
-      ...message,
-      // If the message is from admin, use the company name as sender
-      senderUsername: message.isFromAdmin ? job?.company || 'Admin' : message.senderUsername
-    }));
   }
 
   async getMessage(id: number): Promise<Message | undefined> {
@@ -310,52 +321,82 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createMessage(insertMessage: InsertMessage): Promise<Message> {
-    // If it's an admin message, get the job's company name
-    if (insertMessage.isFromAdmin) {
-      const [application] = await db
-        .select()
-        .from(applications)
-        .where(eq(applications.id, insertMessage.applicationId));
+    try {
+      // Get the application and job details for admin messages
+      if (insertMessage.isFromAdmin) {
+        const [application] = await db
+          .select()
+          .from(applications)
+          .where(eq(applications.id, insertMessage.applicationId));
 
-      if (application) {
+        if (!application) {
+          throw new Error(`Application not found for ID: ${insertMessage.applicationId}`);
+        }
+
         const [job] = await db
           .select()
           .from(jobs)
           .where(eq(jobs.id, application.jobId));
 
-        if (job) {
-          insertMessage.senderUsername = job.company;
+        if (!job) {
+          throw new Error(`Job not found for ID: ${application.jobId}`);
         }
-      }
-    }
 
-    const [message] = await db
-      .insert(messages)
-      .values(insertMessage)
-      .returning();
-    return message;
+        // Set the sender username as the company name for admin messages
+        insertMessage.senderUsername = job.company;
+      }
+
+      // Insert the message with the current timestamp
+      const [message] = await db
+        .insert(messages)
+        .values({
+          ...insertMessage,
+          createdAt: new Date().toISOString()
+        })
+        .returning();
+
+      return message;
+    } catch (error) {
+      console.error('Error creating message:', error);
+      throw error;
+    }
   }
 
   async markMessageAsRead(id: number): Promise<Message> {
-    const [message] = await db
-      .update(messages)
-      .set({ isRead: true })
-      .where(eq(messages.id, id))
-      .returning();
-    return message;
+    try {
+      const [message] = await db
+        .update(messages)
+        .set({ isRead: true })
+        .where(eq(messages.id, id))
+        .returning();
+
+      if (!message) {
+        throw new Error(`Message not found for ID: ${id}`);
+      }
+
+      return message;
+    } catch (error) {
+      console.error('Error marking message as read:', error);
+      throw error;
+    }
   }
 
   async getUnreadMessageCount(applicationId: number): Promise<number> {
-    const unreadMessages = await db
-      .select()
-      .from(messages)
-      .where(
-        and(
-          eq(messages.applicationId, applicationId),
-          eq(messages.isRead, false)
-        )
-      );
-    return unreadMessages.length;
+    try {
+      const unreadMessages = await db
+        .select()
+        .from(messages)
+        .where(
+          and(
+            eq(messages.applicationId, applicationId),
+            eq(messages.isRead, false)
+          )
+        );
+      return unreadMessages.length;
+    } catch (error) {
+      console.error('Error getting unread message count:', error);
+      return 0;
+    }
   }
 }
 
