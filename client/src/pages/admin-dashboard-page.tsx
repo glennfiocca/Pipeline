@@ -21,7 +21,13 @@ import { apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
 import { useLocation } from "wouter";
 import { MessageDialog } from "@/components/MessageDialog";
-import { Users, Mail, User as UserIcon } from "lucide-react";
+import { Users, Mail, User as UserIcon, Edit, Trash2 } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+
 
 type ApplicationUpdateForm = {
   status?: string;
@@ -30,14 +36,26 @@ type ApplicationUpdateForm = {
   nextStepDueDate?: string;
 };
 
+type JobUpdateForm = {
+  title?: string;
+  company?: string;
+  description?: string;
+  salary?: string;
+  location?: string;
+  requirements?: string;
+  type?: string;
+  isActive?: boolean;
+};
+
 export default function AdminDashboardPage() {
-  // All hooks at the top
   const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
   const [selectedApplication, setSelectedApplication] = useState<Application | null>(null);
   const [formData, setFormData] = useState<ApplicationUpdateForm>({});
   const { toast } = useToast();
   const { user } = useAuth();
   const [, setLocation] = useLocation();
+  const [selectedJob, setSelectedJob] = useState<Job | null>(null);
+  const [jobFormData, setJobFormData] = useState<JobUpdateForm>({});
 
   const { data: applications = [], isLoading: isLoadingApps } = useQuery<Application[]>({
     queryKey: ["/api/admin/applications"],
@@ -90,7 +108,57 @@ export default function AdminDashboardPage() {
     },
   });
 
-  // Loading state
+  const updateJobMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: number; data: JobUpdateForm }) => {
+      const res = await apiRequest("PATCH", `/api/admin/jobs/${id}`, data);
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || "Failed to update job");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
+      toast({
+        title: "Job updated",
+        description: "The job has been updated successfully.",
+      });
+      setSelectedJob(null);
+      setJobFormData({});
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteJobMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const res = await apiRequest("DELETE", `/api/admin/jobs/${id}`);
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || "Failed to delete job");
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
+      toast({
+        title: "Job deleted",
+        description: "The job has been deleted successfully.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   if (!user || isLoadingUsers || isLoadingProfiles || isLoadingApps || isLoadingJobs) {
     return (
       <div className="flex items-center justify-center min-h-[calc(100vh-4rem)]">
@@ -99,7 +167,6 @@ export default function AdminDashboardPage() {
     );
   }
 
-  // Check admin access
   if (!user.isAdmin) {
     setLocation("/");
     return null;
@@ -137,7 +204,6 @@ export default function AdminDashboardPage() {
     }
   };
 
-  // Calculate statistics
   const stats = {
     "Total Users": users.length,
     "Total Applications": applications.length,
@@ -148,155 +214,391 @@ export default function AdminDashboardPage() {
     "Withdrawn": applications.filter(app => app.status.toLowerCase() === "withdrawn").length,
   };
 
+  const handleJobInputChange = (field: keyof JobUpdateForm, value: string | boolean) => {
+    setJobFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const handleJobSubmit = () => {
+    if (!selectedJob || Object.keys(jobFormData).length === 0) return;
+    updateJobMutation.mutate({
+      id: selectedJob.id,
+      data: jobFormData
+    });
+  };
+
   return (
     <div className="container py-10">
       <div className="flex items-center justify-between mb-8">
         <h1 className="text-3xl font-bold">Admin Dashboard</h1>
-        {selectedStatus && selectedStatus !== "Total Users" && (
-          <Button variant="ghost" onClick={() => setSelectedStatus(null)}>
-            Clear Filter
-          </Button>
-        )}
       </div>
 
-      {/* Stats Grid */}
-      <div className="grid gap-4 md:grid-cols-4 lg:grid-cols-7">
-        {Object.entries(stats).map(([status, count]) => (
-          <Card
-            key={status}
-            className={`cursor-pointer transition-all hover:shadow-md ${
-              selectedStatus === status && "ring-2 ring-primary"
-            }`}
-            onClick={() => status !== "Total Users" && setSelectedStatus(status)}
-          >
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">{status}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{count}</div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+      <Tabs defaultValue="overview" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="database">Database Management</TabsTrigger>
+        </TabsList>
 
-      {/* Users Grid */}
-      <Card className="mt-8">
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5" />
-              Registered Users ({users.length})
-            </CardTitle>
+        <TabsContent value="overview">
+          <div className="grid gap-4 md:grid-cols-4 lg:grid-cols-7">
+            {Object.entries(stats).map(([status, count]) => (
+              <Card
+                key={status}
+                className={`cursor-pointer transition-all hover:shadow-md ${
+                  selectedStatus === status && "ring-2 ring-primary"
+                }`}
+                onClick={() => status !== "Total Users" && setSelectedStatus(status)}
+              >
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">{status}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{count}</div>
+                </CardContent>
+              </Card>
+            ))}
           </div>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {users.map((user) => {
-              const profile = profiles.find(p => p.email.toLowerCase() === user.email.toLowerCase());
-              return (
-                <Card key={user.id} className="p-4">
-                  <div className="flex flex-col gap-2">
-                    <div className="flex items-center gap-2">
-                      <UserIcon className="h-4 w-4 text-muted-foreground" />
-                      <span className="font-medium">{user.username}</span>
-                      {user.isAdmin && (
-                        <Badge variant="secondary" className="ml-2">
-                          Admin
-                        </Badge>
-                      )}
-                    </div>
-                    {profile && (
-                      <div className="flex items-center gap-2">
-                        <Users className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm text-muted-foreground">{profile.name}</span>
-                      </div>
+
+          {selectedStatus && selectedStatus !== "Total Users" && (
+            <Card className="mt-8">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2">
+                    <Users className="h-5 w-5" />
+                    Applications
+                    {selectedStatus && (
+                      <span className="text-sm font-normal ml-2">
+                        ({selectedStatus})
+                      </span>
                     )}
-                    <div className="flex items-center gap-2">
-                      <Mail className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm text-muted-foreground">{user.email}</span>
-                    </div>
+                  </CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <ScrollArea className="h-[600px] pr-4">
+                  <div className="space-y-4">
+                    {applications
+                      .filter(app => !selectedStatus ||
+                        selectedStatus === "Total Applications" ||
+                        app.status.toLowerCase() === selectedStatus.toLowerCase()
+                      )
+                      .map((application) => {
+                        const job = jobs.find(j => j.id === application.jobId);
+                        const profile = profiles.find(p => p.id === application.profileId);
+                        if (!job || !profile) return null;
+
+                        return (
+                          <div
+                            key={application.id}
+                            className="p-4 rounded-lg border space-y-3"
+                          >
+                            <div className="flex items-start justify-between">
+                              <div className="space-y-1">
+                                <div className="font-medium">
+                                  {job.title}
+                                </div>
+                                <div className="text-sm text-muted-foreground">
+                                  {job.company} - {job.location}
+                                </div>
+                                <div className="text-sm text-muted-foreground">
+                                  Applied by: {profile.name}
+                                </div>
+                                <div className="text-xs text-muted-foreground">
+                                  Applied on {format(new Date(application.appliedAt), "MMM d, yyyy")}
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-4">
+                                <Badge className={getStatusColor(application.status)}>
+                                  {application.status}
+                                </Badge>
+                                <MessageDialog
+                                  applicationId={application.id}
+                                  jobTitle={job.title}
+                                  company={job.company}
+                                  isAdmin={true}
+                                />
+                                <Button
+                                  variant="outline"
+                                  onClick={() => setSelectedApplication(application)}
+                                >
+                                  Manage
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
                   </div>
-                </Card>
-              );
-            })}
-          </div>
-        </CardContent>
-      </Card>
+                </ScrollArea>
+              </CardContent>
+            </Card>
+          )}
 
-      {/* Applications Section */}
-      {selectedStatus && selectedStatus !== "Total Users" && (
-        <Card className="mt-8">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle className="flex items-center gap-2">
-                <Users className="h-5 w-5" />
-                Applications
-                {selectedStatus && (
-                  <span className="text-sm font-normal ml-2">
-                    ({selectedStatus})
-                  </span>
-                )}
-              </CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <ScrollArea className="h-[600px] pr-4">
-              <div className="space-y-4">
-                {applications
-                  .filter(app => !selectedStatus ||
-                    selectedStatus === "Total Applications" ||
-                    app.status.toLowerCase() === selectedStatus.toLowerCase()
-                  )
-                  .map((application) => {
-                    const job = jobs.find(j => j.id === application.jobId);
-                    const profile = profiles.find(p => p.id === application.profileId);
-                    if (!job || !profile) return null;
+          {selectedApplication && (
+            <div className="fixed inset-0 bg-background/80 backdrop-blur-sm">
+              <div className="fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg duration-200 sm:rounded-lg">
+                <h2 className="text-lg font-semibold">Update Application Status</h2>
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Status</label>
+                    <Select
+                      defaultValue={selectedApplication.status}
+                      onValueChange={(value) => handleInputChange('status', value)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Applied">Applied</SelectItem>
+                        <SelectItem value="Interviewing">Interviewing</SelectItem>
+                        <SelectItem value="Accepted">Accepted</SelectItem>
+                        <SelectItem value="Rejected">Rejected</SelectItem>
+                        <SelectItem value="Withdrawn">Withdrawn</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-                    return (
-                      <div
-                        key={application.id}
-                        className="p-4 rounded-lg border space-y-3"
-                      >
-                        <div className="flex items-start justify-between">
-                          <div className="space-y-1">
-                            <div className="font-medium">
-                              {job.title}
-                            </div>
-                            <div className="text-sm text-muted-foreground">
-                              {job.company} - {job.location}
-                            </div>
-                            <div className="text-sm text-muted-foreground">
-                              Applied by: {profile.name}
-                            </div>
-                            <div className="text-xs text-muted-foreground">
-                              Applied on {format(new Date(application.appliedAt), "MMM d, yyyy")}
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-4">
-                            <Badge className={getStatusColor(application.status)}>
-                              {application.status}
-                            </Badge>
-                            <MessageDialog
-                              applicationId={application.id}
-                              jobTitle={job.title}
-                              company={job.company}
-                              isAdmin={true}
-                            />
-                            <Button
-                              variant="outline"
-                              onClick={() => setSelectedApplication(application)}
-                            >
-                              Manage
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Notes</label>
+                    <Textarea
+                      defaultValue={selectedApplication.notes || ""}
+                      placeholder="Add notes about the application..."
+                      onChange={(e) => handleInputChange('notes', e.target.value)}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Next Step</label>
+                    <Input
+                      defaultValue={selectedApplication.nextStep || ""}
+                      placeholder="e.g., Technical Interview"
+                      onChange={(e) => handleInputChange('nextStep', e.target.value)}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Next Step Due Date</label>
+                    <Input
+                      type="date"
+                      defaultValue={selectedApplication.nextStepDueDate?.split("T")[0] || ""}
+                      onChange={(e) => handleInputChange('nextStepDueDate', e.target.value)}
+                    />
+                  </div>
+
+                  <div className="flex justify-end gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setSelectedApplication(null);
+                        setFormData({});
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      onClick={handleSubmit}
+                      disabled={Object.keys(formData).length === 0 || updateApplicationMutation.isPending}
+                    >
+                      {updateApplicationMutation.isPending ? "Saving..." : "Save Changes"}
+                    </Button>
+                  </div>
+                </div>
               </div>
-            </ScrollArea>
-          </CardContent>
-        </Card>
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="database">
+          <div className="space-y-8">
+            <Card>
+              <CardHeader>
+                <CardTitle>Jobs Management</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {jobs.map((job) => (
+                    <div
+                      key={job.id}
+                      className="flex items-center justify-between p-4 rounded-lg border"
+                    >
+                      <div>
+                        <h3 className="font-medium">{job.title}</h3>
+                        <p className="text-sm text-muted-foreground">
+                          {job.company} - {job.location}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() => setSelectedJob(job)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="destructive" size="icon">
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Delete Job</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Are you sure you want to delete this job? This action cannot be undone.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() => deleteJobMutation.mutate(job.id)}
+                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                              >
+                                Delete
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Users Management</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                  {users.map((user) => (
+                    <Card key={user.id} className="p-4">
+                      <div className="flex flex-col gap-2">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <UserIcon className="h-4 w-4 text-muted-foreground" />
+                            <span className="font-medium">{user.username}</span>
+                          </div>
+                          <Button variant="outline" size="icon">
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Mail className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-sm text-muted-foreground">
+                            {user.email}
+                          </span>
+                        </div>
+                        {user.isAdmin && (
+                          <Badge variant="secondary">Admin</Badge>
+                        )}
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+      </Tabs>
+
+      {selectedJob && (
+        <Dialog open={!!selectedJob} onOpenChange={(open) => !open && setSelectedJob(null)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Edit Job</DialogTitle>
+              <DialogDescription>
+                Make changes to the job listing here. Click save when you're done.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="title">Title</Label>
+                <Input
+                  id="title"
+                  defaultValue={selectedJob.title}
+                  onChange={(e) => handleJobInputChange('title', e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="company">Company</Label>
+                <Input
+                  id="company"
+                  defaultValue={selectedJob.company}
+                  onChange={(e) => handleJobInputChange('company', e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="description">Description</Label>
+                <Textarea
+                  id="description"
+                  defaultValue={selectedJob.description}
+                  onChange={(e) => handleJobInputChange('description', e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="salary">Salary</Label>
+                <Input
+                  id="salary"
+                  defaultValue={selectedJob.salary}
+                  onChange={(e) => handleJobInputChange('salary', e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="location">Location</Label>
+                <Input
+                  id="location"
+                  defaultValue={selectedJob.location}
+                  onChange={(e) => handleJobInputChange('location', e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="requirements">Requirements</Label>
+                <Textarea
+                  id="requirements"
+                  defaultValue={selectedJob.requirements}
+                  onChange={(e) => handleJobInputChange('requirements', e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="type">Type</Label>
+                <Input
+                  id="type"
+                  defaultValue={selectedJob.type}
+                  onChange={(e) => handleJobInputChange('type', e.target.value)}
+                />
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="isActive"
+                  defaultChecked={selectedJob.isActive}
+                  onCheckedChange={(checked: boolean) => handleJobInputChange('isActive', checked)}
+                />
+                <Label htmlFor="isActive">Active</Label>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setSelectedJob(null);
+                  setJobFormData({});
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleJobSubmit}
+                disabled={Object.keys(jobFormData).length === 0 || updateJobMutation.isPending}
+              >
+                {updateJobMutation.isPending ? "Saving..." : "Save Changes"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       )}
 
       {selectedApplication && (

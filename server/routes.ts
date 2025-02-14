@@ -102,6 +102,49 @@ export function registerRoutes(app: Express): Server {
   });
 
 
+  // Admin routes for database management
+  app.patch("/api/admin/jobs/:id", isAdmin, async (req, res) => {
+    try {
+      const jobId = parseInt(req.params.id);
+      if (isNaN(jobId)) {
+        return res.status(400).json({ error: "Invalid job ID" });
+      }
+
+      const job = await storage.getJob(jobId);
+      if (!job) {
+        return res.status(404).json({ error: "Job not found" });
+      }
+
+      // Update the job using the storage interface
+      const updatedJob = await storage.updateJob(jobId, req.body);
+      res.json(updatedJob);
+    } catch (error) {
+      console.error('Error updating job:', error);
+      res.status(500).json({ error: "Failed to update job" });
+    }
+  });
+
+  app.delete("/api/admin/jobs/:id", isAdmin, async (req, res) => {
+    try {
+      const jobId = parseInt(req.params.id);
+      if (isNaN(jobId)) {
+        return res.status(400).json({ error: "Invalid job ID" });
+      }
+
+      const job = await storage.getJob(jobId);
+      if (!job) {
+        return res.status(404).json({ error: "Job not found" });
+      }
+
+      // Instead of actually deleting, we'll mark it as inactive
+      await storage.deactivateJob(jobId);
+      res.json({ message: "Job deactivated successfully" });
+    } catch (error) {
+      console.error('Error deleting job:', error);
+      res.status(500).json({ error: "Failed to delete job" });
+    }
+  });
+
   // Regular routes continue...
   app.post("/api/jobs/scrape", async (_req, res) => {
     try {

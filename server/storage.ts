@@ -60,6 +60,10 @@ export interface IStorage {
   createMessage(message: InsertMessage): Promise<Message>;
   markMessageAsRead(id: number): Promise<Message>;
   getUnreadMessageCount(applicationId: number): Promise<number>;
+
+  // Add new methods for job management
+  updateJob(id: number, updates: Partial<InsertJob>): Promise<Job>;
+  deactivateJob(id: number): Promise<Job>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -408,6 +412,28 @@ export class DatabaseStorage implements IStorage {
       console.error('Error getting unread message count:', error);
       return 0;
     }
+  }
+
+  async updateJob(id: number, updates: Partial<InsertJob>): Promise<Job> {
+    const [job] = await db
+      .update(jobs)
+      .set(updates)
+      .where(eq(jobs.id, id))
+      .returning();
+    return job;
+  }
+
+  async deactivateJob(id: number): Promise<Job> {
+    const now = new Date().toISOString();
+    const [job] = await db
+      .update(jobs)
+      .set({
+        isActive: false,
+        deactivatedAt: now
+      })
+      .where(eq(jobs.id, id))
+      .returning();
+    return job;
   }
 }
 
