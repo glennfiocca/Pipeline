@@ -342,10 +342,15 @@ export default function AdminDashboardPage() {
                                   </Badge>
                                 )}
                               </div>
-                              {profile && (
+                              {profile ? (
                                 <div className="text-sm text-muted-foreground flex items-center gap-2">
                                   <Users className="h-4 w-4" />
-                                  {profile.name}
+                                  {profile.name || 'No name provided'}
+                                </div>
+                              ) : (
+                                <div className="text-sm text-muted-foreground flex items-center gap-2">
+                                  <Users className="h-4 w-4" />
+                                  No profile found
                                 </div>
                               )}
                               <div className="text-sm text-muted-foreground flex items-center gap-2">
