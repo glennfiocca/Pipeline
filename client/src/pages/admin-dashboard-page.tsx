@@ -44,8 +44,7 @@ export default function AdminDashboardPage() {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
 
-  // Enhanced admin check
-  if (!user?.isAdmin || user?.username !== 'glennfiocca') {
+  if (!user?.isAdmin) {
     setLocation("/");
     return null;
   }
@@ -62,19 +61,16 @@ export default function AdminDashboardPage() {
     queryKey: ["/api/admin/profiles"],
   });
 
+  // Debug logging to verify data relationships
+  console.log('Admin Dashboard Data:', {
+    profiles: profiles.map(p => ({ id: p.id, name: p.name })),
+    applications: applications.map(a => ({ id: a.id, profileId: a.profileId, status: a.status })),
+    jobs: jobs.map(j => ({ id: j.id, title: j.title }))
+  });
+
   const updateApplicationMutation = useMutation({
-    mutationFn: async ({
-      id,
-      data,
-    }: {
-      id: number;
-      data: ApplicationUpdateForm;
-    }) => {
-      const res = await apiRequest(
-        "PATCH",
-        `/api/admin/applications/${id}`,
-        data
-      );
+    mutationFn: async ({ id, data }: { id: number; data: ApplicationUpdateForm }) => {
+      const res = await apiRequest("PATCH", `/api/admin/applications/${id}`, data);
       if (!res.ok) {
         const error = await res.json();
         throw new Error(error.message || "Failed to update application");
@@ -108,7 +104,6 @@ export default function AdminDashboardPage() {
 
   const handleSubmit = () => {
     if (!selectedApplication || Object.keys(formData).length === 0) return;
-
     updateApplicationMutation.mutate({
       id: selectedApplication.id,
       data: formData
@@ -146,38 +141,46 @@ export default function AdminDashboardPage() {
 
   const getJob = (jobId: number) => jobs.find((job) => job.id === jobId);
 
-  // Improved user groups organization
+  // Create user groups with proper filtering
   const userGroups = profiles.map(profile => {
-    // Filter applications for this profile
+    // Get all applications for this profile
     const userApplications = applications.filter(app => {
-      // Check if the application belongs to this profile
+      // Match on profile ID
       const matchesProfile = app.profileId === profile.id;
-      // If a status filter is active, check if the application status matches
+
+      // If status filter is active, check if application matches
       const matchesStatus = !selectedStatus || 
         selectedStatus === "TotalUsers" || 
         selectedStatus === "TotalApplications" ||
         app.status.toLowerCase() === selectedStatus.toLowerCase();
 
+      console.log('Checking application:', app, 
+        'matches profile:', matchesProfile,
+        'matches status:', matchesStatus
+      );
+
       return matchesProfile && matchesStatus;
     });
+
+    console.log('Applications for profile', profile.id, ':', userApplications);
 
     return {
       profile,
       applications: userApplications
     };
-  }).filter(group => group.applications.length > 0);
+  });
 
-  // Stats calculation
+  // Calculate statistics
   const stats = {
-    TotalUsers: userGroups.length,
+    TotalUsers: profiles.length,
     TotalApplications: applications.length,
-    Applied: applications.filter((app) => app.status.toLowerCase() === "applied").length,
-    Screening: applications.filter((app) => app.status.toLowerCase() === "screening").length,
-    Interviewing: applications.filter((app) => app.status.toLowerCase() === "interviewing").length,
-    Offered: applications.filter((app) => app.status.toLowerCase() === "offered").length,
-    Accepted: applications.filter((app) => app.status.toLowerCase() === "accepted").length,
-    Rejected: applications.filter((app) => app.status.toLowerCase() === "rejected").length,
-    Withdrawn: applications.filter((app) => app.status.toLowerCase() === "withdrawn").length,
+    Applied: applications.filter(app => app.status.toLowerCase() === "applied").length,
+    Screening: applications.filter(app => app.status.toLowerCase() === "screening").length,
+    Interviewing: applications.filter(app => app.status.toLowerCase() === "interviewing").length,
+    Offered: applications.filter(app => app.status.toLowerCase() === "offered").length,
+    Accepted: applications.filter(app => app.status.toLowerCase() === "accepted").length,
+    Rejected: applications.filter(app => app.status.toLowerCase() === "rejected").length,
+    Withdrawn: applications.filter(app => app.status.toLowerCase() === "withdrawn").length,
   };
 
   if (isLoadingApps) {
@@ -206,17 +209,13 @@ export default function AdminDashboardPage() {
             className={`cursor-pointer transition-all hover:shadow-md ${
               selectedStatus === status && "ring-2 ring-primary"
             }`}
-            onClick={() => setSelectedStatus(status === "TotalUsers" || status === "TotalApplications" ? null : status)}
+            onClick={() => setSelectedStatus(status)}
           >
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">{status}</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className={`text-2xl font-bold ${
-                !["TotalUsers", "TotalApplications"].includes(status) && getStatusColor(status)
-              }`}>
-                {count}
-              </div>
+              <div className="text-2xl font-bold">{count}</div>
             </CardContent>
           </Card>
         ))}
@@ -228,7 +227,11 @@ export default function AdminDashboardPage() {
             <CardTitle className="flex items-center gap-2">
               <Users className="h-5 w-5" />
               Users and Their Applications
-              {selectedStatus && <span className="text-sm font-normal ml-2">({selectedStatus} applications)</span>}
+              {selectedStatus && (
+                <span className="text-sm font-normal ml-2">
+                  ({selectedStatus} applications)
+                </span>
+              )}
             </CardTitle>
           </div>
         </CardHeader>
@@ -261,50 +264,48 @@ export default function AdminDashboardPage() {
                   {expandedUsers.includes(profile.id) && (
                     <CardContent>
                       <div className="space-y-4">
-                        {userApplications.length > 0 ? (
-                          userApplications.map((application) => {
-                            const job = getJob(application.jobId);
-                            if (!job) return null;
-
-                            return (
-                              <div
-                                key={application.id}
-                                className="p-4 rounded-lg border space-y-3"
-                              >
-                                <div className="flex items-start justify-between">
-                                  <div className="space-y-1">
-                                    <div className="font-medium">
-                                      {job.title}
-                                    </div>
-                                    <div className="text-sm text-muted-foreground">
-                                      {job.company} - {job.location}
-                                    </div>
-                                    <div className="text-xs text-muted-foreground">
-                                      Applied on {format(new Date(application.appliedAt), "MMM d, yyyy")}
-                                    </div>
+                        {userApplications.map((application) => {
+                          const job = getJob(application.jobId);
+                          if (!job) return null;
+                          return (
+                            <div
+                              key={application.id}
+                              className="p-4 rounded-lg border space-y-3"
+                            >
+                              <div className="flex items-start justify-between">
+                                <div className="space-y-1">
+                                  <div className="font-medium">
+                                    {job.title}
                                   </div>
-                                  <div className="flex items-center gap-4">
-                                    <Badge className={getStatusColor(application.status)}>
-                                      {application.status}
-                                    </Badge>
-                                    <MessageDialog
-                                      applicationId={application.id}
-                                      jobTitle={job.title}
-                                      company={job.company}
-                                      isAdmin={true}
-                                    />
-                                    <Button
-                                      variant="outline"
-                                      onClick={() => setSelectedApplication(application)}
-                                    >
-                                      Manage
-                                    </Button>
+                                  <div className="text-sm text-muted-foreground">
+                                    {job.company} - {job.location}
+                                  </div>
+                                  <div className="text-xs text-muted-foreground">
+                                    Applied on {format(new Date(application.appliedAt), "MMM d, yyyy")}
                                   </div>
                                 </div>
+                                <div className="flex items-center gap-4">
+                                  <Badge className={getStatusColor(application.status)}>
+                                    {application.status}
+                                  </Badge>
+                                  <MessageDialog
+                                    applicationId={application.id}
+                                    jobTitle={job.title}
+                                    company={job.company}
+                                    isAdmin={true}
+                                  />
+                                  <Button
+                                    variant="outline"
+                                    onClick={() => setSelectedApplication(application)}
+                                  >
+                                    Manage
+                                  </Button>
+                                </div>
                               </div>
-                            );
-                          })
-                        ) : (
+                            </div>
+                          );
+                        })}
+                        {userApplications.length === 0 && (
                           <p className="text-sm text-muted-foreground">No applications found</p>
                         )}
                       </div>
