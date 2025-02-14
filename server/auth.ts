@@ -27,13 +27,13 @@ async function comparePasswords(supplied: string, stored: string) {
 export function setupAuth(app: Express) {
   // Session configuration
   const sessionSettings: session.SessionOptions = {
-    secret: process.env.REPLIT_ID || 'default-secret-key',
+    secret: process.env.REPLIT_ID || 'development-secret',
     resave: false,
     saveUninitialized: false,
     store: storage.sessionStore,
     cookie: {
       secure: app.get("env") === "production",
-      maxAge: 24 * 60 * 60 * 1000,
+      maxAge: 24 * 60 * 60 * 1000, // 24 hours
       httpOnly: true,
       sameSite: 'lax'
     }
@@ -66,20 +66,12 @@ export function setupAuth(app: Express) {
     try {
       const user = await storage.getUser(id);
       if (!user) {
-        return done(new Error('User not found'));
+        return done(null, false);
       }
       done(null, user);
     } catch (err) {
       done(err);
     }
-  });
-
-  // User info endpoint
-  app.get("/api/user", (req, res) => {
-    if (!req.isAuthenticated()) {
-      return res.status(401).json({ error: "Not authenticated" });
-    }
-    res.json(req.user);
   });
 
   // Registration endpoint
@@ -99,28 +91,23 @@ export function setupAuth(app: Express) {
         return res.status(400).json({ error: "Email already registered" });
       }
 
-      // Create new user
+      // Create new user with hashed password
       const hashedPassword = await hashPassword(validatedData.password);
       const { confirmPassword, ...userDataWithoutConfirm } = validatedData;
 
       const user = await storage.createUser({
-        username: userDataWithoutConfirm.username,
-        email: userDataWithoutConfirm.email,
+        ...userDataWithoutConfirm,
         password: hashedPassword,
         createdAt: new Date().toISOString()
       });
 
-      // Log in the user
-      return new Promise<void>((resolve, reject) => {
-        req.login(user, (err) => {
-          if (err) {
-            console.error("Login error after registration:", err);
-            reject(new Error("Error logging in after registration"));
-          } else {
-            res.status(201).json(user);
-            resolve();
-          }
-        });
+      // Log in the user after registration
+      req.login(user, (err) => {
+        if (err) {
+          console.error("Login error after registration:", err);
+          return res.status(500).json({ error: "Error logging in after registration" });
+        }
+        return res.status(201).json(user);
       });
     } catch (error) {
       console.error("Registration error:", error);
@@ -138,14 +125,16 @@ export function setupAuth(app: Express) {
   app.post("/api/login", (req, res, next) => {
     passport.authenticate("local", (err: Error | null, user: Express.User | false, info: { message: string } | undefined) => {
       if (err) {
-        return next(err);
+        console.error("Login error:", err);
+        return res.status(500).json({ error: "Internal server error during login" });
       }
       if (!user) {
-        return res.status(401).json({ error: info?.message || "Authentication failed" });
+        return res.status(401).json({ error: info?.message || "Invalid credentials" });
       }
       req.login(user, (err) => {
         if (err) {
-          return next(err);
+          console.error("Session creation error:", err);
+          return res.status(500).json({ error: "Error creating session" });
         }
         return res.json(user);
       });
@@ -156,9 +145,18 @@ export function setupAuth(app: Express) {
   app.post("/api/logout", (req, res, next) => {
     req.logout((err) => {
       if (err) {
+        console.error("Logout error:", err);
         return next(err);
       }
       res.json({ message: "Logged out successfully" });
     });
+  });
+
+  // User info endpoint
+  app.get("/api/user", (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+    res.json(req.user);
   });
 }
