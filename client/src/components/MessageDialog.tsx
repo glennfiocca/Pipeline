@@ -87,6 +87,15 @@ export function MessageDialog({ applicationId, jobTitle, company, isAdmin }: Mes
     createMessageMutation.mutate(newMessage.trim());
   };
 
+  const getSenderName = (message: Message) => {
+    if (message.isFromAdmin) {
+      // If viewing from admin panel, show admin username for their messages
+      return isAdmin ? user?.username : company;
+    }
+    // For non-admin messages, always show the username
+    return user?.username || "You";
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
@@ -107,10 +116,11 @@ export function MessageDialog({ applicationId, jobTitle, company, isAdmin }: Mes
           </DialogTitle>
         </DialogHeader>
         <div className="flex flex-col h-full">
-          <ScrollArea className="flex-1 pr-4" viewportRef={(ref) => {
+          <ScrollArea className="flex-1 pr-4" ref={(ref) => {
             // Auto-scroll to bottom when messages change
             if (ref) {
-              ref.scrollTop = ref.scrollHeight;
+              const element = ref as HTMLDivElement;
+              element.scrollTop = element.scrollHeight;
             }
           }}>
             <div className="space-y-4">
@@ -136,42 +146,14 @@ export function MessageDialog({ applicationId, jobTitle, company, isAdmin }: Mes
                   >
                     <div className="flex justify-between items-start mb-2">
                       <span className="font-medium">
-                        {message.isFromAdmin ? company : (user?.username || "You")}
+                        {getSenderName(message)}
                       </span>
                       <span className="text-xs text-muted-foreground">
                         {format(new Date(message.createdAt), "MMM d, yyyy h:mm a")}
                       </span>
                     </div>
                     <p className="text-sm whitespace-pre-wrap">{message.content}</p>
-                    {message.metadata && Object.keys(message.metadata).length > 0 && (
-                      <div className="mt-2 text-sm">
-                        {message.metadata.interviewDate && (
-                          <p className="text-muted-foreground">
-                            Interview scheduled for:{" "}
-                            {format(
-                              new Date(message.metadata.interviewDate),
-                              "MMM d, yyyy h:mm a"
-                            )}
-                          </p>
-                        )}
-                        {message.metadata.interviewLocation && (
-                          <p className="text-muted-foreground">
-                            Location: {message.metadata.interviewLocation}
-                          </p>
-                        )}
-                        {message.metadata.interviewType && (
-                          <p className="text-muted-foreground">
-                            Type: {message.metadata.interviewType}
-                          </p>
-                        )}
-                        {message.metadata.additionalNotes && (
-                          <p className="text-muted-foreground mt-2">
-                            Additional Notes: {message.metadata.additionalNotes}
-                          </p>
-                        )}
-                      </div>
-                    )}
-                  </div>
+                    </div>
                 ))
               )}
             </div>
