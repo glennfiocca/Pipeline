@@ -146,11 +146,18 @@ export default function AdminDashboardPage() {
 
   const getJob = (jobId: number) => jobs.find((job) => job.id === jobId);
 
-  // Improved group applications by profile logic
-  const userGroups: UserApplicationGroup[] = profiles.length > 0 ? profiles.map(profile => {
+  // Improved user groups organization
+  const userGroups = profiles.map(profile => {
+    // Filter applications for this profile
     const userApplications = applications.filter(app => {
+      // Check if the application belongs to this profile
       const matchesProfile = app.profileId === profile.id;
-      const matchesStatus = !selectedStatus || app.status.toLowerCase() === selectedStatus.toLowerCase();
+      // If a status filter is active, check if the application status matches
+      const matchesStatus = !selectedStatus || 
+        selectedStatus === "TotalUsers" || 
+        selectedStatus === "TotalApplications" ||
+        app.status.toLowerCase() === selectedStatus.toLowerCase();
+
       return matchesProfile && matchesStatus;
     });
 
@@ -158,9 +165,9 @@ export default function AdminDashboardPage() {
       profile,
       applications: userApplications
     };
-  }).filter(group => group.applications.length > 0) : [];
+  }).filter(group => group.applications.length > 0);
 
-  // Stats calculation with proper type handling
+  // Stats calculation
   const stats = {
     TotalUsers: userGroups.length,
     TotalApplications: applications.length,
@@ -254,48 +261,52 @@ export default function AdminDashboardPage() {
                   {expandedUsers.includes(profile.id) && (
                     <CardContent>
                       <div className="space-y-4">
-                        {userApplications.map((application) => {
-                          const job = getJob(application.jobId);
-                          if (!job) return null;
+                        {userApplications.length > 0 ? (
+                          userApplications.map((application) => {
+                            const job = getJob(application.jobId);
+                            if (!job) return null;
 
-                          return (
-                            <div
-                              key={application.id}
-                              className="p-4 rounded-lg border space-y-3"
-                            >
-                              <div className="flex items-start justify-between">
-                                <div className="space-y-1">
-                                  <div className="font-medium">
-                                    {job.title}
+                            return (
+                              <div
+                                key={application.id}
+                                className="p-4 rounded-lg border space-y-3"
+                              >
+                                <div className="flex items-start justify-between">
+                                  <div className="space-y-1">
+                                    <div className="font-medium">
+                                      {job.title}
+                                    </div>
+                                    <div className="text-sm text-muted-foreground">
+                                      {job.company} - {job.location}
+                                    </div>
+                                    <div className="text-xs text-muted-foreground">
+                                      Applied on {format(new Date(application.appliedAt), "MMM d, yyyy")}
+                                    </div>
                                   </div>
-                                  <div className="text-sm text-muted-foreground">
-                                    {job.company} - {job.location}
+                                  <div className="flex items-center gap-4">
+                                    <Badge className={getStatusColor(application.status)}>
+                                      {application.status}
+                                    </Badge>
+                                    <MessageDialog
+                                      applicationId={application.id}
+                                      jobTitle={job.title}
+                                      company={job.company}
+                                      isAdmin={true}
+                                    />
+                                    <Button
+                                      variant="outline"
+                                      onClick={() => setSelectedApplication(application)}
+                                    >
+                                      Manage
+                                    </Button>
                                   </div>
-                                  <div className="text-xs text-muted-foreground">
-                                    Applied on {format(new Date(application.appliedAt), "MMM d, yyyy")}
-                                  </div>
-                                </div>
-                                <div className="flex items-center gap-4">
-                                  <Badge className={getStatusColor(application.status)}>
-                                    {application.status}
-                                  </Badge>
-                                  <MessageDialog
-                                    applicationId={application.id}
-                                    jobTitle={job.title}
-                                    company={job.company}
-                                    isAdmin={true}
-                                  />
-                                  <Button
-                                    variant="outline"
-                                    onClick={() => setSelectedApplication(application)}
-                                  >
-                                    Manage
-                                  </Button>
                                 </div>
                               </div>
-                            </div>
-                          );
-                        })}
+                            );
+                          })
+                        ) : (
+                          <p className="text-sm text-muted-foreground">No applications found</p>
+                        )}
                       </div>
                     </CardContent>
                   )}
