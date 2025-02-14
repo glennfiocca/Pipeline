@@ -118,10 +118,12 @@ export function MessageDialog({ applicationId, jobTitle, company, isAdmin }: Mes
         </DialogHeader>
         <div className="flex flex-col h-full">
           <ScrollArea className="flex-1 pr-4" ref={(ref) => {
-            // Auto-scroll to bottom when messages change
+            // Auto-scroll to bottom when messages change or when a new message is sent
             if (ref) {
               const element = ref as HTMLDivElement;
-              element.scrollTop = element.scrollHeight;
+              setTimeout(() => {
+                element.scrollTop = element.scrollHeight;
+              }, 100);
             }
           }}>
             <div className="space-y-4">
