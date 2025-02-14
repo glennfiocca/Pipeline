@@ -228,7 +228,7 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  app.post("/api/applications/:id/messages", async (req, res) => {
+  app.post("/api/applications/:id/messages", async (req: any, res) => {
     try {
       if (!req.isAuthenticated()) {
         return res.status(401).json({ error: "Authentication required" });

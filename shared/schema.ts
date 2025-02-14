@@ -230,7 +230,8 @@ export const messages = pgTable("messages", {
   isFromAdmin: boolean("is_from_admin").notNull(),
   isRead: boolean("is_read").notNull().default(false),
   createdAt: text("created_at").notNull().default(new Date().toISOString()),
-  metadata: jsonb("metadata").default({})
+  metadata: jsonb("metadata").default({}),
+  senderUsername: text("sender_username") 
 });
 
 export const insertMessageSchema = createInsertSchema(messages).omit({ 
@@ -242,9 +243,10 @@ export const insertMessageSchema = createInsertSchema(messages).omit({
     interviewLocation: z.string().optional(),
     interviewType: z.string().optional(),
     additionalNotes: z.string().optional()
-  }).optional()
+  }).optional(),
+  senderUsername: z.string()
 });
 
-// Add new types
+// Types remain unchanged except for Message which will now include senderUsername
 export type Message = typeof messages.$inferSelect;
 export type InsertMessage = z.infer<typeof insertMessageSchema>;
