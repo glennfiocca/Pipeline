@@ -44,30 +44,37 @@ export default function AdminDashboardPage() {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
 
-  if (!user?.isAdmin) {
+  // Fetch data first, then check admin status
+  const { data: applications = [], isLoading: isLoadingApps } = useQuery<Application[]>({
+    queryKey: ["/api/admin/applications"],
+    enabled: !!user?.isAdmin // Only fetch if user is admin
+  });
+
+  const { data: jobs = [], isLoading: isLoadingJobs } = useQuery<Job[]>({
+    queryKey: ["/api/jobs"],
+    enabled: !!user?.isAdmin
+  });
+
+  const { data: profiles = [], isLoading: isLoadingProfiles } = useQuery<Profile[]>({
+    queryKey: ["/api/admin/profiles"],
+    enabled: !!user?.isAdmin
+  });
+
+  // Check for admin access after loading user
+  if (!user) {
+    return (
+      <div className="flex items-center justify-center min-h-[calc(100vh-4rem)]">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+      </div>
+    );
+  }
+
+  if (!user.isAdmin) {
     setLocation("/");
     return null;
   }
 
-  const { data: applications = [], isLoading: isLoadingApps } = useQuery<Application[]>({
-    queryKey: ["/api/admin/applications"],
-  });
-
-  const { data: jobs = [] } = useQuery<Job[]>({
-    queryKey: ["/api/jobs"],
-  });
-
-  const { data: profiles = [] } = useQuery<Profile[]>({
-    queryKey: ["/api/admin/profiles"],
-  });
-
-  // Debug logging to verify data relationships
-  console.log('Admin Dashboard Data:', {
-    profiles: profiles.map(p => ({ id: p.id, name: p.name })),
-    applications: applications.map(a => ({ id: a.id, profileId: a.profileId, status: a.status })),
-    jobs: jobs.map(j => ({ id: j.id, title: j.title }))
-  });
-
+  // Rest of the component remains unchanged
   const updateApplicationMutation = useMutation({
     mutationFn: async ({ id, data }: { id: number; data: ApplicationUpdateForm }) => {
       const res = await apiRequest("PATCH", `/api/admin/applications/${id}`, data);
@@ -122,12 +129,8 @@ export default function AdminDashboardPage() {
     switch (status.toLowerCase()) {
       case "applied":
         return "bg-blue-500/10 text-blue-500";
-      case "screening":
-        return "bg-purple-500/10 text-purple-500";
       case "interviewing":
         return "bg-yellow-500/10 text-yellow-500";
-      case "offered":
-        return "bg-orange-500/10 text-orange-500";
       case "accepted":
         return "bg-green-500/10 text-green-500";
       case "rejected":
@@ -143,26 +146,15 @@ export default function AdminDashboardPage() {
 
   // Create user groups with proper filtering
   const userGroups = profiles.map(profile => {
-    // Get all applications for this profile
     const userApplications = applications.filter(app => {
-      // Match on profile ID
       const matchesProfile = app.profileId === profile.id;
-
-      // If status filter is active, check if application matches
-      const matchesStatus = !selectedStatus || 
-        selectedStatus === "TotalUsers" || 
-        selectedStatus === "TotalApplications" ||
+      const matchesStatus = !selectedStatus ||
+        selectedStatus === "Total Users" ||
+        selectedStatus === "Total Applications" ||
         app.status.toLowerCase() === selectedStatus.toLowerCase();
-
-      console.log('Checking application:', app, 
-        'matches profile:', matchesProfile,
-        'matches status:', matchesStatus
-      );
 
       return matchesProfile && matchesStatus;
     });
-
-    console.log('Applications for profile', profile.id, ':', userApplications);
 
     return {
       profile,
@@ -172,18 +164,16 @@ export default function AdminDashboardPage() {
 
   // Calculate statistics with case-insensitive matching
   const stats = {
-    TotalUsers: profiles.length,
-    TotalApplications: applications.length,
+    "Total Users": profiles.length,
+    "Total Applications": applications.length,
     Applied: applications.filter(app => app.status.toLowerCase() === "applied").length,
-    Screening: applications.filter(app => app.status.toLowerCase() === "screening").length,
     Interviewing: applications.filter(app => app.status.toLowerCase() === "interviewing").length,
-    Offered: applications.filter(app => app.status.toLowerCase() === "offered").length,
     Accepted: applications.filter(app => app.status.toLowerCase() === "accepted").length,
     Rejected: applications.filter(app => app.status.toLowerCase() === "rejected").length,
     Withdrawn: applications.filter(app => app.status.toLowerCase() === "withdrawn").length,
   };
 
-  if (isLoadingApps) {
+  if (isLoadingApps || isLoadingJobs || isLoadingProfiles) {
     return (
       <div className="flex items-center justify-center min-h-[calc(100vh-4rem)]">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
@@ -202,7 +192,7 @@ export default function AdminDashboardPage() {
         )}
       </div>
 
-      <div className="grid gap-4 md:grid-cols-4 lg:grid-cols-8">
+      <div className="grid gap-4 md:grid-cols-4 lg:grid-cols-7">
         {Object.entries(stats).map(([status, count]) => (
           <Card
             key={status}
@@ -334,9 +324,7 @@ export default function AdminDashboardPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Applied">Applied</SelectItem>
-                    <SelectItem value="Screening">Screening</SelectItem>
                     <SelectItem value="Interviewing">Interviewing</SelectItem>
-                    <SelectItem value="Offered">Offered</SelectItem>
                     <SelectItem value="Accepted">Accepted</SelectItem>
                     <SelectItem value="Rejected">Rejected</SelectItem>
                     <SelectItem value="Withdrawn">Withdrawn</SelectItem>
