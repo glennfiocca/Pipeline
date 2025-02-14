@@ -5,7 +5,7 @@ import session from "express-session";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 import { storage } from "./storage";
-import { insertUserSchema, type InsertUser } from "@shared/schema";
+import { insertUserSchema } from "@shared/schema";
 import { fromZodError } from "zod-validation-error";
 import { ZodError } from "zod";
 
@@ -27,16 +27,19 @@ async function comparePasswords(supplied: string, stored: string) {
 export function setupAuth(app: Express) {
   // Session configuration
   const sessionSettings: session.SessionOptions = {
-    secret: process.env.REPL_ID!,
+    secret: process.env.REPLIT_ID || 'default-secret-key',
     resave: false,
     saveUninitialized: false,
     store: storage.sessionStore,
     cookie: {
       secure: app.get("env") === "production",
-      maxAge: 24 * 60 * 60 * 1000
+      maxAge: 24 * 60 * 60 * 1000,
+      httpOnly: true,
+      sameSite: 'lax'
     }
   };
 
+  app.set('trust proxy', 1);
   app.use(session(sessionSettings));
   app.use(passport.initialize());
   app.use(passport.session());
@@ -55,7 +58,10 @@ export function setupAuth(app: Express) {
     })
   );
 
-  passport.serializeUser((user, done) => done(null, user.id));
+  passport.serializeUser((user: Express.User, done) => {
+    done(null, user.id);
+  });
+
   passport.deserializeUser(async (id: number, done) => {
     try {
       const user = await storage.getUser(id);
@@ -68,10 +74,17 @@ export function setupAuth(app: Express) {
     }
   });
 
+  // User info endpoint
+  app.get("/api/user", (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+    res.json(req.user);
+  });
+
   // Registration endpoint
   app.post("/api/register", async (req, res) => {
     try {
-      console.log('Registration request body:', req.body);
       const validatedData = insertUserSchema.parse(req.body);
 
       // Check for existing user
@@ -104,7 +117,7 @@ export function setupAuth(app: Express) {
             console.error("Login error after registration:", err);
             reject(new Error("Error logging in after registration"));
           } else {
-            res.status(201).json({ user });
+            res.status(201).json(user);
             resolve();
           }
         });
@@ -123,7 +136,7 @@ export function setupAuth(app: Express) {
 
   // Login endpoint
   app.post("/api/login", (req, res, next) => {
-    passport.authenticate("local", (err, user, info) => {
+    passport.authenticate("local", (err: Error | null, user: Express.User | false, info: { message: string } | undefined) => {
       if (err) {
         return next(err);
       }
@@ -134,7 +147,7 @@ export function setupAuth(app: Express) {
         if (err) {
           return next(err);
         }
-        return res.json({ user });
+        return res.json(user);
       });
     })(req, res, next);
   });
@@ -147,13 +160,5 @@ export function setupAuth(app: Express) {
       }
       res.json({ message: "Logged out successfully" });
     });
-  });
-
-  // User info endpoint
-  app.get("/api/user", (req, res) => {
-    if (!req.isAuthenticated()) {
-      return res.status(401).json({ error: "Not authenticated" });
-    }
-    res.json({ user: req.user });
   });
 }

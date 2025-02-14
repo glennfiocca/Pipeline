@@ -12,7 +12,7 @@ const isAdmin = (req: any, res: any, next: any) => {
     return res.status(401).json({ error: "Authentication required" });
   }
 
-  // Check both admin status and specific username
+  // Check admin status
   if (!req.user?.isAdmin) {
     return res.status(403).json({ error: "Unauthorized. Admin access required." });
   }

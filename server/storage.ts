@@ -3,8 +3,12 @@ import { drizzle } from 'drizzle-orm/neon-serverless';
 import { eq, desc, and } from "drizzle-orm";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
-import { messages, applications, jobs, type Message, type InsertMessage } from "@shared/schema";
-import { jobs, profiles, applications, users, type Job, type Profile, type Application, type User, type InsertJob, type InsertProfile, type InsertApplication, type InsertUser } from "@shared/schema";
+import { 
+  messages, applications, jobs, profiles, users,
+  type Message, type InsertMessage,
+  type Job, type Profile, type Application, type User,
+  type InsertJob, type InsertProfile, type InsertApplication, type InsertUser 
+} from "@shared/schema";
 import { db } from "./db";
 
 const PostgresSessionStore = connectPg(session);

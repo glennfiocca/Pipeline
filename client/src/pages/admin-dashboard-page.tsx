@@ -21,7 +21,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
 import { useLocation } from "wouter";
 import { MessageDialog } from "@/components/MessageDialog";
-import { ChevronDown, ChevronRight, Users, Mail, User as UserIcon } from "lucide-react";
+import { Users, Mail, User as UserIcon } from "lucide-react";
 
 type ApplicationUpdateForm = {
   status?: string;
@@ -30,12 +30,8 @@ type ApplicationUpdateForm = {
   nextStepDueDate?: string;
 };
 
-interface UserApplicationGroup {
-  profile: Profile;
-  applications: Application[];
-}
-
 export default function AdminDashboardPage() {
+  // All hooks at the top
   const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
   const [selectedApplication, setSelectedApplication] = useState<Application | null>(null);
   const [formData, setFormData] = useState<ApplicationUpdateForm>({});
@@ -43,15 +39,16 @@ export default function AdminDashboardPage() {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
 
-  // Fetch data first, then check admin status
   const { data: applications = [], isLoading: isLoadingApps } = useQuery<Application[]>({
     queryKey: ["/api/admin/applications"],
-    enabled: !!user?.isAdmin
+    enabled: !!user?.isAdmin,
+    retry: false
   });
 
   const { data: jobs = [], isLoading: isLoadingJobs } = useQuery<Job[]>({
     queryKey: ["/api/jobs"],
-    enabled: !!user?.isAdmin
+    enabled: !!user?.isAdmin,
+    retry: false
   });
 
   const { data: profiles = [], isLoading: isLoadingProfiles } = useQuery<Profile[]>({
@@ -65,28 +62,6 @@ export default function AdminDashboardPage() {
     enabled: !!user?.isAdmin,
     retry: false
   });
-
-  // Check for admin access after loading user
-  if (!user) {
-    return (
-      <div className="flex items-center justify-center min-h-[calc(100vh-4rem)]">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-      </div>
-    );
-  }
-
-  if (!user.isAdmin) {
-    setLocation("/");
-    return null;
-  }
-
-  if (isLoadingUsers || isLoadingProfiles || isLoadingApps || isLoadingJobs) {
-    return (
-      <div className="flex items-center justify-center min-h-[calc(100vh-4rem)]">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-      </div>
-    );
-  }
 
   const updateApplicationMutation = useMutation({
     mutationFn: async ({ id, data }: { id: number; data: ApplicationUpdateForm }) => {
@@ -114,6 +89,21 @@ export default function AdminDashboardPage() {
       });
     },
   });
+
+  // Loading state
+  if (!user || isLoadingUsers || isLoadingProfiles || isLoadingApps || isLoadingJobs) {
+    return (
+      <div className="flex items-center justify-center min-h-[calc(100vh-4rem)]">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+      </div>
+    );
+  }
+
+  // Check admin access
+  if (!user.isAdmin) {
+    setLocation("/");
+    return null;
+  }
 
   const handleInputChange = (field: keyof ApplicationUpdateForm, value: string) => {
     setFormData(prev => ({
@@ -147,20 +137,16 @@ export default function AdminDashboardPage() {
     }
   };
 
-  const getJob = (jobId: number) => jobs.find((job) => job.id === jobId);
-
-
-  // Calculate statistics with case-insensitive matching
+  // Calculate statistics
   const stats = {
     "Total Users": users.length,
     "Total Applications": applications.length,
-    Applied: applications.filter(app => app.status.toLowerCase() === "applied").length,
-    Interviewing: applications.filter(app => app.status.toLowerCase() === "interviewing").length,
-    Accepted: applications.filter(app => app.status.toLowerCase() === "accepted").length,
-    Rejected: applications.filter(app => app.status.toLowerCase() === "rejected").length,
-    Withdrawn: applications.filter(app => app.status.toLowerCase() === "withdrawn").length,
+    "Applied": applications.filter(app => app.status.toLowerCase() === "applied").length,
+    "Interviewing": applications.filter(app => app.status.toLowerCase() === "interviewing").length,
+    "Accepted": applications.filter(app => app.status.toLowerCase() === "accepted").length,
+    "Rejected": applications.filter(app => app.status.toLowerCase() === "rejected").length,
+    "Withdrawn": applications.filter(app => app.status.toLowerCase() === "withdrawn").length,
   };
-
 
   return (
     <div className="container py-10">
@@ -237,6 +223,7 @@ export default function AdminDashboardPage() {
         </CardContent>
       </Card>
 
+      {/* Applications Section */}
       {selectedStatus && selectedStatus !== "Total Users" && (
         <Card className="mt-8">
           <CardHeader>
