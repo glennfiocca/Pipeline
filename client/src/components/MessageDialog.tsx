@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -24,6 +24,7 @@ export function MessageDialog({ applicationId, jobTitle, company, isAdmin }: Mes
   const { toast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
   const { user } = useAuth();
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   const { data: messages = [] } = useQuery<Message[]>({
     queryKey: [`/api/applications/${applicationId}/messages`],
@@ -33,6 +34,13 @@ export function MessageDialog({ applicationId, jobTitle, company, isAdmin }: Mes
   const { data: unreadCount = 0 } = useQuery<number>({
     queryKey: [`/api/applications/${applicationId}/messages/unread`],
   });
+
+  // Auto-scroll to bottom when new messages arrive
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [messages]);
 
   const createMessageMutation = useMutation({
     mutationFn: async (content: string) => {
@@ -110,76 +118,72 @@ export function MessageDialog({ applicationId, jobTitle, company, isAdmin }: Mes
           )}
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-2xl h-[80vh]">
+      <DialogContent className="max-w-2xl h-[80vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>
             Messages - {jobTitle} at {company}
           </DialogTitle>
         </DialogHeader>
-        <div className="flex flex-col h-full">
-          <ScrollArea className="flex-1 pr-4" ref={(ref) => {
-            // Auto-scroll to bottom when messages change or when a new message is sent
-            if (ref) {
-              const element = ref as HTMLDivElement;
-              setTimeout(() => {
-                element.scrollTop = element.scrollHeight;
-              }, 100);
-            }
-          }}>
-            <div className="space-y-4">
-              {messages.length === 0 ? (
-                <p className="text-center text-muted-foreground py-4">
-                  No messages yet. Start the conversation!
-                </p>
-              ) : (
-                messages.map((message) => (
-                  <div
-                    key={message.id}
-                    className={cn(
-                      "p-4 rounded-lg",
-                      message.isFromAdmin
-                        ? "bg-muted ml-8"
-                        : "bg-primary/10 mr-8"
-                    )}
-                    onClick={() => {
-                      if (!message.isRead && !message.isFromAdmin) {
-                        markAsReadMutation.mutate(message.id);
-                      }
-                    }}
-                  >
-                    <div className="flex justify-between items-start mb-2">
-                      <span className="font-medium">
-                        {getSenderName(message)}
-                      </span>
-                      <span className="text-xs text-muted-foreground">
-                        {format(new Date(message.createdAt), "MMM d, yyyy h:mm a")}
-                      </span>
+        <div className="flex-1 min-h-0 flex flex-col">
+          <div className="flex-1 overflow-hidden" ref={scrollRef}>
+            <ScrollArea className="h-full">
+              <div className="space-y-4 p-4">
+                {messages.length === 0 ? (
+                  <p className="text-center text-muted-foreground py-4">
+                    No messages yet. Start the conversation!
+                  </p>
+                ) : (
+                  messages.map((message) => (
+                    <div
+                      key={message.id}
+                      className={cn(
+                        "p-4 rounded-lg",
+                        message.isFromAdmin
+                          ? "bg-muted ml-8"
+                          : "bg-primary/10 mr-8"
+                      )}
+                      onClick={() => {
+                        if (!message.isRead && !message.isFromAdmin) {
+                          markAsReadMutation.mutate(message.id);
+                        }
+                      }}
+                    >
+                      <div className="flex justify-between items-start mb-2">
+                        <span className="font-medium">
+                          {getSenderName(message)}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          {format(new Date(message.createdAt), "MMM d, yyyy h:mm a")}
+                        </span>
+                      </div>
+                      <p className="text-sm whitespace-pre-wrap">{message.content}</p>
                     </div>
-                    <p className="text-sm whitespace-pre-wrap">{message.content}</p>
-                  </div>
-                ))
-              )}
+                  ))
+                )}
+              </div>
+            </ScrollArea>
+          </div>
+          <div className="p-4 mt-auto border-t">
+            <div className="flex gap-2">
+              <Textarea
+                placeholder="Type your message..."
+                value={newMessage}
+                onChange={(e) => setNewMessage(e.target.value)}
+                className="flex-1"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSend();
+                  }
+                }}
+              />
+              <Button
+                onClick={handleSend}
+                disabled={createMessageMutation.isPending}
+              >
+                Send
+              </Button>
             </div>
-          </ScrollArea>
-          <div className="mt-4 flex gap-2">
-            <Textarea
-              placeholder="Type your message..."
-              value={newMessage}
-              onChange={(e) => setNewMessage(e.target.value)}
-              className="flex-1"
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  handleSend();
-                }
-              }}
-            />
-            <Button
-              onClick={handleSend}
-              disabled={createMessageMutation.isPending}
-            >
-              Send
-            </Button>
           </div>
         </div>
       </DialogContent>
