@@ -295,11 +295,12 @@ export class DatabaseStorage implements IStorage {
       }
 
       // Get all messages for this application
+      // Changed to ascending order (removed desc) so new messages appear at the bottom
       const applicationMessages = await db
         .select()
         .from(messages)
         .where(eq(messages.applicationId, applicationId))
-        .orderBy(desc(messages.createdAt));
+        .orderBy(messages.createdAt);
 
       // Map and enhance messages with sender information
       return applicationMessages.map(message => ({
