@@ -239,6 +239,7 @@ export function registerRoutes(app: Express): Server {
         return res.status(400).json({ error: "Invalid application ID" });
       }
 
+      // Set isFromAdmin based on the user's admin status
       const parsed = insertMessageSchema.safeParse({
         ...req.body,
         applicationId,
