@@ -19,21 +19,15 @@ function useLoginMutation() {
   const { toast } = useToast();
   return useMutation({
     mutationFn: async (credentials: Pick<InsertUser, "username" | "password">) => {
-      try {
-        const res = await apiRequest("POST", "/api/login", credentials);
-        const data = await res.json();
-
-        if (!res.ok) {
-          throw new Error(data.error || "Login failed");
-        }
-
-        return data.user;
-      } catch (error: any) {
-        throw new Error(error.message || "Login failed");
+      const res = await apiRequest("POST", "/api/login", credentials);
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || "Login failed");
       }
+      return res.json();
     },
-    onSuccess: (user: User) => {
-      queryClient.setQueryData(["/api/user"], { user });
+    onSuccess: (user) => {
+      queryClient.setQueryData(["/api/user"], user);
       toast({
         title: "Welcome back!",
         description: "You have successfully logged in.",
@@ -53,18 +47,14 @@ function useLogoutMutation() {
   const { toast } = useToast();
   return useMutation({
     mutationFn: async () => {
-      try {
-        const res = await apiRequest("POST", "/api/logout");
-        if (!res.ok) {
-          const data = await res.json();
-          throw new Error(data.error || "Logout failed");
-        }
-      } catch (error: any) {
-        throw new Error(error.message || "Logout failed");
+      const res = await apiRequest("POST", "/api/logout");
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || "Logout failed");
       }
     },
     onSuccess: () => {
-      queryClient.setQueryData(["/api/user"], { user: null });
+      queryClient.setQueryData(["/api/user"], null);
       toast({
         title: "Logged out",
         description: "You have been successfully logged out.",
@@ -85,10 +75,7 @@ function useRegisterMutation() {
   return useMutation({
     mutationFn: async (userData: InsertUser) => {
       try {
-        // Validate the data first
         const validated = insertUserSchema.parse(userData);
-
-        // Make the API request
         const res = await apiRequest("POST", "/api/register", validated);
 
         if (!res.ok) {
@@ -96,17 +83,14 @@ function useRegisterMutation() {
           throw new Error(error.error || error.details || "Registration failed");
         }
 
-        return await res.json();
+        return res.json();
       } catch (error: any) {
-        console.error("Registration error details:", error);
-        if (error.errors) {
-          throw new Error(error.errors);
-        }
+        console.error("Registration error:", error);
         throw new Error(error.message || "Registration failed");
       }
     },
-    onSuccess: (data) => {
-      queryClient.setQueryData(["/api/user"], { user: data.user });
+    onSuccess: (user) => {
+      queryClient.setQueryData(["/api/user"], user);
       toast({
         title: "Welcome!",
         description: "Your account has been created successfully.",
@@ -124,10 +108,10 @@ function useRegisterMutation() {
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const {
-    data: userData,
+    data: user,
     error,
     isLoading,
-  } = useQuery<{ user: User | null }>({
+  } = useQuery<User>({
     queryKey: ["/api/user"],
     retry: false,
   });
@@ -139,7 +123,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   return (
     <AuthContext.Provider
       value={{
-        user: userData?.user ?? null,
+        user: user ?? null,
         isLoading,
         error: error as Error | null,
         loginMutation,

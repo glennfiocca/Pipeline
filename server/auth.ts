@@ -5,9 +5,17 @@ import session from "express-session";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 import { storage } from "./storage";
-import { insertUserSchema } from "@shared/schema";
+import { insertUserSchema, type User } from "@shared/schema";
 import { fromZodError } from "zod-validation-error";
 import { ZodError } from "zod";
+
+// Correctly extend Express.User interface
+declare global {
+  namespace Express {
+    // Use type intersection instead of extends
+    interface User extends Omit<User, keyof Express.User> {}
+  }
+}
 
 const scryptAsync = promisify(scrypt);
 
@@ -18,10 +26,15 @@ async function hashPassword(password: string) {
 }
 
 async function comparePasswords(supplied: string, stored: string) {
-  const [hashed, salt] = stored.split(".");
-  const hashedBuf = Buffer.from(hashed, "hex");
-  const suppliedBuf = (await scryptAsync(supplied, salt, 64)) as Buffer;
-  return timingSafeEqual(hashedBuf, suppliedBuf);
+  try {
+    const [hashed, salt] = stored.split(".");
+    const hashedBuf = Buffer.from(hashed, "hex");
+    const suppliedBuf = (await scryptAsync(supplied, salt, 64)) as Buffer;
+    return timingSafeEqual(hashedBuf, suppliedBuf);
+  } catch (error) {
+    console.error("Password comparison error:", error);
+    return false;
+  }
 }
 
 export function setupAuth(app: Express) {
@@ -45,7 +58,7 @@ export function setupAuth(app: Express) {
   app.use(passport.session());
 
   passport.use(
-    new LocalStrategy(async (username: string, password: string, done) => {
+    new LocalStrategy(async (username, password, done) => {
       try {
         const user = await storage.getUserByUsername(username);
         if (!user || !(await comparePasswords(password, user.password))) {
@@ -58,10 +71,15 @@ export function setupAuth(app: Express) {
     })
   );
 
-  passport.serializeUser((user: Express.User, done) => {
+  // Serialize user by ID
+  passport.serializeUser((user, done) => {
+    if (!user || typeof user.id !== 'number') {
+      return done(new Error('Invalid user object during serialization'));
+    }
     done(null, user.id);
   });
 
+  // Deserialize user from ID
   passport.deserializeUser(async (id: number, done) => {
     try {
       const user = await storage.getUser(id);
@@ -136,6 +154,7 @@ export function setupAuth(app: Express) {
           console.error("Session creation error:", err);
           return res.status(500).json({ error: "Error creating session" });
         }
+        console.log("User logged in successfully:", user.username);
         return res.json(user);
       });
     })(req, res, next);
@@ -143,6 +162,9 @@ export function setupAuth(app: Express) {
 
   // Logout endpoint
   app.post("/api/logout", (req, res, next) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
     req.logout((err) => {
       if (err) {
         console.error("Logout error:", err);
@@ -157,6 +179,7 @@ export function setupAuth(app: Express) {
     if (!req.isAuthenticated()) {
       return res.status(401).json({ error: "Not authenticated" });
     }
+    console.log("Current authenticated user:", req.user?.username);
     res.json(req.user);
   });
 }
