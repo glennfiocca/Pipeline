@@ -41,7 +41,7 @@ export default function JobsPage() {
     queryKey: ["/api/jobs"]
   });
 
-  const { data: applications = [] } = useQuery<Application[]>({
+  const { data: applications = [], isLoading: isLoadingApplications } = useQuery<Application[]>({
     queryKey: ["/api/applications"]
   });
 
@@ -83,7 +83,9 @@ export default function JobsPage() {
         const error = await res.json();
         throw new Error(error.message || "Failed to submit application");
       }
-      return res.json();
+
+      const data = await res.json();
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/applications"] });
@@ -116,7 +118,7 @@ export default function JobsPage() {
     return matchesSearch && matchesIndustry && matchesLocation;
   });
 
-  if (isLoadingJobs) {
+  if (isLoadingJobs || isLoadingApplications) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <Loader2 className="h-8 w-8 animate-spin" />
@@ -245,7 +247,7 @@ export default function JobsPage() {
               />
             ))}
 
-            {filteredJobs.length === 0 && !isLoadingJobs && (
+            {filteredJobs.length === 0 && !isLoadingJobs && !isLoadingApplications && (
               <div className="text-center py-8">
                 <p className="text-muted-foreground">
                   No active jobs found matching your criteria. Try adjusting your filters.

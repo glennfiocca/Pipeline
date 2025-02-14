@@ -38,13 +38,6 @@ export function ApplicationCreditsDialog({
   const remainingCredits = 10 - applicationsToday;
   const resetTime = format(new Date().setHours(24, 0, 0, 0), "h:mm a");
 
-  const handleConfirm = () => {
-    if (remainingCredits > 0) {
-      onConfirm();
-      onClose();
-    }
-  };
-
   return (
     <AlertDialog open={isOpen} onOpenChange={onClose}>
       <AlertDialogContent>
@@ -53,31 +46,37 @@ export function ApplicationCreditsDialog({
             <CreditCard className="h-5 w-5" />
             Use Application Credit
           </AlertDialogTitle>
-          <AlertDialogDescription className="space-y-4">
-            <p>
-              You are about to use 1 application credit to apply for{" "}
-              <strong>{jobTitle}</strong>.
-            </p>
+          <AlertDialogDescription>
+            <div className="space-y-4">
+              <p>
+                You are about to use 1 application credit to apply for{" "}
+                <strong>{jobTitle}</strong>.
+              </p>
 
-            <div className="rounded-md bg-primary/10 p-4 space-y-2">
-              <p className="font-semibold text-primary">Application Credits:</p>
-              <ul className="list-disc list-inside space-y-1">
-                <li>You have {remainingCredits} credits remaining today</li>
-                <li>Credits reset at {resetTime}</li>
-                <li>Unused credits do not roll over</li>
-              </ul>
+              <div className="rounded-md bg-primary/10 p-4">
+                <p className="font-semibold text-primary mb-2">Application Credits:</p>
+                <ul className="list-disc list-inside space-y-1">
+                  <li>You have {remainingCredits} credits remaining today</li>
+                  <li>Credits reset at {resetTime}</li>
+                  <li>Unused credits do not roll over</li>
+                </ul>
+              </div>
+
+              <p className="text-sm text-muted-foreground">
+                Note: Each user is limited to 10 applications per 24-hour period to ensure
+                quality applications and fair distribution of opportunities.
+              </p>
             </div>
-
-            <p className="text-sm text-muted-foreground">
-              Note: Each user is limited to 10 applications per 24-hour period to ensure
-              quality applications and fair distribution of opportunities.
-            </p>
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel onClick={onClose}>Cancel</AlertDialogCancel>
           <AlertDialogAction
-            onClick={handleConfirm}
+            onClick={() => {
+              if (remainingCredits > 0) {
+                onConfirm();
+              }
+            }}
             disabled={remainingCredits <= 0}
           >
             {remainingCredits > 0

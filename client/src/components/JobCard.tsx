@@ -43,10 +43,6 @@ export function JobCard({
     setShowCreditsDialog(true);
   };
 
-  const handleConfirmApplication = () => {
-    onApply();
-  };
-
   return (
     <>
       <Card className="w-full transition-shadow hover:shadow-md">
@@ -111,7 +107,10 @@ export function JobCard({
       <ApplicationCreditsDialog
         isOpen={showCreditsDialog}
         onClose={() => setShowCreditsDialog(false)}
-        onConfirm={handleConfirmApplication}
+        onConfirm={() => {
+          onApply();
+          setShowCreditsDialog(false);
+        }}
         jobTitle={job.title}
       />
     </>
