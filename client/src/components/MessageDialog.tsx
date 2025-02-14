@@ -15,9 +15,10 @@ interface MessageDialogProps {
   applicationId: number;
   jobTitle: string;
   company: string;
+  isAdmin?: boolean;
 }
 
-export function MessageDialog({ applicationId, jobTitle, company }: MessageDialogProps) {
+export function MessageDialog({ applicationId, jobTitle, company, isAdmin }: MessageDialogProps) {
   const [newMessage, setNewMessage] = useState("");
   const { toast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
@@ -128,7 +129,7 @@ export function MessageDialog({ applicationId, jobTitle, company }: MessageDialo
                   >
                     <div className="flex justify-between items-start mb-2">
                       <span className="font-medium">
-                        {message.isFromAdmin ? "Admin" : "You"}
+                        {message.isFromAdmin ? company : "You"}
                       </span>
                       <span className="text-xs text-muted-foreground">
                         {format(new Date(message.createdAt), "MMM d, yyyy h:mm a")}

@@ -20,6 +20,7 @@ import { queryClient } from "@/lib/queryClient";
 import { apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
 import { useLocation } from "wouter";
+import { MessageDialog } from "@/components/MessageDialog";
 
 type ApplicationUpdateForm = {
   status?: string;
@@ -145,8 +146,8 @@ export default function AdminDashboardPage() {
     Withdrawn: applications.filter((app) => app.status === "Withdrawn").length,
   };
 
-  // Calculate total as sum of all status counts
-  stats.Total = Object.values(stats).reduce((sum, count) => sum + count, 0);
+  // Calculate total applications
+  const totalApplications = Object.values(stats).reduce((sum, count) => sum + count, 0);
 
   if (isLoadingApps) {
     return (
@@ -188,6 +189,17 @@ export default function AdminDashboardPage() {
             </CardContent>
           </Card>
         ))}
+        <Card
+          className="cursor-pointer transition-all hover:shadow-md"
+          onClick={() => setSelectedStatus(null)}
+        >
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{totalApplications}</div>
+          </CardContent>
+        </Card>
       </div>
 
       <Card className="mt-8">
@@ -225,6 +237,12 @@ export default function AdminDashboardPage() {
                         <Badge className={getStatusColor(application.status)}>
                           {application.status}
                         </Badge>
+                        <MessageDialog
+                          applicationId={application.id}
+                          jobTitle={job.title}
+                          company={job.company}
+                          isAdmin={true}
+                        />
                         <Button
                           variant="outline"
                           onClick={() => setSelectedApplication(application)}
