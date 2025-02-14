@@ -1,8 +1,11 @@
 import { jobs, profiles, applications, users, type Job, type Profile, type Application, type User, type InsertJob, type InsertProfile, type InsertApplication, type InsertUser } from "@shared/schema";
 import { db } from "./db";
-import { eq } from "drizzle-orm";
+import { eq, desc, and } from "drizzle-orm";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
+import { messages, type Message } from "@shared/schema";
+import { type InsertMessage } from "@shared/schema";
+
 
 const PostgresSessionStore = connectPg(session);
 
@@ -46,6 +49,13 @@ export interface IStorage {
 
   // Session store
   sessionStore: session.Store;
+
+  // Messages
+  getMessages(applicationId: number): Promise<Message[]>;
+  getMessage(id: number): Promise<Message | undefined>;
+  createMessage(message: InsertMessage): Promise<Message>;
+  markMessageAsRead(id: number): Promise<Message>;
+  getUnreadMessageCount(applicationId: number): Promise<number>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -258,6 +268,52 @@ export class DatabaseStorage implements IStorage {
       .returning();
 
     return application;
+  }
+
+  async getMessages(applicationId: number): Promise<Message[]> {
+    return await db
+      .select()
+      .from(messages)
+      .where(eq(messages.applicationId, applicationId))
+      .orderBy(desc(messages.createdAt));
+  }
+
+  async getMessage(id: number): Promise<Message | undefined> {
+    const [message] = await db
+      .select()
+      .from(messages)
+      .where(eq(messages.id, id));
+    return message;
+  }
+
+  async createMessage(insertMessage: InsertMessage): Promise<Message> {
+    const [message] = await db
+      .insert(messages)
+      .values(insertMessage)
+      .returning();
+    return message;
+  }
+
+  async markMessageAsRead(id: number): Promise<Message> {
+    const [message] = await db
+      .update(messages)
+      .set({ isRead: true })
+      .where(eq(messages.id, id))
+      .returning();
+    return message;
+  }
+
+  async getUnreadMessageCount(applicationId: number): Promise<number> {
+    const messages = await db
+      .select()
+      .from(messages)
+      .where(
+        and(
+          eq(messages.applicationId, applicationId),
+          eq(messages.isRead, false)
+        )
+      );
+    return messages.length;
   }
 }
 

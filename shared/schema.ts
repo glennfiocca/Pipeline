@@ -1,4 +1,4 @@
-import { pgTable, text, serial } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, boolean, integer, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -222,4 +222,29 @@ export type Publication = z.infer<typeof publicationSchema>;
 export type Project = z.infer<typeof projectSchema>;
 export type Reference = z.infer<typeof referenceSchema>;
 
-import { boolean, integer, jsonb } from "drizzle-orm/pg-core";
+
+export const messages = pgTable("messages", {
+  id: serial("id").primaryKey(),
+  applicationId: integer("application_id").notNull(),
+  content: text("content").notNull(),
+  isFromAdmin: boolean("is_from_admin").notNull(),
+  isRead: boolean("is_read").notNull().default(false),
+  createdAt: text("created_at").notNull().default(new Date().toISOString()),
+  metadata: jsonb("metadata").default({})
+});
+
+export const insertMessageSchema = createInsertSchema(messages).omit({ 
+  id: true,
+  createdAt: true 
+}).extend({
+  metadata: z.object({
+    interviewDate: z.string().optional(),
+    interviewLocation: z.string().optional(),
+    interviewType: z.string().optional(),
+    additionalNotes: z.string().optional()
+  }).optional()
+});
+
+// Add new types
+export type Message = typeof messages.$inferSelect;
+export type InsertMessage = z.infer<typeof insertMessageSchema>;

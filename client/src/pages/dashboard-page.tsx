@@ -13,6 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
 import { WithdrawDialog } from "@/components/WithdrawDialog";
 import { ApplicationCreditsCard } from "@/components/ApplicationCreditsCard";
+import { MessageDialog } from "@/components/MessageDialog";
 
 interface StatusHistoryItem {
   status: string;
@@ -199,6 +200,11 @@ export default function DashboardPage() {
                           <Badge className={getStatusColor(application.status)}>
                             {application.status}
                           </Badge>
+                          <MessageDialog
+                            applicationId={application.id}
+                            jobTitle={job.title}
+                            company={job.company}
+                          />
                           {application.status !== "Withdrawn" && (
                             <WithdrawDialog
                               onWithdraw={() => withdrawMutation.mutate(application.id)}

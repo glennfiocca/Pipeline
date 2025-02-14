@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertJobSchema, insertApplicationSchema, insertProfileSchema } from "@shared/schema";
+import { insertJobSchema, insertApplicationSchema, insertProfileSchema, insertMessageSchema } from "@shared/schema";
 import { ScraperManager } from './services/scraper/manager';
 
 // Enhanced admin middleware with specific user check
@@ -205,6 +205,74 @@ export function registerRoutes(app: Express): Server {
     } catch (error) {
       console.error('Error updating application status:', error);
       res.status(500).json({ error: (error as Error).message });
+    }
+  });
+
+  // Messages routes
+  app.get("/api/applications/:id/messages", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ error: "Authentication required" });
+      }
+
+      const applicationId = parseInt(req.params.id);
+      if (isNaN(applicationId)) {
+        return res.status(400).json({ error: "Invalid application ID" });
+      }
+
+      const messages = await storage.getMessages(applicationId);
+      res.json(messages);
+    } catch (error) {
+      console.error('Error fetching messages:', error);
+      res.status(500).json({ error: "Failed to fetch messages" });
+    }
+  });
+
+  app.post("/api/applications/:id/messages", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ error: "Authentication required" });
+      }
+
+      const applicationId = parseInt(req.params.id);
+      if (isNaN(applicationId)) {
+        return res.status(400).json({ error: "Invalid application ID" });
+      }
+
+      const parsed = insertMessageSchema.safeParse({
+        ...req.body,
+        applicationId,
+        isFromAdmin: req.user?.isAdmin || false
+      });
+
+      if (!parsed.success) {
+        return res.status(400).json(parsed.error);
+      }
+
+      const message = await storage.createMessage(parsed.data);
+      res.status(201).json(message);
+    } catch (error) {
+      console.error('Error creating message:', error);
+      res.status(500).json({ error: "Failed to create message" });
+    }
+  });
+
+  app.patch("/api/messages/:id/read", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ error: "Authentication required" });
+      }
+
+      const messageId = parseInt(req.params.id);
+      if (isNaN(messageId)) {
+        return res.status(400).json({ error: "Invalid message ID" });
+      }
+
+      const message = await storage.markMessageAsRead(messageId);
+      res.json(message);
+    } catch (error) {
+      console.error('Error marking message as read:', error);
+      res.status(500).json({ error: "Failed to mark message as read" });
     }
   });
 
