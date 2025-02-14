@@ -275,7 +275,7 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(messages)
       .where(eq(messages.applicationId, applicationId))
-      .orderBy(messages.createdAt); // Remove desc() to show oldest messages first
+      .orderBy(messages.createdAt); 
   }
 
   async getMessage(id: number): Promise<Message | undefined> {
@@ -304,7 +304,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getUnreadMessageCount(applicationId: number): Promise<number> {
-    const messages = await db
+    const unreadMessages = await db
       .select()
       .from(messages)
       .where(
@@ -313,7 +313,7 @@ export class DatabaseStorage implements IStorage {
           eq(messages.isRead, false)
         )
       );
-    return messages.length;
+    return unreadMessages.length;
   }
 }
 

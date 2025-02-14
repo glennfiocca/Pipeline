@@ -1,7 +1,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Building2, MapPin, DollarSign, Loader2 } from "lucide-react";
+import { Building2, MapPin, DollarSign, Loader2, CheckCircle2 } from "lucide-react";
 import { Link } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import type { Job } from "@shared/schema";
@@ -83,7 +83,11 @@ export function JobCard({
                 disabled={isButtonDisabled}
                 className="flex-1"
               >
-                {isApplying && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {isApplying ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <CheckCircle2 className="mr-2 h-4 w-4" />
+                )}
                 {buttonText}
               </Button>
             ) : (

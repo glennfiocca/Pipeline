@@ -8,12 +8,14 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Job, Application, Profile } from "@shared/schema";
+import { useAuth } from "@/hooks/use-auth";
+import { Job, Application } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useState } from "react";
 import { JobModal } from "@/components/JobModal";
 import { Loader2 } from "lucide-react";
 import { ApplicationCreditsCard } from "@/components/ApplicationCreditsCard";
+import { useLocation } from "wouter";
 
 const INDUSTRY_TYPES = ["All", "STEM", "Finance", "Healthcare", "Consulting", "Legal Tech", "Clean Tech"];
 const LOCATIONS = [
@@ -36,23 +38,22 @@ export default function JobsPage() {
   const [salaryRange, setSalaryRange] = useState([80000, 200000]);
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const { toast } = useToast();
+  const { user } = useAuth();
+  const [, navigate] = useLocation();
 
   const { data: jobs = [], isLoading: isLoadingJobs } = useQuery<Job[]>({
     queryKey: ["/api/jobs"]
   });
 
   const { data: applications = [], isLoading: isLoadingApplications } = useQuery<Application[]>({
-    queryKey: ["/api/applications"]
-  });
-
-  const { data: profiles = [] } = useQuery<Profile[]>({
-    queryKey: ["/api/profiles"]
+    queryKey: ["/api/applications"],
+    enabled: !!user
   });
 
   const applyMutation = useMutation({
     mutationFn: async (jobId: number) => {
-      if (!profiles || !profiles.length) {
-        throw new Error("Please create a profile before applying to jobs");
+      if (!user) {
+        throw new Error("You must be logged in to apply for jobs");
       }
 
       const now = new Date().toISOString();
@@ -61,7 +62,7 @@ export default function JobsPage() {
         "/api/applications",
         {
           jobId,
-          profileId: profiles[0].id,
+          profileId: user.id,
           status: "Applied",
           appliedAt: now,
           applicationData: {
@@ -94,6 +95,7 @@ export default function JobsPage() {
         description: "Your application has been successfully submitted."
       });
       setSelectedJob(null);
+      navigate("/dashboard");
     },
     onError: (error: Error) => {
       toast({
@@ -263,8 +265,9 @@ export default function JobsPage() {
         isOpen={!!selectedJob}
         onClose={() => setSelectedJob(null)}
         onApply={(jobId) => applyMutation.mutate(jobId)}
-        isApplied={selectedJob ? applications.some((app) => app.jobId === selectedJob.id) : false}
+        isApplied={selectedJob ? applications.some((app) => app.jobId === selectedJob.id && app.status !== "Withdrawn") : false}
         isApplying={applyMutation.isPending}
+        previouslyApplied={selectedJob ? applications.some((app) => app.jobId === selectedJob.id && app.status === "Withdrawn") : false}
       />
     </div>
   );

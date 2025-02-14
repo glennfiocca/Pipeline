@@ -31,12 +31,18 @@ export function ApplicationCreditsDialog({
   });
 
   const today = new Date().toISOString().split('T')[0];
-  const applicationsToday = applications.filter(app => 
+  const applicationsToday = applications.filter(app =>
     app.appliedAt.startsWith(today)
   ).length;
 
   const remainingCredits = 10 - applicationsToday;
   const resetTime = format(new Date().setHours(24, 0, 0, 0), "h:mm a");
+
+  const handleConfirm = () => {
+    if (remainingCredits > 0) {
+      onConfirm();
+    }
+  };
 
   return (
     <AlertDialog open={isOpen} onOpenChange={onClose}>
@@ -72,11 +78,7 @@ export function ApplicationCreditsDialog({
         <AlertDialogFooter>
           <AlertDialogCancel onClick={onClose}>Cancel</AlertDialogCancel>
           <AlertDialogAction
-            onClick={() => {
-              if (remainingCredits > 0) {
-                onConfirm();
-              }
-            }}
+            onClick={handleConfirm}
             disabled={remainingCredits <= 0}
           >
             {remainingCredits > 0
