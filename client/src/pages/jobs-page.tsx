@@ -47,7 +47,7 @@ export default function JobsPage() {
 
   const { data: applications = [], isLoading: isLoadingApplications } = useQuery<Application[]>({
     queryKey: ["/api/applications"],
-    enabled: !!user
+    enabled: !!user // Only fetch applications if user is logged in
   });
 
   const applyMutation = useMutation({
@@ -120,7 +120,8 @@ export default function JobsPage() {
     return matchesSearch && matchesIndustry && matchesLocation;
   });
 
-  if (isLoadingJobs || isLoadingApplications) {
+  // Only show loading state for jobs, not applications
+  if (isLoadingJobs) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <Loader2 className="h-8 w-8 animate-spin" />
@@ -134,7 +135,7 @@ export default function JobsPage() {
         <div className="flex items-center justify-between">
           <h1 className="text-3xl font-bold">Jobs</h1>
           <div className="flex items-center gap-4">
-            <ApplicationCreditsCard />
+            {user && <ApplicationCreditsCard />}
             <Input
               placeholder="Search jobs..."
               className="max-w-sm"
@@ -245,11 +246,11 @@ export default function JobsPage() {
                 onApply={() => applyMutation.mutate(job.id)}
                 onViewDetails={() => setSelectedJob(job)}
                 isApplying={applyMutation.isPending && selectedJob?.id === job.id}
-                isApplied={applications.some((app) => app.jobId === job.id)}
+                isApplied={user ? applications.some((app) => app.jobId === job.id) : false}
               />
             ))}
 
-            {filteredJobs.length === 0 && !isLoadingJobs && !isLoadingApplications && (
+            {filteredJobs.length === 0 && !isLoadingJobs && (
               <div className="text-center py-8">
                 <p className="text-muted-foreground">
                   No active jobs found matching your criteria. Try adjusting your filters.
@@ -265,9 +266,9 @@ export default function JobsPage() {
         isOpen={!!selectedJob}
         onClose={() => setSelectedJob(null)}
         onApply={(jobId) => applyMutation.mutate(jobId)}
-        isApplied={selectedJob ? applications.some((app) => app.jobId === selectedJob.id && app.status !== "Withdrawn") : false}
+        isApplied={selectedJob && user ? applications.some((app) => app.jobId === selectedJob.id && app.status !== "Withdrawn") : false}
         isApplying={applyMutation.isPending}
-        previouslyApplied={selectedJob ? applications.some((app) => app.jobId === selectedJob.id && app.status === "Withdrawn") : false}
+        previouslyApplied={selectedJob && user ? applications.some((app) => app.jobId === selectedJob.id && app.status === "Withdrawn") : false}
       />
     </div>
   );
