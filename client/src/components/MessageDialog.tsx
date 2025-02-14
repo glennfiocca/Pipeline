@@ -96,12 +96,12 @@ export function MessageDialog({ applicationId, jobTitle, company, isAdmin }: Mes
   };
 
   const getSenderName = (message: Message) => {
-    // Simply show the company name for admin messages and the username for user messages
     if (message.isFromAdmin) {
+      // Admin messages come from the company
       return company;
     } else {
-      // For non-admin messages, always show the username
-      return user?.username || "You";
+      // For user messages, always show the actual username
+      return message.senderUsername || user?.username || "You";
     }
   };
 
