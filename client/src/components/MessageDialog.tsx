@@ -88,12 +88,13 @@ export function MessageDialog({ applicationId, jobTitle, company, isAdmin }: Mes
   };
 
   const getSenderName = (message: Message) => {
-    if (message.isFromAdmin) {
-      // If viewing from admin panel, show admin username for their messages
-      return isAdmin ? user?.username : company;
+    if (isAdmin) {
+      // In admin view, show messages as if they're from the company or the user
+      return message.isFromAdmin ? company : (user?.username || "Applicant");
+    } else {
+      // In user view, show admin messages as company and user messages as username
+      return message.isFromAdmin ? company : (user?.username || "You");
     }
-    // For non-admin messages, always show the username
-    return user?.username || "You";
   };
 
   return (
@@ -153,7 +154,7 @@ export function MessageDialog({ applicationId, jobTitle, company, isAdmin }: Mes
                       </span>
                     </div>
                     <p className="text-sm whitespace-pre-wrap">{message.content}</p>
-                    </div>
+                  </div>
                 ))
               )}
             </div>
