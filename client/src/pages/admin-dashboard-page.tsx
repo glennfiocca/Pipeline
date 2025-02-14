@@ -196,20 +196,25 @@ export default function AdminDashboardPage() {
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center gap-2">
               <Users className="h-5 w-5" />
-              Registered Users
+              Registered Users ({users.length})
             </CardTitle>
           </div>
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {users.map((user) => {
-              const profile = profiles.find(p => p.email === user.email);
+              const profile = profiles.find(p => p.email.toLowerCase() === user.email.toLowerCase());
               return (
                 <Card key={user.id} className="p-4">
                   <div className="flex flex-col gap-2">
                     <div className="flex items-center gap-2">
                       <UserIcon className="h-4 w-4 text-muted-foreground" />
                       <span className="font-medium">{user.username}</span>
+                      {user.isAdmin && (
+                        <Badge variant="secondary" className="ml-2">
+                          Admin
+                        </Badge>
+                      )}
                     </div>
                     {profile && (
                       <div className="flex items-center gap-2">
@@ -248,7 +253,7 @@ export default function AdminDashboardPage() {
             <ScrollArea className="h-[600px] pr-4">
               <div className="space-y-4">
                 {applications
-                  .filter(app => !selectedStatus || 
+                  .filter(app => !selectedStatus ||
                     selectedStatus === "Total Applications" ||
                     app.status.toLowerCase() === selectedStatus.toLowerCase()
                   )
