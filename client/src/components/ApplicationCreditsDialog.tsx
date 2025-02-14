@@ -26,7 +26,6 @@ export function ApplicationCreditsDialog({
   onConfirm,
   jobTitle,
 }: ApplicationCreditsDialogProps) {
-  // Get today's applications
   const { data: applications = [] } = useQuery<Application[]>({
     queryKey: ["/api/applications"],
   });
@@ -38,6 +37,13 @@ export function ApplicationCreditsDialog({
 
   const remainingCredits = 10 - applicationsToday;
   const resetTime = format(new Date().setHours(24, 0, 0, 0), "h:mm a");
+
+  const handleConfirm = () => {
+    if (remainingCredits > 0) {
+      onConfirm();
+      onClose();
+    }
+  };
 
   return (
     <AlertDialog open={isOpen} onOpenChange={onClose}>
@@ -69,9 +75,9 @@ export function ApplicationCreditsDialog({
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogCancel onClick={onClose}>Cancel</AlertDialogCancel>
           <AlertDialogAction
-            onClick={onConfirm}
+            onClick={handleConfirm}
             disabled={remainingCredits <= 0}
           >
             {remainingCredits > 0
