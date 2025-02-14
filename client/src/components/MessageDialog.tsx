@@ -10,6 +10,7 @@ import { Mail } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/hooks/use-auth";
 
 interface MessageDialogProps {
   applicationId: number;
@@ -22,6 +23,7 @@ export function MessageDialog({ applicationId, jobTitle, company, isAdmin }: Mes
   const [newMessage, setNewMessage] = useState("");
   const { toast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
+  const { user } = useAuth();
 
   const { data: messages = [] } = useQuery<Message[]>({
     queryKey: [`/api/applications/${applicationId}/messages`],
@@ -129,7 +131,7 @@ export function MessageDialog({ applicationId, jobTitle, company, isAdmin }: Mes
                   >
                     <div className="flex justify-between items-start mb-2">
                       <span className="font-medium">
-                        {message.isFromAdmin ? company : "You"}
+                        {message.isFromAdmin ? company : user?.username || "You"}
                       </span>
                       <span className="text-xs text-muted-foreground">
                         {format(new Date(message.createdAt), "MMM d, yyyy h:mm a")}
