@@ -52,6 +52,9 @@ export default function AdminDashboardPage() {
 
   const { data: applications = [], isLoading: isLoadingApps } = useQuery<Application[]>({
     queryKey: ["/api/admin/applications"],
+    onSuccess: (data) => {
+      console.log("Applications data:", data);
+    }
   });
 
   const { data: jobs = [] } = useQuery<Job[]>({
@@ -60,6 +63,9 @@ export default function AdminDashboardPage() {
 
   const { data: profiles = [] } = useQuery<Profile[]>({
     queryKey: ["/api/admin/profiles"],
+    onSuccess: (data) => {
+      console.log("Profiles data:", data);
+    }
   });
 
   const updateApplicationMutation = useMutation({
@@ -116,8 +122,8 @@ export default function AdminDashboardPage() {
   };
 
   const toggleUserExpanded = (profileId: number) => {
-    setExpandedUsers(prev => 
-      prev.includes(profileId) 
+    setExpandedUsers(prev =>
+      prev.includes(profileId)
         ? prev.filter(id => id !== profileId)
         : [...prev, profileId]
     );
@@ -146,19 +152,29 @@ export default function AdminDashboardPage() {
 
   const getJob = (jobId: number) => jobs.find((job) => job.id === jobId);
 
-  // Group applications by profile
+  // Group applications by profile with better matching logic
   const userGroups: UserApplicationGroup[] = profiles.map(profile => {
+    console.log("Processing profile:", profile);
+
     const userApplications = applications.filter(app => {
       const matchesProfile = app.profileId === profile.id;
       const matchesStatus = !selectedStatus || app.status === selectedStatus;
+
+      console.log("Checking application:", app, "matches profile:", matchesProfile, "matches status:", matchesStatus);
+
       return matchesProfile && matchesStatus;
     });
+
+    console.log("Applications for profile", profile.id, ":", userApplications);
 
     return {
       profile,
       applications: userApplications
     };
-  }).filter(group => group.applications.length > 0);
+  }).filter(group => {
+    console.log("Group:", group);
+    return group.applications.length > 0;
+  });
 
   const stats = {
     TotalUsers: userGroups.length,
@@ -229,7 +245,7 @@ export default function AdminDashboardPage() {
             <div className="space-y-4">
               {userGroups.map(({ profile, applications: userApplications }) => (
                 <Card key={profile.id} className="border shadow-sm">
-                  <CardHeader 
+                  <CardHeader
                     className="cursor-pointer hover:bg-accent/50"
                     onClick={() => toggleUserExpanded(profile.id)}
                   >
