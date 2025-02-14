@@ -21,6 +21,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
 import { useLocation } from "wouter";
 import { MessageDialog } from "@/components/MessageDialog";
+import { ChevronDown, ChevronRight, Users } from "lucide-react";
 
 type ApplicationUpdateForm = {
   status?: string;
@@ -29,9 +30,15 @@ type ApplicationUpdateForm = {
   nextStepDueDate?: string;
 };
 
+interface UserApplicationGroup {
+  profile: Profile;
+  applications: Application[];
+}
+
 export default function AdminDashboardPage() {
   const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
   const [selectedApplication, setSelectedApplication] = useState<Application | null>(null);
+  const [expandedUsers, setExpandedUsers] = useState<number[]>([]);
   const [formData, setFormData] = useState<ApplicationUpdateForm>({});
   const { toast } = useToast();
   const { user } = useAuth();
@@ -108,6 +115,14 @@ export default function AdminDashboardPage() {
     });
   };
 
+  const toggleUserExpanded = (profileId: number) => {
+    setExpandedUsers(prev => 
+      prev.includes(profileId) 
+        ? prev.filter(id => id !== profileId)
+        : [...prev, profileId]
+    );
+  };
+
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
       case "applied":
@@ -130,13 +145,16 @@ export default function AdminDashboardPage() {
   };
 
   const getJob = (jobId: number) => jobs.find((job) => job.id === jobId);
-  const getProfile = (profileId: number) => profiles.find((profile) => profile.id === profileId);
 
-  const filteredApplications = selectedStatus
-    ? applications.filter((app) => app.status === selectedStatus)
-    : applications;
+  // Group applications by profile
+  const userGroups: UserApplicationGroup[] = profiles.map(profile => ({
+    profile,
+    applications: applications.filter(app => app.profileId === profile.id)
+  })).filter(group => group.applications.length > 0);
 
   const stats = {
+    TotalUsers: userGroups.length,
+    TotalApplications: applications.length,
     Applied: applications.filter((app) => app.status === "Applied").length,
     Screening: applications.filter((app) => app.status === "Screening").length,
     Interviewing: applications.filter((app) => app.status === "Interviewing").length,
@@ -145,9 +163,6 @@ export default function AdminDashboardPage() {
     Rejected: applications.filter((app) => app.status === "Rejected").length,
     Withdrawn: applications.filter((app) => app.status === "Withdrawn").length,
   };
-
-  // Calculate total applications
-  const totalApplications = Object.values(stats).reduce((sum, count) => sum + count, 0);
 
   if (isLoadingApps) {
     return (
@@ -182,76 +197,101 @@ export default function AdminDashboardPage() {
             </CardHeader>
             <CardContent>
               <div className={`text-2xl font-bold ${
-                status !== "Total" && getStatusColor(status)
+                !["TotalUsers", "TotalApplications"].includes(status) && getStatusColor(status)
               }`}>
                 {count}
               </div>
             </CardContent>
           </Card>
         ))}
-        <Card
-          className="cursor-pointer transition-all hover:shadow-md"
-          onClick={() => setSelectedStatus(null)}
-        >
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalApplications}</div>
-          </CardContent>
-        </Card>
       </div>
 
       <Card className="mt-8">
         <CardHeader>
-          <CardTitle>
-            {selectedStatus ? `${selectedStatus} Applications` : "All Applications"}
-          </CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5" />
+              Users and Their Applications
+            </CardTitle>
+          </div>
         </CardHeader>
         <CardContent>
           <ScrollArea className="h-[600px] pr-4">
             <div className="space-y-4">
-              {filteredApplications.map((application) => {
-                const job = getJob(application.jobId);
-                const profile = getProfile(application.profileId);
-                if (!job || !profile) return null;
+              {userGroups.map(({ profile, applications: userApplications }) => {
+                const isExpanded = expandedUsers.includes(profile.id);
+                const filteredApplications = selectedStatus 
+                  ? userApplications.filter(app => app.status === selectedStatus)
+                  : userApplications;
+
+                if (selectedStatus && filteredApplications.length === 0) return null;
 
                 return (
-                  <div
-                    key={application.id}
-                    className="p-4 rounded-lg border space-y-3"
-                  >
-                    <div className="flex items-start justify-between">
-                      <div className="space-y-1">
-                        <div className="font-medium">
-                          {profile.name} - {job.title}
-                        </div>
-                        <div className="text-sm text-muted-foreground">
-                          {job.company} - {job.location}
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          Applied on {format(new Date(application.appliedAt), "MMM d, yyyy")}
+                  <Card key={profile.id} className="border shadow-sm">
+                    <CardHeader 
+                      className="cursor-pointer hover:bg-accent/50"
+                      onClick={() => toggleUserExpanded(profile.id)}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                          <div>
+                            <h3 className="font-medium">{profile.name}</h3>
+                            <p className="text-sm text-muted-foreground">{userApplications.length} applications</p>
+                          </div>
                         </div>
                       </div>
-                      <div className="flex items-center gap-4">
-                        <Badge className={getStatusColor(application.status)}>
-                          {application.status}
-                        </Badge>
-                        <MessageDialog
-                          applicationId={application.id}
-                          jobTitle={job.title}
-                          company={job.company}
-                          isAdmin={true}
-                        />
-                        <Button
-                          variant="outline"
-                          onClick={() => setSelectedApplication(application)}
-                        >
-                          Manage
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
+                    </CardHeader>
+
+                    {isExpanded && (
+                      <CardContent>
+                        <div className="space-y-4">
+                          {filteredApplications.map((application) => {
+                            const job = getJob(application.jobId);
+                            if (!job) return null;
+
+                            return (
+                              <div
+                                key={application.id}
+                                className="p-4 rounded-lg border space-y-3"
+                              >
+                                <div className="flex items-start justify-between">
+                                  <div className="space-y-1">
+                                    <div className="font-medium">
+                                      {job.title}
+                                    </div>
+                                    <div className="text-sm text-muted-foreground">
+                                      {job.company} - {job.location}
+                                    </div>
+                                    <div className="text-xs text-muted-foreground">
+                                      Applied on {format(new Date(application.appliedAt), "MMM d, yyyy")}
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-4">
+                                    <Badge className={getStatusColor(application.status)}>
+                                      {application.status}
+                                    </Badge>
+                                    <MessageDialog
+                                      applicationId={application.id}
+                                      jobTitle={job.title}
+                                      company={job.company}
+                                      isAdmin={true}
+                                    />
+                                    <Button
+                                      variant="outline"
+                                      onClick={() => setSelectedApplication(application)}
+                                    >
+                                      Manage
+                                    </Button>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </CardContent>
+                    )}
+                  </Card>
                 );
               })}
             </div>
