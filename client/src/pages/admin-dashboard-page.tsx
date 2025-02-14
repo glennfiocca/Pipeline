@@ -299,7 +299,7 @@ export default function AdminDashboardPage() {
                 className={`cursor-pointer transition-all hover:shadow-md ${
                   selectedStatus === status && "ring-2 ring-primary"
                 }`}
-                onClick={() => status !== "Total Users" && setSelectedStatus(status)}
+                onClick={() => setSelectedStatus(status)}
               >
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">{status}</CardTitle>
@@ -311,79 +311,138 @@ export default function AdminDashboardPage() {
             ))}
           </div>
 
-          {selectedStatus && selectedStatus !== "Total Users" && (
+          {selectedStatus === "Total Users" ? (
             <Card className="mt-8">
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle className="flex items-center gap-2">
                     <Users className="h-5 w-5" />
-                    Applications
-                    {selectedStatus && (
-                      <span className="text-sm font-normal ml-2">
-                        ({selectedStatus})
-                      </span>
-                    )}
+                    User List
                   </CardTitle>
                 </div>
               </CardHeader>
               <CardContent>
                 <ScrollArea className="h-[600px] pr-4">
                   <div className="space-y-4">
-                    {applications
-                      .filter(app => !selectedStatus ||
-                        selectedStatus === "Total Applications" ||
-                        app.status.toLowerCase() === selectedStatus.toLowerCase()
-                      )
-                      .map((application) => {
-                        const job = jobs.find(j => j.id === application.jobId);
-                        const profile = profiles.find(p => p.id === application.profileId);
-                        if (!job || !profile) return null;
-
-                        return (
-                          <div
-                            key={application.id}
-                            className="p-4 rounded-lg border space-y-3"
-                          >
-                            <div className="flex items-start justify-between">
-                              <div className="space-y-1">
-                                <div className="font-medium">
-                                  {job.title}
-                                </div>
-                                <div className="text-sm text-muted-foreground">
-                                  {job.company} - {job.location}
-                                </div>
-                                <div className="text-sm text-muted-foreground">
-                                  Applied by: {profile.name}
-                                </div>
-                                <div className="text-xs text-muted-foreground">
-                                  Applied on {format(new Date(application.appliedAt), "MMM d, yyyy")}
-                                </div>
+                    {users.map((user) => {
+                      const profile = profiles.find(p => p.email.toLowerCase() === user.email.toLowerCase());
+                      return (
+                        <div
+                          key={user.id}
+                          className="p-4 rounded-lg border space-y-2"
+                        >
+                          <div className="flex items-start justify-between">
+                            <div className="space-y-1">
+                              <div className="font-medium flex items-center gap-2">
+                                <UserIcon className="h-4 w-4 text-muted-foreground" />
+                                {user.username}
+                                {user.isAdmin && (
+                                  <Badge variant="secondary" className="ml-2">
+                                    Admin
+                                  </Badge>
+                                )}
                               </div>
-                              <div className="flex items-center gap-4">
-                                <Badge className={getStatusColor(application.status)}>
-                                  {application.status}
-                                </Badge>
-                                <MessageDialog
-                                  applicationId={application.id}
-                                  jobTitle={job.title}
-                                  company={job.company}
-                                  isAdmin={true}
-                                />
-                                <Button
-                                  variant="outline"
-                                  onClick={() => setSelectedApplication(application)}
-                                >
-                                  Manage
-                                </Button>
+                              {profile && (
+                                <div className="text-sm text-muted-foreground flex items-center gap-2">
+                                  <Users className="h-4 w-4" />
+                                  {profile.name}
+                                </div>
+                              )}
+                              <div className="text-sm text-muted-foreground flex items-center gap-2">
+                                <Mail className="h-4 w-4" />
+                                {user.email}
                               </div>
                             </div>
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              onClick={() => setSelectedUser(user)}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
                           </div>
-                        );
-                      })}
+                        </div>
+                      );
+                    })}
                   </div>
                 </ScrollArea>
               </CardContent>
             </Card>
+          ) : (
+            selectedStatus && selectedStatus !== "Total Users" && (
+              <Card className="mt-8">
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="flex items-center gap-2">
+                      <Users className="h-5 w-5" />
+                      Applications
+                      {selectedStatus && (
+                        <span className="text-sm font-normal ml-2">
+                          ({selectedStatus})
+                        </span>
+                      )}
+                    </CardTitle>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <ScrollArea className="h-[600px] pr-4">
+                    <div className="space-y-4">
+                      {applications
+                        .filter(app => !selectedStatus ||
+                          selectedStatus === "Total Applications" ||
+                          app.status.toLowerCase() === selectedStatus.toLowerCase()
+                        )
+                        .map((application) => {
+                          const job = jobs.find(j => j.id === application.jobId);
+                          const profile = profiles.find(p => p.id === application.profileId);
+                          if (!job || !profile) return null;
+
+                          return (
+                            <div
+                              key={application.id}
+                              className="p-4 rounded-lg border space-y-3"
+                            >
+                              <div className="flex items-start justify-between">
+                                <div className="space-y-1">
+                                  <div className="font-medium">
+                                    {job.title}
+                                  </div>
+                                  <div className="text-sm text-muted-foreground">
+                                    {job.company} - {job.location}
+                                  </div>
+                                  <div className="text-sm text-muted-foreground">
+                                    Applied by: {profile.name}
+                                  </div>
+                                  <div className="text-xs text-muted-foreground">
+                                    Applied on {format(new Date(application.appliedAt), "MMM d, yyyy")}
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-4">
+                                  <Badge className={getStatusColor(application.status)}>
+                                    {application.status}
+                                  </Badge>
+                                  <MessageDialog
+                                    applicationId={application.id}
+                                    jobTitle={job.title}
+                                    company={job.company}
+                                    isAdmin={true}
+                                  />
+                                  <Button
+                                    variant="outline"
+                                    onClick={() => setSelectedApplication(application)}
+                                  >
+                                    Manage
+                                  </Button>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                    </div>
+                  </ScrollArea>
+                </CardContent>
+              </Card>
+            )
           )}
 
           {selectedApplication && (
