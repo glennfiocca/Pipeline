@@ -52,9 +52,6 @@ export default function AdminDashboardPage() {
 
   const { data: applications = [], isLoading: isLoadingApps } = useQuery<Application[]>({
     queryKey: ["/api/admin/applications"],
-    onSuccess: (data) => {
-      console.log("Applications data:", data);
-    }
   });
 
   const { data: jobs = [] } = useQuery<Job[]>({
@@ -63,9 +60,6 @@ export default function AdminDashboardPage() {
 
   const { data: profiles = [] } = useQuery<Profile[]>({
     queryKey: ["/api/admin/profiles"],
-    onSuccess: (data) => {
-      console.log("Profiles data:", data);
-    }
   });
 
   const updateApplicationMutation = useMutation({
@@ -152,40 +146,31 @@ export default function AdminDashboardPage() {
 
   const getJob = (jobId: number) => jobs.find((job) => job.id === jobId);
 
-  // Group applications by profile with better matching logic
-  const userGroups: UserApplicationGroup[] = profiles.map(profile => {
-    console.log("Processing profile:", profile);
-
+  // Improved group applications by profile logic
+  const userGroups: UserApplicationGroup[] = profiles.length > 0 ? profiles.map(profile => {
     const userApplications = applications.filter(app => {
       const matchesProfile = app.profileId === profile.id;
-      const matchesStatus = !selectedStatus || app.status === selectedStatus;
-
-      console.log("Checking application:", app, "matches profile:", matchesProfile, "matches status:", matchesStatus);
-
+      const matchesStatus = !selectedStatus || app.status.toLowerCase() === selectedStatus.toLowerCase();
       return matchesProfile && matchesStatus;
     });
-
-    console.log("Applications for profile", profile.id, ":", userApplications);
 
     return {
       profile,
       applications: userApplications
     };
-  }).filter(group => {
-    console.log("Group:", group);
-    return group.applications.length > 0;
-  });
+  }).filter(group => group.applications.length > 0) : [];
 
+  // Stats calculation with proper type handling
   const stats = {
     TotalUsers: userGroups.length,
     TotalApplications: applications.length,
-    Applied: applications.filter((app) => app.status === "Applied").length,
-    Screening: applications.filter((app) => app.status === "Screening").length,
-    Interviewing: applications.filter((app) => app.status === "Interviewing").length,
-    Offered: applications.filter((app) => app.status === "Offered").length,
-    Accepted: applications.filter((app) => app.status === "Accepted").length,
-    Rejected: applications.filter((app) => app.status === "Rejected").length,
-    Withdrawn: applications.filter((app) => app.status === "Withdrawn").length,
+    Applied: applications.filter((app) => app.status.toLowerCase() === "applied").length,
+    Screening: applications.filter((app) => app.status.toLowerCase() === "screening").length,
+    Interviewing: applications.filter((app) => app.status.toLowerCase() === "interviewing").length,
+    Offered: applications.filter((app) => app.status.toLowerCase() === "offered").length,
+    Accepted: applications.filter((app) => app.status.toLowerCase() === "accepted").length,
+    Rejected: applications.filter((app) => app.status.toLowerCase() === "rejected").length,
+    Withdrawn: applications.filter((app) => app.status.toLowerCase() === "withdrawn").length,
   };
 
   if (isLoadingApps) {

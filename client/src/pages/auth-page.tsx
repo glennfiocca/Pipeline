@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { insertUserSchema, type InsertUser } from "@shared/schema";
@@ -17,7 +17,14 @@ export default function AuthPage() {
   const { loginMutation, registerMutation } = useAuth();
   const [isResettingPassword, setIsResettingPassword] = useState(false);
 
-  const form = useForm<InsertUser>({
+  const loginForm = useForm({
+    defaultValues: {
+      username: "",
+      password: "",
+    }
+  });
+
+  const registerForm = useForm<InsertUser>({
     resolver: zodResolver(insertUserSchema),
     defaultValues: {
       username: "",
@@ -36,18 +43,36 @@ export default function AuthPage() {
   async function onSubmit(values: InsertUser) {
     try {
       await registerMutation.mutateAsync(values);
-      setLocation("/");
+      toast({
+        title: "Account created",
+        description: "You can now log in with your credentials.",
+      });
+      setLocation("/auth/login");
     } catch (error) {
       console.error("Registration error:", error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to create account",
+        variant: "destructive",
+      });
     }
   }
 
-  async function onLogin(values: Pick<InsertUser, "username" | "password">) {
+  async function onLogin(values: { username: string; password: string }) {
     try {
       await loginMutation.mutateAsync(values);
+      toast({
+        title: "Success",
+        description: "Successfully logged in",
+      });
       setLocation("/");
     } catch (error) {
       console.error("Login error:", error);
+      toast({
+        title: "Error",
+        description: "Invalid username or password",
+        variant: "destructive",
+      });
     }
   }
 
@@ -103,10 +128,10 @@ export default function AuthPage() {
             <CardContent>
               <TabsContent value="login">
                 {!isResettingPassword ? (
-                  <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onLogin)} className="space-y-4">
+                  <Form {...loginForm}>
+                    <form onSubmit={loginForm.handleSubmit(onLogin)} className="space-y-4">
                       <FormField
-                        control={form.control}
+                        control={loginForm.control}
                         name="username"
                         render={({ field }) => (
                           <FormItem>
@@ -120,7 +145,7 @@ export default function AuthPage() {
                       />
 
                       <FormField
-                        control={form.control}
+                        control={loginForm.control}
                         name="password"
                         render={({ field }) => (
                           <FormItem>
@@ -186,10 +211,10 @@ export default function AuthPage() {
               </TabsContent>
 
               <TabsContent value="register">
-                <Form {...form}>
-                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                <Form {...registerForm}>
+                  <form onSubmit={registerForm.handleSubmit(onSubmit)} className="space-y-4">
                     <FormField
-                      control={form.control}
+                      control={registerForm.control}
                       name="username"
                       render={({ field }) => (
                         <FormItem>
@@ -203,7 +228,7 @@ export default function AuthPage() {
                     />
 
                     <FormField
-                      control={form.control}
+                      control={registerForm.control}
                       name="email"
                       render={({ field }) => (
                         <FormItem>
@@ -217,7 +242,7 @@ export default function AuthPage() {
                     />
 
                     <FormField
-                      control={form.control}
+                      control={registerForm.control}
                       name="password"
                       render={({ field }) => (
                         <FormItem>
@@ -231,7 +256,7 @@ export default function AuthPage() {
                     />
 
                     <FormField
-                      control={form.control}
+                      control={registerForm.control}
                       name="confirmPassword"
                       render={({ field }) => (
                         <FormItem>
