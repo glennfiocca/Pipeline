@@ -6,7 +6,6 @@ import connectPg from "connect-pg-simple";
 import { messages, type Message } from "@shared/schema";
 import { type InsertMessage } from "@shared/schema";
 
-
 const PostgresSessionStore = connectPg(session);
 
 export interface IStorage {
@@ -271,11 +270,35 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getMessages(applicationId: number): Promise<Message[]> {
-    return await db
+    // Get the application to fetch the job details
+    const [application] = await db
+      .select()
+      .from(applications)
+      .where(eq(applications.id, applicationId));
+
+    if (!application) {
+      throw new Error("Application not found");
+    }
+
+    // Get the job to get the company name
+    const [job] = await db
+      .select()
+      .from(jobs)
+      .where(eq(jobs.id, application.jobId));
+
+    // Get all messages for this application
+    const applicationMessages = await db
       .select()
       .from(messages)
       .where(eq(messages.applicationId, applicationId))
-      .orderBy(messages.createdAt); 
+      .orderBy(desc(messages.createdAt));
+
+    // Enhance messages with sender information
+    return applicationMessages.map(message => ({
+      ...message,
+      // If the message is from admin, use the company name as sender
+      senderUsername: message.isFromAdmin ? job?.company || 'Admin' : message.senderUsername
+    }));
   }
 
   async getMessage(id: number): Promise<Message | undefined> {
@@ -287,6 +310,25 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createMessage(insertMessage: InsertMessage): Promise<Message> {
+    // If it's an admin message, get the job's company name
+    if (insertMessage.isFromAdmin) {
+      const [application] = await db
+        .select()
+        .from(applications)
+        .where(eq(applications.id, insertMessage.applicationId));
+
+      if (application) {
+        const [job] = await db
+          .select()
+          .from(jobs)
+          .where(eq(jobs.id, application.jobId));
+
+        if (job) {
+          insertMessage.senderUsername = job.company;
+        }
+      }
+    }
+
     const [message] = await db
       .insert(messages)
       .values(insertMessage)
