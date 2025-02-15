@@ -97,7 +97,7 @@ export default function AdminDashboardPage() {
 
   const createUserMutation = useMutation({
     mutationFn: async (data: NewUserForm) => {
-      const res = await apiRequest("POST", "/api/register", data);
+      const res = await apiRequest("POST", "/api/admin/users", data);
       if (!res.ok) {
         const error = await res.json();
         throw new Error(error.message || "Failed to create user");

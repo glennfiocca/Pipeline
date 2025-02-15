@@ -1,10 +1,11 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertJobSchema, insertApplicationSchema, insertProfileSchema, insertMessageSchema } from "@shared/schema";
+import { insertJobSchema, insertApplicationSchema, insertProfileSchema, insertMessageSchema, insertUserSchema } from "@shared/schema";
 import { ScraperManager } from './services/scraper/manager';
 import { db } from './db';
 import { users } from '@shared/schema';
+import { hashPassword } from './utils/password'; // Assuming this function exists
 
 // Enhanced admin middleware with specific user check
 const isAdmin = (req: any, res: any, next: any) => {
@@ -213,6 +214,41 @@ export function registerRoutes(app: Express): Server {
     } catch (error) {
       console.error('Error deleting user:', error);
       res.status(500).json({ error: "Failed to delete user" });
+    }
+  });
+
+  // Add POST endpoint for admin user creation
+  app.post("/api/admin/users", isAdmin, async (req, res) => {
+    try {
+      const parsed = insertUserSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ 
+          error: "Invalid user data", 
+          details: parsed.error 
+        });
+      }
+
+      const existingUser = await storage.getUserByUsername(parsed.data.username);
+      if (existingUser) {
+        return res.status(400).json({ error: "Username already exists" });
+      }
+
+      // Hash the password before storing
+      const hashedPassword = await hashPassword(parsed.data.password);
+
+      const user = await storage.createUser({
+        ...parsed.data,
+        password: hashedPassword,
+        createdAt: new Date().toISOString()
+      });
+
+      res.status(201).json(user);
+    } catch (error) {
+      console.error('Error creating user:', error);
+      res.status(500).json({ 
+        error: "Failed to create user",
+        message: error instanceof Error ? error.message : "Unknown error"
+      });
     }
   });
 
