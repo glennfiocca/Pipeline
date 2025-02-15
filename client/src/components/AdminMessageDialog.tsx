@@ -56,6 +56,8 @@ export function AdminMessageDialog({
         senderUsername: username
       };
 
+      console.log('Sending message data:', messageData);
+
       const response = await apiRequest(
         "POST",
         `/api/applications/${applicationId}/messages`,
@@ -69,6 +71,7 @@ export function AdminMessageDialog({
       }
 
       const data = await response.json();
+      console.log('Message response:', data);
       return data;
     },
     onSuccess: () => {
