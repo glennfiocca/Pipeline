@@ -44,7 +44,7 @@ export function AdminMessageDialog({
 
   const queryKey = ["/api/applications", applicationId, "messages"];
 
-  const { data: messages = [], isLoading, refetch } = useQuery<Message[]>({
+  const { data: messages = [], isLoading } = useQuery<Message[]>({
     queryKey,
     enabled: isOpen && applicationId > 0,
   });
@@ -76,13 +76,52 @@ export function AdminMessageDialog({
       console.log('Message response:', data);
       return data;
     },
-    onSuccess: async (newMessage) => {
-      // Immediately update the cache with the new message
-      const existingMessages = queryClient.getQueryData<Message[]>(queryKey) || [];
-      queryClient.setQueryData(queryKey, [...existingMessages, newMessage]);
+    onMutate: async (content) => {
+      // Cancel any outgoing refetches so they don't overwrite our optimistic update
+      await queryClient.cancelQueries({ queryKey });
 
-      // Also trigger a refetch to ensure consistency
-      await refetch();
+      // Snapshot the previous value
+      const previousMessages = queryClient.getQueryData<Message[]>(queryKey);
+
+      // Optimistically update to the new value
+      const optimisticMessage = {
+        id: Date.now(), // temporary ID
+        applicationId,
+        content,
+        isFromAdmin: true,
+        isRead: false,
+        createdAt: new Date().toISOString(),
+        senderUsername: username
+      };
+
+      queryClient.setQueryData<Message[]>(queryKey, old => [...(old || []), optimisticMessage]);
+
+      // Return a context object with the snapshotted value
+      return { previousMessages };
+    },
+    onError: (err, newMessage, context) => {
+      console.error("Message error:", err);
+      // Roll back to the previous value if there was an error
+      if (context?.previousMessages) {
+        queryClient.setQueryData(queryKey, context.previousMessages);
+      }
+      toast({
+        title: "Error",
+        description: "Failed to send message. Please try again.",
+        variant: "destructive",
+      });
+    },
+    onSuccess: (newMessage) => {
+      // Update the messages in the cache
+      queryClient.setQueryData<Message[]>(queryKey, old => {
+        const messages = [...(old || [])];
+        // Remove optimistic message if it exists and add the real one
+        const optimisticIndex = messages.findIndex(m => m.id === Date.now());
+        if (optimisticIndex > -1) {
+          messages.splice(optimisticIndex, 1);
+        }
+        return [...messages, newMessage];
+      });
 
       setNewMessage("");
       toast({
@@ -90,14 +129,10 @@ export function AdminMessageDialog({
         description: "Your message has been sent successfully.",
       });
     },
-    onError: (error: Error) => {
-      console.error("Message error:", error);
-      toast({
-        title: "Error",
-        description: "Failed to send message. Please try again.",
-        variant: "destructive",
-      });
-    },
+    onSettled: () => {
+      // Always refetch after error or success to ensure cache consistency
+      queryClient.invalidateQueries({ queryKey });
+    }
   });
 
   const handleSendMessage = async () => {
