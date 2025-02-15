@@ -47,14 +47,17 @@ export function AdminMessageDialog({
 
   const sendMessageMutation = useMutation({
     mutationFn: async (content: string) => {
+      const messageData = {
+        applicationId,
+        content,
+        sender: companyName,
+        timestamp: new Date().toISOString()
+      };
+
       const response = await apiRequest(
         "POST",
         `/api/messages`,
-        {
-          applicationId,
-          content,
-          sender: companyName,
-        }
+        messageData
       );
 
       if (!response.ok) {

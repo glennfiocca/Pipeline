@@ -49,10 +49,10 @@ export function ApplicationsManagement() {
         `/api/applications/${applicationId}/status`,
         { 
           status,
-          statusHistory: {
+          statusHistory: [{
             status,
             date: now
-          }
+          }]
         }
       );
 
@@ -191,6 +191,7 @@ export function ApplicationsManagement() {
                                 username,
                                 companyName: app.job.company
                               })}
+                              className="text-primary hover:text-primary-foreground"
                             >
                               <MessageSquare className="h-4 w-4" />
                             </Button>
