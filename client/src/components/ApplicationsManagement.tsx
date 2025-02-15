@@ -9,8 +9,11 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
 import { apiRequest } from "@/lib/queryClient";
-import { ChevronDown, ChevronRight, Loader2 } from "lucide-react";
+import { ChevronRight, Loader2, MessageSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { useState } from "react";
+import { AdminMessageDialog } from "./AdminMessageDialog";
 
 const APPLICATION_STATUSES = ["Applied", "Interviewing", "Accepted", "Rejected", "Withdrawn"];
 
@@ -20,6 +23,11 @@ interface ApplicationsByUser {
 
 export function ApplicationsManagement() {
   const { toast } = useToast();
+  const [selectedApplication, setSelectedApplication] = useState<{
+    id: number;
+    username: string;
+    companyName: string;
+  } | null>(null);
 
   const { data: applications = [], isLoading: isLoadingApps } = useQuery<Application[]>({
     queryKey: ["/api/admin/applications"],
@@ -175,6 +183,17 @@ export function ApplicationsManagement() {
                                 ))}
                               </SelectContent>
                             </Select>
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              onClick={() => setSelectedApplication({
+                                id: app.id,
+                                username,
+                                companyName: app.job.company
+                              })}
+                            >
+                              <MessageSquare className="h-4 w-4" />
+                            </Button>
                           </div>
                         </div>
 
@@ -193,6 +212,16 @@ export function ApplicationsManagement() {
           </div>
         </ScrollArea>
       </CardContent>
+
+      {selectedApplication && (
+        <AdminMessageDialog
+          isOpen={!!selectedApplication}
+          onClose={() => setSelectedApplication(null)}
+          applicationId={selectedApplication.id}
+          username={selectedApplication.username}
+          companyName={selectedApplication.companyName}
+        />
+      )}
     </Card>
   );
 }
