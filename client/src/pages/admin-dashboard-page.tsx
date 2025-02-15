@@ -42,7 +42,14 @@ export default function AdminDashboardPage() {
   // Queries
   const { data: jobs = [], isLoading: isLoadingJobs } = useQuery<Job[]>({
     queryKey: ["/api/jobs"],
-    enabled: true
+    enabled: true,
+    select: (data) => data.sort((a, b) => {
+      // Sort by active status first, then by creation date
+      if (a.isActive === b.isActive) {
+        return new Date(b.lastCheckedAt).getTime() - new Date(a.lastCheckedAt).getTime();
+      }
+      return a.isActive ? -1 : 1;
+    })
   });
 
   const { data: users = [], isLoading: isLoadingUsers } = useQuery<User[]>({
@@ -191,6 +198,13 @@ export default function AdminDashboardPage() {
                       <p className="text-sm text-muted-foreground">
                         {job.company} - {job.location}
                       </p>
+                      <div className="flex items-center gap-2 mt-1">
+                        {!job.isActive && (
+                          <Badge variant="secondary" className="text-xs">
+                            Inactive
+                          </Badge>
+                        )}
+                      </div>
                     </div>
                     <div className="flex items-center gap-2">
                       <Button
