@@ -28,11 +28,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm, UseFormRegister, FieldErrors } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { insertJobSchema, insertUserSchema } from "@shared/schema";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import * as z from 'zod';
-import type { SubmitHandler } from "react-hook-form";
 
 type ApplicationUpdateForm = {
   status?: string;
@@ -61,9 +60,234 @@ type UserUpdateForm = {
 type NewJobForm = z.infer<typeof insertJobSchema>;
 type NewUserForm = z.infer<typeof insertUserSchema>;
 
-type FormFields = {
-  register: UseFormRegister<any>;
-  formState: { errors: FieldErrors<any> };
+const NewJobForm = ({ onSubmit, onCancel }: { onSubmit: (data: NewJobForm) => void, onCancel: () => void }) => {
+  const form = useForm<NewJobForm>({
+    resolver: zodResolver(insertJobSchema),
+    defaultValues: {
+      title: "",
+      company: "",
+      description: "",
+      salary: "",
+      location: "",
+      requirements: "",
+      type: "",
+      isActive: true,
+    }
+  });
+
+  return (
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <FormField
+          control={form.control}
+          name="title"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Title</FormLabel>
+              <FormControl>
+                <Input {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="company"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Company</FormLabel>
+              <FormControl>
+                <Input {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="description"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Description</FormLabel>
+              <FormControl>
+                <Textarea {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="salary"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Salary</FormLabel>
+              <FormControl>
+                <Input {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="location"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Location</FormLabel>
+              <FormControl>
+                <Input {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="requirements"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Requirements</FormLabel>
+              <FormControl>
+                <Textarea {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="type"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Type</FormLabel>
+              <FormControl>
+                <Select onValueChange={field.onChange} value={field.value}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select job type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Full-time">Full-time</SelectItem>
+                    <SelectItem value="Part-time">Part-time</SelectItem>
+                    <SelectItem value="Contract">Contract</SelectItem>
+                    <SelectItem value="Internship">Internship</SelectItem>
+                  </SelectContent>
+                </Select>
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="isActive"
+          render={({ field }) => (
+            <FormItem className="flex items-center gap-2">
+              <FormControl>
+                <Checkbox
+                  checked={field.value}
+                  onCheckedChange={field.onChange}
+                />
+              </FormControl>
+              <FormLabel>Active</FormLabel>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <DialogFooter>
+          <Button variant="outline" onClick={onCancel}>
+            Cancel
+          </Button>
+          <Button type="submit">
+            Create Job
+          </Button>
+        </DialogFooter>
+      </form>
+    </Form>
+  );
+};
+
+const NewUserForm = ({ onSubmit, onCancel }: { onSubmit: (data: NewUserForm) => void, onCancel: () => void }) => {
+  const form = useForm<NewUserForm>({
+    resolver: zodResolver(insertUserSchema),
+    defaultValues: {
+      username: "",
+      email: "",
+      password: "",
+      isAdmin: false,
+    }
+  });
+
+  return (
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <FormField
+          control={form.control}
+          name="username"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Username</FormLabel>
+              <FormControl>
+                <Input {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="email"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Email</FormLabel>
+              <FormControl>
+                <Input type="email" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="password"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Password</FormLabel>
+              <FormControl>
+                <Input type="password" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="isAdmin"
+          render={({ field }) => (
+            <FormItem className="flex items-center gap-2">
+              <FormControl>
+                <Checkbox
+                  checked={field.value}
+                  onCheckedChange={field.onChange}
+                />
+              </FormControl>
+              <FormLabel>Administrator Access</FormLabel>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <DialogFooter>
+          <Button variant="outline" onClick={onCancel}>
+            Cancel
+          </Button>
+          <Button type="submit">
+            Create User
+          </Button>
+        </DialogFooter>
+      </form>
+    </Form>
+  );
 };
 
 export default function AdminDashboardPage() {
@@ -919,131 +1143,10 @@ export default function AdminDashboardPage() {
               Add a new job listing to the platform. Fill in all the required information below.
             </DialogDescription>
           </DialogHeader>
-          <Form {...useForm<NewJobForm>({
-            resolver: zodResolver(insertJobSchema),
-            defaultValues: {
-              title: "",
-              company:"",
-              description: "",
-              salary: "",
-              location: "",
-              requirements: "",
-              type: "",
-              isActive: true,
-            }
-          })}
-          onSubmit={(data: NewJobForm) => createJobMutation.mutate(data)}
-          >
-            {({ register, formState: { errors }}: FormFields) => (
-              <form onSubmit={(e) => e.preventDefault()} className="space-y-4">
-                <FormField
-                  name="title"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Title</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  name="company"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Company</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  name="description"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Description</FormLabel>
-                      <FormControl>
-                        <Textarea {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  name="salary"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Salary</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  name="location"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Location</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  name="requirements"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Requirements</FormLabel>
-                      <FormControl>
-                        <Textarea {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  name="type"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Type</FormLabel>
-                      <FormControl>
-                        <Select
-                          value={field.value}
-                          onValueChange={field.onChange}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select job type" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="Full-time">Full-time</SelectItem>
-                            <SelectItem value="Part-time">Part-time</SelectItem>
-                            <SelectItem value="Contract">Contract</SelectItem>
-                            <SelectItem value="Internship">Internship</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <DialogFooter>
-                  <Button variant="outline" onClick={() => setShowNewJobDialog(false)}>
-                    Cancel
-                  </Button>
-                  <Button type="submit" disabled={createJobMutation.isPending}>
-                    {createJobMutation.isPending ? "Creating..." : "Create Job"}
-                  </Button>
-                </DialogFooter>
-              </form>
-            )}
-          </Form>
+          <NewJobForm 
+            onSubmit={(data) => createJobMutation.mutate(data)}
+            onCancel={() => setShowNewJobDialog(false)}
+          />
         </DialogContent>
       </Dialog>
 
@@ -1055,81 +1158,10 @@ export default function AdminDashboardPage() {
               Add a new user to the platform. The user will receive their login credentials via email.
             </DialogDescription>
           </DialogHeader>
-          <Form {...useForm<NewUserForm>({
-            resolver: zodResolver(insertUserSchema),
-            defaultValues: {
-              username: "",
-              email: "",
-              password: "",
-              isAdmin: false,
-            }
-          })}
-          onSubmit={(data: NewUserForm) => createUserMutation.mutate(data)}
-          >
-            {({ register, formState: { errors }}: FormFields) => (
-              <form onSubmit={(e) => e.preventDefault()} className="space-y-4">
-                <FormField
-                  name="username"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Username</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  name="email"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Email</FormLabel>
-                      <FormControl>
-                        <Input type="email" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  name="password"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Password</FormLabel>
-                      <FormControl>
-                        <Input type="password" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  name="isAdmin"
-                  render={({ field }) => (
-                    <FormItem className="flex items-center gap-2">
-                      <FormControl>
-                        <Checkbox
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
-                      <FormLabel>Administrator Access</FormLabel>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <DialogFooter>
-                  <Button variant="outline" onClick={() => setShowNewUserDialog(false)}>
-                    Cancel
-                  </Button>
-                  <Button type="submit" disabled={createUserMutation.isPending}>
-                    {createUserMutation.isPending ? "Creating..." : "Create User"}
-                  </Button>
-                </DialogFooter>
-              </form>
-            )}
-          </Form>
+          <NewUserForm
+            onSubmit={(data) => createUserMutation.mutate(data)}
+            onCancel={() => setShowNewUserDialog(false)}
+          />
         </DialogContent>
       </Dialog>
     </div>
