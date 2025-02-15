@@ -7,27 +7,55 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { DialogFooter } from "@/components/ui/dialog";
 import { insertUserSchema } from "@shared/schema";
 import type { z } from "zod";
+import type { User } from "@shared/schema";
 
 type NewUserForm = z.infer<typeof insertUserSchema>;
 
-export function NewUserForm({ onSubmit, onCancel }: {
+interface UserFormProps {
   onSubmit: (data: NewUserForm) => void;
   onCancel: () => void;
-}) {
+  initialData?: User | null;
+}
+
+export function NewUserForm({ onSubmit, onCancel, initialData }: UserFormProps) {
   const form = useForm<NewUserForm>({
-    resolver: zodResolver(insertUserSchema),
-    defaultValues: {
-      username: "",
-      email: "",
-      password: "",
-      confirmPassword: "",
-      isAdmin: false,
-    }
+    resolver: zodResolver(
+      // If we have initial data, make password and confirmPassword optional
+      initialData
+        ? insertUserSchema
+            .omit({ password: true, confirmPassword: true })
+            .extend({
+              password: z.string().optional(),
+              confirmPassword: z.string().optional(),
+            })
+        : insertUserSchema
+    ),
+    defaultValues: initialData
+      ? {
+          username: initialData.username,
+          email: initialData.email,
+          isAdmin: initialData.isAdmin,
+          password: "",
+          confirmPassword: "",
+        }
+      : {
+          username: "",
+          email: "",
+          password: "",
+          confirmPassword: "",
+          isAdmin: false,
+        },
   });
 
   const handleSubmit = async (data: NewUserForm) => {
     try {
-      await onSubmit(data);
+      // If editing and no password provided, remove password fields
+      if (initialData && !data.password) {
+        const { password, confirmPassword, ...restData } = data;
+        await onSubmit(restData as NewUserForm);
+      } else {
+        await onSubmit(data);
+      }
       form.reset();
     } catch (error) {
       console.error('Form submission error:', error);
@@ -68,7 +96,7 @@ export function NewUserForm({ onSubmit, onCancel }: {
           name="password"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Password</FormLabel>
+              <FormLabel>{initialData ? "New Password (optional)" : "Password"}</FormLabel>
               <FormControl>
                 <Input type="password" {...field} />
               </FormControl>
@@ -81,7 +109,7 @@ export function NewUserForm({ onSubmit, onCancel }: {
           name="confirmPassword"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Confirm Password</FormLabel>
+              <FormLabel>{initialData ? "Confirm New Password" : "Confirm Password"}</FormLabel>
               <FormControl>
                 <Input type="password" {...field} />
               </FormControl>
@@ -110,7 +138,7 @@ export function NewUserForm({ onSubmit, onCancel }: {
             Cancel
           </Button>
           <Button type="submit" disabled={form.formState.isSubmitting}>
-            Create User
+            {initialData ? "Update User" : "Create User"}
           </Button>
         </DialogFooter>
       </form>

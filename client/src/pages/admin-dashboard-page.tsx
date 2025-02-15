@@ -38,6 +38,8 @@ export default function AdminDashboardPage() {
   const [showNewUserDialog, setShowNewUserDialog] = useState(false);
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [showEditJobDialog, setShowEditJobDialog] = useState(false);
+  const [showEditUserDialog, setShowEditUserDialog] = useState(false);
 
   // Queries
   const { data: jobs = [], isLoading: isLoadingJobs } = useQuery<Job[]>({
@@ -121,6 +123,63 @@ export default function AdminDashboardPage() {
     },
   });
 
+  // Edit mutations
+  const editJobMutation = useMutation({
+    mutationFn: async (data: Partial<Job>) => {
+      if (!selectedJob) throw new Error("No job selected");
+      const res = await apiRequest("PATCH", `/api/admin/jobs/${selectedJob.id}`, data);
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || "Failed to update job");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
+      toast({
+        title: "Success",
+        description: "Job updated successfully",
+      });
+      setShowEditJobDialog(false);
+      setSelectedJob(null);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const editUserMutation = useMutation({
+    mutationFn: async (data: Partial<User>) => {
+      if (!selectedUser) throw new Error("No user selected");
+      const res = await apiRequest("PATCH", `/api/admin/users/${selectedUser.id}`, data);
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || "Failed to update user");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      toast({
+        title: "Success",
+        description: "User updated successfully",
+      });
+      setShowEditUserDialog(false);
+      setSelectedUser(null);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   // Delete mutations
   const deleteJobMutation = useMutation({
     mutationFn: async (id: number) => {
@@ -153,6 +212,16 @@ export default function AdminDashboardPage() {
       });
     },
   });
+
+  const handleEditUser = (user: User) => {
+    setSelectedUser(user);
+    setShowEditUserDialog(true);
+  };
+
+  const handleEditJob = (job: Job) => {
+    setSelectedJob(job);
+    setShowEditJobDialog(true);
+  };
 
   if (isLoadingJobs || isLoadingUsers) {
     return (
@@ -210,7 +279,7 @@ export default function AdminDashboardPage() {
                       <Button
                         variant="outline"
                         size="icon"
-                        onClick={() => setSelectedJob(job)}
+                        onClick={() => handleEditJob(job)}
                       >
                         <Edit className="h-4 w-4" />
                       </Button>
@@ -281,7 +350,7 @@ export default function AdminDashboardPage() {
                         <Button
                           variant="outline"
                           size="icon"
-                          onClick={() => setSelectedUser(user)}
+                          onClick={() => handleEditUser(user)}
                         >
                           <Edit className="h-4 w-4" />
                         </Button>
@@ -357,6 +426,57 @@ export default function AdminDashboardPage() {
               }
             }}
             onCancel={() => setShowNewUserDialog(false)}
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Dialogs */}
+      <Dialog open={showEditJobDialog} onOpenChange={setShowEditJobDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Job</DialogTitle>
+            <DialogDescription>
+              Update job listing information.
+            </DialogDescription>
+          </DialogHeader>
+          <NewJobForm
+            initialData={selectedJob}
+            onSubmit={(data) => {
+              try {
+                editJobMutation.mutate(data);
+              } catch (error) {
+                console.error("Error submitting form:", error);
+              }
+            }}
+            onCancel={() => {
+              setShowEditJobDialog(false);
+              setSelectedJob(null);
+            }}
+          />
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showEditUserDialog} onOpenChange={setShowEditUserDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit User</DialogTitle>
+            <DialogDescription>
+              Update user information.
+            </DialogDescription>
+          </DialogHeader>
+          <NewUserForm
+            initialData={selectedUser}
+            onSubmit={(data) => {
+              try {
+                editUserMutation.mutate(data);
+              } catch (error) {
+                console.error("Error submitting form:", error);
+              }
+            }}
+            onCancel={() => {
+              setShowEditUserDialog(false);
+              setSelectedUser(null);
+            }}
           />
         </DialogContent>
       </Dialog>
