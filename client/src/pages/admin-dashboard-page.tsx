@@ -19,6 +19,7 @@ import { NewJobForm } from "@/components/NewJobForm";
 import { NewUserForm } from "@/components/NewUserForm";
 import type { z } from 'zod';
 import { insertJobSchema, insertUserSchema } from "@shared/schema";
+import { ApplicationsManagement } from "@/components/ApplicationsManagement";
 
 type NewJobForm = z.infer<typeof insertJobSchema>;
 type NewUserForm = z.infer<typeof insertUserSchema>;
@@ -241,6 +242,7 @@ export default function AdminDashboardPage() {
         <TabsList>
           <TabsTrigger value="jobs">Jobs</TabsTrigger>
           <TabsTrigger value="users">Users</TabsTrigger>
+          <TabsTrigger value="applications">Applications</TabsTrigger>
         </TabsList>
 
         <TabsContent value="jobs">
@@ -384,6 +386,10 @@ export default function AdminDashboardPage() {
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="applications">
+          <ApplicationsManagement />
         </TabsContent>
       </Tabs>
 
