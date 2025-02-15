@@ -77,15 +77,12 @@ export function AdminMessageDialog({
       return data;
     },
     onMutate: async (content) => {
-      // Cancel any outgoing refetches
       await queryClient.cancelQueries({ queryKey });
 
-      // Snapshot the previous value
       const previousMessages = queryClient.getQueryData<Message[]>(queryKey);
 
-      // Optimistically update to the new value
       const optimisticMessage = {
-        id: Date.now(), // temporary ID
+        id: Date.now(),
         applicationId,
         content,
         isFromAdmin: true,
@@ -110,10 +107,8 @@ export function AdminMessageDialog({
       });
     },
     onSuccess: (newMessage) => {
-      // Update the messages in the cache
       queryClient.setQueryData<Message[]>(queryKey, old => {
         const messages = [...(old || [])];
-        // Remove optimistic message if it exists
         const optimisticIndex = messages.findIndex(m => m.id === Date.now());
         if (optimisticIndex > -1) {
           messages.splice(optimisticIndex, 1);
