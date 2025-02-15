@@ -42,9 +42,11 @@ export function AdminMessageDialog({
   const [newMessage, setNewMessage] = useState("");
   const { toast } = useToast();
 
-  const { data: messages = [], isLoading } = useQuery<Message[]>({
-    queryKey: ["/api/applications", applicationId, "messages"],
-    enabled: isOpen,
+  const queryKey = ["/api/applications", applicationId, "messages"];
+
+  const { data: messages = [], isLoading, refetch } = useQuery<Message[]>({
+    queryKey,
+    enabled: isOpen && applicationId > 0,
   });
 
   const sendMessageMutation = useMutation({
@@ -74,8 +76,14 @@ export function AdminMessageDialog({
       console.log('Message response:', data);
       return data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/applications", applicationId, "messages"] });
+    onSuccess: async (newMessage) => {
+      // Immediately update the cache with the new message
+      const existingMessages = queryClient.getQueryData<Message[]>(queryKey) || [];
+      queryClient.setQueryData(queryKey, [...existingMessages, newMessage]);
+
+      // Also trigger a refetch to ensure consistency
+      await refetch();
+
       setNewMessage("");
       toast({
         title: "Message sent",
@@ -95,7 +103,7 @@ export function AdminMessageDialog({
   const handleSendMessage = async () => {
     if (!newMessage.trim()) return;
     try {
-      await sendMessageMutation.mutateAsync(newMessage);
+      await sendMessageMutation.mutateAsync(newMessage.trim());
     } catch (error) {
       console.error("Error in handleSendMessage:", error);
     }
@@ -166,6 +174,12 @@ export function AdminMessageDialog({
               onChange={(e) => setNewMessage(e.target.value)}
               placeholder="Type your message..."
               className="min-h-[80px]"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSendMessage();
+                }
+              }}
             />
             <Button
               size="icon"
