@@ -47,23 +47,23 @@ export function AdminMessageDialog({
 
   const sendMessageMutation = useMutation({
     mutationFn: async (content: string) => {
-      const response = await apiRequest(
-        "POST",
-        "/api/messages",
-        {
-          applicationId,
-          content,
-          sender: companyName,
-          timestamp: new Date().toISOString(),
-        }
-      );
+      const messageData = {
+        applicationId,
+        content,
+        sender: companyName,
+        timestamp: new Date().toISOString(),
+      };
+
+      const response = await apiRequest("POST", "/api/messages", messageData);
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || "Failed to send message");
+        const errorText = await response.text();
+        console.error("Error response:", errorText);
+        throw new Error(errorText || "Failed to send message");
       }
 
-      return response.json();
+      const data = await response.json();
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/messages", applicationId] });
@@ -74,9 +74,10 @@ export function AdminMessageDialog({
       });
     },
     onError: (error: Error) => {
+      console.error("Message error:", error);
       toast({
         title: "Error",
-        description: error.message,
+        description: "Failed to send message. Please try again.",
         variant: "destructive",
       });
     },
@@ -87,7 +88,7 @@ export function AdminMessageDialog({
     try {
       await sendMessageMutation.mutateAsync(newMessage);
     } catch (error) {
-      console.error("Error sending message:", error);
+      console.error("Error in handleSendMessage:", error);
     }
   };
 
