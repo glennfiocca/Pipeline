@@ -21,6 +21,28 @@ const isAdmin = (req: any, res: any, next: any) => {
 };
 
 export function registerRoutes(app: Express): Server {
+  // Add POST endpoint for job creation
+  app.post("/api/jobs", async (req, res) => {
+    try {
+      const parsed = insertJobSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ 
+          error: "Invalid job data", 
+          details: parsed.error 
+        });
+      }
+
+      const job = await storage.createJob(parsed.data);
+      res.status(201).json(job);
+    } catch (error) {
+      console.error('Error creating job:', error);
+      res.status(500).json({ 
+        error: "Failed to create job",
+        message: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
   // Jobs
   app.get("/api/jobs", async (_req, res) => {
     try {
