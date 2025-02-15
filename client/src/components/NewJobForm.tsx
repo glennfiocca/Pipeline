@@ -8,17 +8,26 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { DialogFooter } from "@/components/ui/dialog";
 import { insertJobSchema } from "@shared/schema";
-import type { z } from "zod";
+import { z } from "zod";
+import type { Job } from "@shared/schema";
 
 type NewJobForm = z.infer<typeof insertJobSchema>;
 
-export function NewJobForm({ onSubmit, onCancel }: { 
+interface JobFormProps {
   onSubmit: (data: NewJobForm) => void;
   onCancel: () => void;
-}) {
+  initialData?: Job | null;
+}
+
+export function NewJobForm({ onSubmit, onCancel, initialData }: JobFormProps) {
   const form = useForm<NewJobForm>({
     resolver: zodResolver(insertJobSchema),
-    defaultValues: {
+    defaultValues: initialData ? {
+      ...initialData,
+      // Ensure boolean fields are properly typed
+      isActive: Boolean(initialData.isActive),
+      published: Boolean(initialData.published)
+    } : {
       title: "",
       company: "",
       description: "",
@@ -34,9 +43,18 @@ export function NewJobForm({ onSubmit, onCancel }: {
     }
   });
 
+  const handleSubmit = async (data: NewJobForm) => {
+    try {
+      await onSubmit(data);
+      form.reset();
+    } catch (error) {
+      console.error("Error submitting form:", error);
+    }
+  };
+
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
         <FormField
           control={form.control}
           name="title"
@@ -146,7 +164,7 @@ export function NewJobForm({ onSubmit, onCancel }: {
               <FormControl>
                 <Checkbox
                   checked={field.value}
-                  onCheckedChange={(checked) => field.onChange(checked)}
+                  onCheckedChange={field.onChange}
                 />
               </FormControl>
               <div className="space-y-1 leading-none">
@@ -159,8 +177,8 @@ export function NewJobForm({ onSubmit, onCancel }: {
           <Button type="button" variant="outline" onClick={onCancel}>
             Cancel
           </Button>
-          <Button type="submit">
-            Create Job
+          <Button type="submit" disabled={form.formState.isSubmitting}>
+            {initialData ? "Update Job" : "Create Job"}
           </Button>
         </DialogFooter>
       </form>

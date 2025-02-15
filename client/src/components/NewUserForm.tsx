@@ -6,7 +6,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Checkbox } from "@/components/ui/checkbox";
 import { DialogFooter } from "@/components/ui/dialog";
 import { insertUserSchema } from "@shared/schema";
-import type { z } from "zod";
+import { z } from "zod";
 import type { User } from "@shared/schema";
 
 type NewUserForm = z.infer<typeof insertUserSchema>;
@@ -18,18 +18,26 @@ interface UserFormProps {
 }
 
 export function NewUserForm({ onSubmit, onCancel, initialData }: UserFormProps) {
+  // Create an edit mode schema that makes password fields optional
+  const editModeSchema = z.object({
+    username: z.string().min(3, "Username must be at least 3 characters"),
+    email: z.string().email("Invalid email format"),
+    password: z.string().min(6, "Password must be at least 6 characters").optional(),
+    confirmPassword: z.string().optional(),
+    isAdmin: z.boolean(),
+  }).refine(data => {
+    // Only validate passwords match if password is provided
+    if (data.password || data.confirmPassword) {
+      return data.password === data.confirmPassword;
+    }
+    return true;
+  }, {
+    message: "Passwords don't match",
+    path: ["confirmPassword"],
+  });
+
   const form = useForm<NewUserForm>({
-    resolver: zodResolver(
-      // If we have initial data, make password and confirmPassword optional
-      initialData
-        ? insertUserSchema
-            .omit({ password: true, confirmPassword: true })
-            .extend({
-              password: z.string().optional(),
-              confirmPassword: z.string().optional(),
-            })
-        : insertUserSchema
-    ),
+    resolver: zodResolver(initialData ? editModeSchema : insertUserSchema),
     defaultValues: initialData
       ? {
           username: initialData.username,
