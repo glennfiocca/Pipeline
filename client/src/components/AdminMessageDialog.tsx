@@ -53,7 +53,7 @@ export function AdminMessageDialog({
         applicationId,
         content,
         isFromAdmin: true,
-        senderUsername: companyName
+        senderUsername: username
       };
 
       const response = await apiRequest(
@@ -102,12 +102,12 @@ export function AdminMessageDialog({
     try {
       const date = parseISO(dateString);
       if (!isValid(date)) {
-        return "Invalid date";
+        throw new Error("Invalid date format");
       }
       return format(date, "MMM d, h:mm a");
     } catch (error) {
       console.error("Date formatting error:", error);
-      return "Invalid date";
+      return "";
     }
   };
 
