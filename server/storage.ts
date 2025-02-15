@@ -65,6 +65,8 @@ export interface IStorage {
   updateJob(id: number, updates: Partial<InsertJob>): Promise<Job>;
   deactivateJob(id: number): Promise<Job>;
   updateUser(id: number, updates: Partial<User>): Promise<User>;
+  deleteUser(id: number): Promise<void>;
+  getAdminUsers(): Promise<User[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -443,6 +445,13 @@ export class DatabaseStorage implements IStorage {
       .where(eq(users.id, id))
       .returning();
     return user;
+  }
+  async deleteUser(id: number): Promise<void> {
+    await db.delete(users).where(eq(users.id, id));
+  }
+
+  async getAdminUsers(): Promise<User[]> {
+    return await db.select().from(users).where(eq(users.isAdmin, true));
   }
 }
 

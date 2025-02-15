@@ -167,6 +167,33 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Add delete route for users
+  app.delete("/api/admin/users/:id", isAdmin, async (req, res) => {
+    try {
+      const userId = parseInt(req.params.id);
+      if (isNaN(userId)) {
+        return res.status(400).json({ error: "Invalid user ID" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      // Don't allow deleting the last admin
+      const admins = await storage.getAdminUsers();
+      if (user.isAdmin && admins.length <= 1) {
+        return res.status(400).json({ error: "Cannot delete the last administrator" });
+      }
+
+      await storage.deleteUser(userId);
+      res.json({ message: "User deleted successfully" });
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      res.status(500).json({ error: "Failed to delete user" });
+    }
+  });
+
   // Regular routes continue...
   app.post("/api/jobs/scrape", async (_req, res) => {
     try {

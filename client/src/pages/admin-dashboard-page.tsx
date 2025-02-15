@@ -194,6 +194,169 @@ export default function AdminDashboardPage() {
     },
   });
 
+  const deleteUserMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const res = await apiRequest("DELETE", `/api/admin/users/${id}`);
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || "Failed to delete user");
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      toast({
+        title: "User deleted",
+        description: "The user has been permanently deleted.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const UserCard = ({ user }: { user: User }) => {
+    const profile = profiles.find(p => p.email.toLowerCase() === user.email.toLowerCase());
+
+    return (
+      <div key={user.id} className="p-4 rounded-lg border space-y-2">
+        <div className="flex items-start justify-between">
+          <div className="space-y-1">
+            <div className="font-medium flex items-center gap-2">
+              <UserIcon className="h-4 w-4 text-muted-foreground" />
+              {user.username}
+              {user.isAdmin && (
+                <Badge variant="secondary" className="ml-2">
+                  Admin
+                </Badge>
+              )}
+            </div>
+            {profile ? (
+              <div className="text-sm text-muted-foreground flex items-center gap-2">
+                <Users className="h-4 w-4" />
+                {profile.name || 'No name provided'}
+              </div>
+            ) : (
+              <div className="text-sm text-muted-foreground flex items-center gap-2">
+                <Users className="h-4 w-4" />
+                No profile found
+              </div>
+            )}
+            <div className="text-sm text-muted-foreground flex items-center gap-2">
+              <Mail className="h-4 w-4" />
+              {user.email}
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => setSelectedUser(user)}
+            >
+              <Edit className="h-4 w-4" />
+            </Button>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive" size="icon">
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Delete User Account</AlertDialogTitle>
+                  <AlertDialogDescription className="space-y-2">
+                    <p className="font-medium text-destructive">
+                      ⚠️ This action cannot be undone!
+                    </p>
+                    <p>
+                      Are you absolutely sure you want to delete the account for {user.username}?
+                      This will permanently remove:
+                    </p>
+                    <ul className="list-disc list-inside space-y-1">
+                      <li>User account and authentication details</li>
+                      <li>Associated profile information</li>
+                      <li>All application history</li>
+                    </ul>
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={() => deleteUserMutation.mutate(user.id)}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  >
+                    Delete Account
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const JobCard = ({ job }: { job: Job }) => (
+    <div
+      key={job.id}
+      className="flex items-center justify-between p-4 rounded-lg border"
+    >
+      <div>
+        <h3 className="font-medium">{job.title}</h3>
+        <p className="text-sm text-muted-foreground">
+          {job.company} - {job.location}
+        </p>
+      </div>
+      <div className="flex items-center gap-2">
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={() => setSelectedJob(job)}
+        >
+          <Edit className="h-4 w-4" />
+        </Button>
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button variant="destructive" size="icon">
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete Job Listing</AlertDialogTitle>
+              <AlertDialogDescription className="space-y-2">
+                <p className="font-medium text-destructive">
+                  ⚠️ This action cannot be undone!
+                </p>
+                <p>
+                  Are you absolutely sure you want to delete this job listing for {job.title} at {job.company}?
+                  This will permanently remove:
+                </p>
+                <ul className="list-disc list-inside space-y-1">
+                  <li>Job listing details</li>
+                  <li>Associated applications</li>
+                  <li>All related messages and communication history</li>
+                </ul>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => deleteJobMutation.mutate(job.id)}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                Delete Job
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </div>
+    </div>
+  );
+
   if (!user || isLoadingUsers || isLoadingProfiles || isLoadingApps || isLoadingJobs) {
     return (
       <div className="flex items-center justify-center min-h-[calc(100vh-4rem)]">
@@ -324,51 +487,9 @@ export default function AdminDashboardPage() {
               <CardContent>
                 <ScrollArea className="h-[600px] pr-4">
                   <div className="space-y-4">
-                    {users.map((user) => {
-                      const profile = profiles.find(p => p.email.toLowerCase() === user.email.toLowerCase());
-                      return (
-                        <div
-                          key={user.id}
-                          className="p-4 rounded-lg border space-y-2"
-                        >
-                          <div className="flex items-start justify-between">
-                            <div className="space-y-1">
-                              <div className="font-medium flex items-center gap-2">
-                                <UserIcon className="h-4 w-4 text-muted-foreground" />
-                                {user.username}
-                                {user.isAdmin && (
-                                  <Badge variant="secondary" className="ml-2">
-                                    Admin
-                                  </Badge>
-                                )}
-                              </div>
-                              {profile ? (
-                                <div className="text-sm text-muted-foreground flex items-center gap-2">
-                                  <Users className="h-4 w-4" />
-                                  {profile.name || 'No name provided'}
-                                </div>
-                              ) : (
-                                <div className="text-sm text-muted-foreground flex items-center gap-2">
-                                  <Users className="h-4 w-4" />
-                                  No profile found
-                                </div>
-                              )}
-                              <div className="text-sm text-muted-foreground flex items-center gap-2">
-                                <Mail className="h-4 w-4" />
-                                {user.email}
-                              </div>
-                            </div>
-                            <Button
-                              variant="outline"
-                              size="icon"
-                              onClick={() => setSelectedUser(user)}
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </div>
-                      );
-                    })}
+                    {users.map((user) => (
+                      <UserCard key={user.id} user={user} />
+                    ))}
                   </div>
                 </ScrollArea>
               </CardContent>
@@ -533,50 +654,7 @@ export default function AdminDashboardPage() {
               <CardContent>
                 <div className="space-y-4">
                   {jobs.map((job) => (
-                    <div
-                      key={job.id}
-                      className="flex items-center justify-between p-4 rounded-lg border"
-                    >
-                      <div>
-                        <h3 className="font-medium">{job.title}</h3>
-                        <p className="text-sm text-muted-foreground">
-                          {job.company} - {job.location}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          onClick={() => setSelectedJob(job)}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button variant="destructive" size="icon">
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Delete Job</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                Are you sure you want to delete this job? This action cannot be undone.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancel</AlertDialogCancel>
-                              <AlertDialogAction
-                                onClick={() => deleteJobMutation.mutate(job.id)}
-                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                              >
-                                Delete
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      </div>
-                    </div>
+                    <JobCard key={job.id} job={job} />
                   ))}
                 </div>
               </CardContent>
@@ -589,32 +667,7 @@ export default function AdminDashboardPage() {
               <CardContent>
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                   {users.map((user) => (
-                    <Card key={user.id} className="p-4">
-                      <div className="flex flex-col gap-2">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <UserIcon className="h-4 w-4 text-muted-foreground" />
-                            <span className="font-medium">{user.username}</span>
-                          </div>
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            onClick={() => setSelectedUser(user)}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Mail className="h-4 w-4 text-muted-foreground" />
-                          <span className="text-sm text-muted-foreground">
-                            {user.email}
-                          </span>
-                        </div>
-                        {user.isAdmin && (
-                          <Badge variant="secondary">Admin</Badge>
-                        )}
-                      </div>
-                    </Card>
+                    <UserCard key={user.id} user={user} />
                   ))}
                 </div>
               </CardContent>
