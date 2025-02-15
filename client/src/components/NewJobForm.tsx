@@ -29,7 +29,7 @@ export function NewJobForm({ onSubmit, onCancel }: {
       source: "Pipeline",
       sourceUrl: window.location.origin,
       isActive: true,
-      published: true
+      published: true,
     }
   });
 
@@ -120,19 +120,19 @@ export function NewJobForm({ onSubmit, onCancel }: {
           render={({ field }) => (
             <FormItem>
               <FormLabel>Type</FormLabel>
-              <FormControl>
-                <Select onValueChange={field.onChange} value={field.value}>
+              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <FormControl>
                   <SelectTrigger>
                     <SelectValue placeholder="Select job type" />
                   </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Full-time">Full-time</SelectItem>
-                    <SelectItem value="Part-time">Part-time</SelectItem>
-                    <SelectItem value="Contract">Contract</SelectItem>
-                    <SelectItem value="Internship">Internship</SelectItem>
-                  </SelectContent>
-                </Select>
-              </FormControl>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="Full-time">Full-time</SelectItem>
+                  <SelectItem value="Part-time">Part-time</SelectItem>
+                  <SelectItem value="Contract">Contract</SelectItem>
+                  <SelectItem value="Internship">Internship</SelectItem>
+                </SelectContent>
+              </Select>
               <FormMessage />
             </FormItem>
           )}
@@ -146,7 +146,6 @@ export function NewJobForm({ onSubmit, onCancel }: {
                 <Checkbox
                   checked={field.value}
                   onCheckedChange={field.onChange}
-                  defaultChecked
                 />
               </FormControl>
               <FormLabel>Active</FormLabel>
