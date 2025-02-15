@@ -180,9 +180,9 @@ export function registerRoutes(app: Express): Server {
         return res.status(404).json({ error: "Job not found" });
       }
 
-      // Instead of actually deleting, we'll mark it as inactive
-      await storage.deactivateJob(jobId);
-      res.json({ message: "Job deactivated successfully" });
+      // Permanently delete the job
+      await storage.deleteJob(jobId);
+      res.json({ message: "Job deleted successfully" });
     } catch (error) {
       console.error('Error deleting job:', error);
       res.status(500).json({ error: "Failed to delete job" });
