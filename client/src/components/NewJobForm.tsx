@@ -26,7 +26,10 @@ export function NewJobForm({ onSubmit, onCancel }: {
       location: "",
       requirements: "",
       type: "",
+      source: "Pipeline",
+      sourceUrl: window.location.origin,
       isActive: true,
+      published: true
     }
   });
 
@@ -143,6 +146,7 @@ export function NewJobForm({ onSubmit, onCancel }: {
                 <Checkbox
                   checked={field.value}
                   onCheckedChange={field.onChange}
+                  defaultChecked
                 />
               </FormControl>
               <FormLabel>Active</FormLabel>
