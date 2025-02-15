@@ -57,7 +57,7 @@ export const jobs = pgTable("jobs", {
 export const profiles = pgTable("profiles", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
-  email: text("email").notNull().unique(),
+  email: text("email").notNull(), 
   phone: text("phone").notNull(),
   title: text("title").notNull(),
   bio: text("bio").notNull(),
