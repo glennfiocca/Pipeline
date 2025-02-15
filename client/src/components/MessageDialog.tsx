@@ -43,15 +43,20 @@ export function MessageDialog({ applicationId, jobTitle, company, isAdmin }: Mes
 
   const createMessageMutation = useMutation({
     mutationFn: async (content: string) => {
+      if (!user?.username) {
+        throw new Error("User not authenticated");
+      }
+
       const res = await apiRequest(
         "POST",
         `/api/applications/${applicationId}/messages`,
         { 
           content,
           isFromAdmin: false,
-          senderUsername: user?.username
+          senderUsername: user.username // Explicitly set the sender's username
         }
       );
+
       if (!res.ok) {
         const error = await res.json();
         throw new Error(error.message || "Failed to send message");
@@ -59,7 +64,6 @@ export function MessageDialog({ applicationId, jobTitle, company, isAdmin }: Mes
       return res.json();
     },
     onSuccess: (newMessage) => {
-      // Update the messages in the cache
       queryClient.setQueryData<Message[]>([`/api/applications/${applicationId}/messages`], 
         old => [...(old || []), newMessage]
       );
@@ -86,8 +90,7 @@ export function MessageDialog({ applicationId, jobTitle, company, isAdmin }: Mes
         {}
       );
       if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.message || "Failed to mark message as read");
+        throw new Error("Failed to mark message as read");
       }
       return res.json();
     },
@@ -104,9 +107,11 @@ export function MessageDialog({ applicationId, jobTitle, company, isAdmin }: Mes
   };
 
   const getSenderName = (message: Message) => {
+    // For admin messages, show the company name
     if (message.isFromAdmin) {
       return company;
     }
+    // For user messages, show the sender's username
     return message.senderUsername;
   };
 
