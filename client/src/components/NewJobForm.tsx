@@ -34,17 +34,9 @@ export function NewJobForm({ onSubmit, onCancel }: {
     }
   });
 
-  const handleSubmit = async (data: NewJobForm) => {
-    try {
-      await onSubmit(data);
-    } catch (error) {
-      console.error("Form submission error:", error);
-    }
-  };
-
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
         <FormField
           control={form.control}
           name="title"
@@ -154,7 +146,7 @@ export function NewJobForm({ onSubmit, onCancel }: {
               <FormControl>
                 <Checkbox
                   checked={field.value}
-                  onCheckedChange={field.onChange}
+                  onCheckedChange={(checked) => field.onChange(checked)}
                 />
               </FormControl>
               <div className="space-y-1 leading-none">
