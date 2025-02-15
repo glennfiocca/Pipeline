@@ -25,17 +25,26 @@ export function NewJobForm({ onSubmit, onCancel }: {
       salary: "",
       location: "",
       requirements: "",
-      type: "",
+      type: "Full-time",
       source: "Pipeline",
       sourceUrl: window.location.origin,
       isActive: true,
       published: true,
+      lastCheckedAt: new Date().toISOString(),
     }
   });
 
+  const handleSubmit = async (data: NewJobForm) => {
+    try {
+      await onSubmit(data);
+    } catch (error) {
+      console.error("Form submission error:", error);
+    }
+  };
+
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
         <FormField
           control={form.control}
           name="title"
@@ -141,20 +150,21 @@ export function NewJobForm({ onSubmit, onCancel }: {
           control={form.control}
           name="isActive"
           render={({ field }) => (
-            <FormItem className="flex items-center gap-2">
+            <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
               <FormControl>
                 <Checkbox
                   checked={field.value}
                   onCheckedChange={field.onChange}
                 />
               </FormControl>
-              <FormLabel>Active</FormLabel>
-              <FormMessage />
+              <div className="space-y-1 leading-none">
+                <FormLabel>Active</FormLabel>
+              </div>
             </FormItem>
           )}
         />
         <DialogFooter>
-          <Button variant="outline" onClick={onCancel}>
+          <Button type="button" variant="outline" onClick={onCancel}>
             Cancel
           </Button>
           <Button type="submit">
