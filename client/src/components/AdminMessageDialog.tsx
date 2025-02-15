@@ -76,50 +76,20 @@ export function AdminMessageDialog({
       console.log('Message response:', data);
       return data;
     },
-    onMutate: async (content) => {
-      await queryClient.cancelQueries({ queryKey });
-
-      const previousMessages = queryClient.getQueryData<Message[]>(queryKey);
-
-      const optimisticMessage = {
-        id: Date.now(),
-        applicationId,
-        content,
-        isFromAdmin: true,
-        isRead: false,
-        createdAt: new Date().toISOString(),
-        senderUsername: username
-      };
-
-      queryClient.setQueryData<Message[]>(queryKey, old => [...(old || []), optimisticMessage]);
-
-      return { previousMessages };
-    },
-    onError: (err, newMessage, context) => {
-      console.error("Message error:", err);
-      if (context?.previousMessages) {
-        queryClient.setQueryData(queryKey, context.previousMessages);
-      }
-      toast({
-        title: "Error",
-        description: "Failed to send message. Please try again.",
-        variant: "destructive",
-      });
-    },
     onSuccess: (newMessage) => {
-      queryClient.setQueryData<Message[]>(queryKey, old => {
-        const messages = [...(old || [])];
-        const optimisticIndex = messages.findIndex(m => m.id === Date.now());
-        if (optimisticIndex > -1) {
-          messages.splice(optimisticIndex, 1);
-        }
-        return [...messages, newMessage];
-      });
-
+      queryClient.setQueryData<Message[]>(queryKey, old => [...(old || []), newMessage]);
       setNewMessage("");
       toast({
         title: "Message sent",
         description: "Your message has been sent successfully.",
+      });
+    },
+    onError: (error: Error) => {
+      console.error("Message error:", error);
+      toast({
+        title: "Error",
+        description: "Failed to send message. Please try again.",
+        variant: "destructive",
       });
     }
   });
