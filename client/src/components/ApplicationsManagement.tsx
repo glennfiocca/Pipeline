@@ -11,7 +11,6 @@ import { queryClient } from "@/lib/queryClient";
 import { apiRequest } from "@/lib/queryClient";
 import { ChevronDown, ChevronRight, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
 
 const APPLICATION_STATUSES = ["Applied", "Interviewing", "Accepted", "Rejected", "Withdrawn"];
 
@@ -39,7 +38,7 @@ export function ApplicationsManagement() {
       const now = new Date().toISOString();
       const response = await apiRequest(
         "PATCH",
-        `/api/admin/applications/${applicationId}/status`,
+        `/api/applications/${applicationId}/status`,
         { 
           status,
           statusHistory: {
@@ -80,17 +79,17 @@ export function ApplicationsManagement() {
     );
   }
 
-  const applicationsByUser: ApplicationsByUser = applications.reduce((acc, app) => {
+  const applicationsByUser = applications.reduce((acc, app) => {
     const user = users.find(u => u.id === app.profileId);
     const job = jobs.find(j => j.id === app.jobId);
-    
+
     if (!user || !job) return acc;
-    
+
     const username = user.username;
     if (!acc[username]) {
       acc[username] = [];
     }
-    
+
     acc[username].push({ ...app, job });
     return acc;
   }, {} as ApplicationsByUser);
@@ -133,7 +132,7 @@ export function ApplicationsManagement() {
                     </div>
                   </CollapsibleTrigger>
                 </div>
-                
+
                 <CollapsibleContent>
                   <div className="space-y-2 mt-2 ml-4">
                     {userApps.map((app) => (
@@ -156,11 +155,11 @@ export function ApplicationsManagement() {
                               {app.status}
                             </Badge>
                             <Select
-                              value={app.status}
+                              defaultValue={app.status}
                               onValueChange={(newStatus) => {
                                 updateStatusMutation.mutate({
                                   applicationId: app.id,
-                                  status: newStatus
+                                  status: newStatus,
                                 });
                               }}
                               disabled={updateStatusMutation.isPending}
