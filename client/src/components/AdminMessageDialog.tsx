@@ -17,9 +17,11 @@ import { Send, Loader2 } from "lucide-react";
 interface Message {
   id: number;
   applicationId: number;
-  sender: string;
   content: string;
-  timestamp: string;
+  isFromAdmin: boolean;
+  isRead: boolean;
+  createdAt: string;
+  senderUsername: string;
 }
 
 interface AdminMessageDialogProps {
@@ -41,7 +43,7 @@ export function AdminMessageDialog({
   const { toast } = useToast();
 
   const { data: messages = [], isLoading } = useQuery<Message[]>({
-    queryKey: ["/api/messages", applicationId],
+    queryKey: ["/api/applications", applicationId, "messages"],
     enabled: isOpen,
   });
 
@@ -50,11 +52,15 @@ export function AdminMessageDialog({
       const messageData = {
         applicationId,
         content,
-        sender: companyName,
-        timestamp: new Date().toISOString(),
+        isFromAdmin: true,
+        senderUsername: companyName
       };
 
-      const response = await apiRequest("POST", "/api/messages", messageData);
+      const response = await apiRequest(
+        "POST",
+        `/api/applications/${applicationId}/messages`,
+        messageData
+      );
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -66,7 +72,7 @@ export function AdminMessageDialog({
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/messages", applicationId] });
+      queryClient.invalidateQueries({ queryKey: ["/api/applications", applicationId, "messages"] });
       setNewMessage("");
       toast({
         title: "Message sent",
@@ -115,14 +121,12 @@ export function AdminMessageDialog({
                   <div
                     key={message.id}
                     className={`flex flex-col ${
-                      message.sender === companyName
-                        ? "items-end"
-                        : "items-start"
+                      message.isFromAdmin ? "items-end" : "items-start"
                     }`}
                   >
                     <div
                       className={`max-w-[80%] rounded-lg p-3 ${
-                        message.sender === companyName
+                        message.isFromAdmin
                           ? "bg-primary text-primary-foreground"
                           : "bg-muted"
                       }`}
@@ -130,7 +134,7 @@ export function AdminMessageDialog({
                       <p className="text-sm">{message.content}</p>
                     </div>
                     <div className="text-xs text-muted-foreground mt-1">
-                      {message.sender} • {format(new Date(message.timestamp), "MMM d, h:mm a")}
+                      {message.senderUsername} • {format(new Date(message.createdAt), "MMM d, h:mm a")}
                     </div>
                   </div>
                 ))}
