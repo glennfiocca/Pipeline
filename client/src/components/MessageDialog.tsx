@@ -53,7 +53,7 @@ export function MessageDialog({ applicationId, jobTitle, company, isAdmin }: Mes
         { 
           content,
           isFromAdmin: false,
-          senderUsername: user.username // Explicitly set the sender's username
+          senderUsername: user.username
         }
       );
 
@@ -107,12 +107,11 @@ export function MessageDialog({ applicationId, jobTitle, company, isAdmin }: Mes
   };
 
   const getSenderName = (message: Message) => {
-    // For admin messages, show the company name
     if (message.isFromAdmin) {
       return company;
     }
     // For user messages, show the sender's username
-    return message.senderUsername;
+    return message.senderUsername || user?.username;
   };
 
   return (
