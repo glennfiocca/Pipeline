@@ -35,7 +35,6 @@ export function MessageDialog({ applicationId, jobTitle, company, isAdmin }: Mes
     queryKey: [`/api/applications/${applicationId}/messages/unread`],
   });
 
-  // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
@@ -47,7 +46,11 @@ export function MessageDialog({ applicationId, jobTitle, company, isAdmin }: Mes
       const res = await apiRequest(
         "POST",
         `/api/applications/${applicationId}/messages`,
-        { content }
+        { 
+          content,
+          isFromAdmin: false,
+          senderUsername: user?.username // Ensure user's username is sent
+        }
       );
       if (!res.ok) {
         const error = await res.json();
@@ -55,10 +58,14 @@ export function MessageDialog({ applicationId, jobTitle, company, isAdmin }: Mes
       }
       return res.json();
     },
-    onSuccess: () => {
+    onSuccess: (newMessage) => {
+      queryClient.setQueryData<Message[]>([`/api/applications/${applicationId}/messages`], 
+        old => [...(old || []), newMessage]
+      );
       setNewMessage("");
-      queryClient.invalidateQueries({
-        queryKey: [`/api/applications/${applicationId}/messages`],
+      toast({
+        title: "Message sent",
+        description: "Your message has been sent successfully.",
       });
     },
     onError: (error: Error) => {
@@ -97,11 +104,9 @@ export function MessageDialog({ applicationId, jobTitle, company, isAdmin }: Mes
 
   const getSenderName = (message: Message) => {
     if (message.isFromAdmin) {
-      // Admin messages come from the company
       return company;
     } else {
-      // For user messages, always show the actual sender's username
-      return message.senderUsername || "Unknown User";
+      return message.senderUsername || user?.username || "Unknown User";
     }
   };
 
@@ -134,30 +139,32 @@ export function MessageDialog({ applicationId, jobTitle, company, isAdmin }: Mes
                   </p>
                 ) : (
                   messages.map((message) => (
-                    <div
-                      key={message.id}
-                      className={cn(
-                        "p-4 rounded-lg",
-                        message.isFromAdmin
-                          ? "bg-muted ml-8"
-                          : "bg-primary/10 mr-8"
-                      )}
-                      onClick={() => {
-                        if (!message.isRead && !message.isFromAdmin) {
-                          markAsReadMutation.mutate(message.id);
-                        }
-                      }}
-                    >
-                      <div className="flex justify-between items-start mb-2">
-                        <span className="font-medium">
-                          {getSenderName(message)}
-                        </span>
-                        <span className="text-xs text-muted-foreground">
-                          {format(new Date(message.createdAt), "MMM d, yyyy h:mm a")}
-                        </span>
+                    message.content && (
+                      <div
+                        key={message.id}
+                        className={cn(
+                          "p-4 rounded-lg",
+                          message.isFromAdmin
+                            ? "bg-muted ml-8"
+                            : "bg-primary/10 mr-8"
+                        )}
+                        onClick={() => {
+                          if (!message.isRead && !message.isFromAdmin) {
+                            markAsReadMutation.mutate(message.id);
+                          }
+                        }}
+                      >
+                        <div className="flex justify-between items-start mb-2">
+                          <span className="font-medium">
+                            {getSenderName(message)}
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            {format(new Date(message.createdAt), "MMM d, yyyy h:mm a")}
+                          </span>
+                        </div>
+                        <p className="text-sm whitespace-pre-wrap">{message.content}</p>
                       </div>
-                      <p className="text-sm whitespace-pre-wrap">{message.content}</p>
-                    </div>
+                    )
                   ))
                 )}
               </div>
