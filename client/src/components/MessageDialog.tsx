@@ -49,7 +49,7 @@ export function MessageDialog({ applicationId, jobTitle, company, isAdmin }: Mes
         { 
           content,
           isFromAdmin: false,
-          senderUsername: user?.username // Ensure user's username is sent
+          senderUsername: user?.username
         }
       );
       if (!res.ok) {
@@ -59,6 +59,7 @@ export function MessageDialog({ applicationId, jobTitle, company, isAdmin }: Mes
       return res.json();
     },
     onSuccess: (newMessage) => {
+      // Update the messages in the cache
       queryClient.setQueryData<Message[]>([`/api/applications/${applicationId}/messages`], 
         old => [...(old || []), newMessage]
       );
@@ -105,9 +106,8 @@ export function MessageDialog({ applicationId, jobTitle, company, isAdmin }: Mes
   const getSenderName = (message: Message) => {
     if (message.isFromAdmin) {
       return company;
-    } else {
-      return message.senderUsername || user?.username || "Unknown User";
     }
+    return message.senderUsername;
   };
 
   return (
