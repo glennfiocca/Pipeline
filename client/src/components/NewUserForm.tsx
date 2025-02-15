@@ -20,13 +20,23 @@ export function NewUserForm({ onSubmit, onCancel }: {
       username: "",
       email: "",
       password: "",
+      confirmPassword: "",
       isAdmin: false,
     }
   });
 
+  const handleSubmit = async (data: NewUserForm) => {
+    try {
+      await onSubmit(data);
+      form.reset();
+    } catch (error) {
+      console.error('Form submission error:', error);
+    }
+  };
+
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
         <FormField
           control={form.control}
           name="username"
@@ -68,6 +78,19 @@ export function NewUserForm({ onSubmit, onCancel }: {
         />
         <FormField
           control={form.control}
+          name="confirmPassword"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Confirm Password</FormLabel>
+              <FormControl>
+                <Input type="password" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
           name="isAdmin"
           render={({ field }) => (
             <FormItem className="flex items-center gap-2">
@@ -83,10 +106,10 @@ export function NewUserForm({ onSubmit, onCancel }: {
           )}
         />
         <DialogFooter>
-          <Button variant="outline" onClick={onCancel}>
+          <Button variant="outline" type="button" onClick={onCancel}>
             Cancel
           </Button>
-          <Button type="submit">
+          <Button type="submit" disabled={form.formState.isSubmitting}>
             Create User
           </Button>
         </DialogFooter>
