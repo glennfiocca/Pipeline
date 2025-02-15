@@ -11,7 +11,7 @@ import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { format } from "date-fns";
+import { format, parseISO, isValid } from "date-fns";
 import { Send, Loader2 } from "lucide-react";
 
 interface Message {
@@ -98,6 +98,19 @@ export function AdminMessageDialog({
     }
   };
 
+  const formatMessageDate = (dateString: string) => {
+    try {
+      const date = parseISO(dateString);
+      if (!isValid(date)) {
+        return "Invalid date";
+      }
+      return format(date, "MMM d, h:mm a");
+    } catch (error) {
+      console.error("Date formatting error:", error);
+      return "Invalid date";
+    }
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={() => onClose()}>
       <DialogContent className="sm:max-w-[500px]">
@@ -134,7 +147,7 @@ export function AdminMessageDialog({
                       <p className="text-sm">{message.content}</p>
                     </div>
                     <div className="text-xs text-muted-foreground mt-1">
-                      {message.senderUsername} • {format(new Date(message.createdAt), "MMM d, h:mm a")}
+                      {message.senderUsername} • {formatMessageDate(message.createdAt)}
                     </div>
                   </div>
                 ))}
