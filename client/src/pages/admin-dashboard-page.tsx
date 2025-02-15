@@ -21,13 +21,18 @@ import { apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
 import { useLocation } from "wouter";
 import { MessageDialog } from "@/components/MessageDialog";
-import { Users, Mail, User as UserIcon, Edit, Trash2 } from "lucide-react";
+import { Users, Mail, User as UserIcon, Edit, Trash2, Plus } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm, UseFormRegister, FieldErrors } from "react-hook-form";
+import { insertJobSchema, insertUserSchema } from "@shared/schema";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import * as z from 'zod';
+import type { SubmitHandler } from "react-hook-form";
 
 type ApplicationUpdateForm = {
   status?: string;
@@ -53,6 +58,14 @@ type UserUpdateForm = {
   isAdmin?: boolean;
 };
 
+type NewJobForm = z.infer<typeof insertJobSchema>;
+type NewUserForm = z.infer<typeof insertUserSchema>;
+
+type FormFields = {
+  register: UseFormRegister<any>;
+  formState: { errors: FieldErrors<any> };
+};
+
 export default function AdminDashboardPage() {
   const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
   const [selectedApplication, setSelectedApplication] = useState<Application | null>(null);
@@ -64,6 +77,8 @@ export default function AdminDashboardPage() {
   const [jobFormData, setJobFormData] = useState<JobUpdateForm>({});
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [userFormData, setUserFormData] = useState<UserUpdateForm>({});
+  const [showNewJobDialog, setShowNewJobDialog] = useState(false);
+  const [showNewUserDialog, setShowNewUserDialog] = useState(false);
 
   const { data: applications = [], isLoading: isLoadingApps } = useQuery<Application[]>({
     queryKey: ["/api/admin/applications"],
@@ -442,6 +457,59 @@ export default function AdminDashboardPage() {
     });
   };
 
+  const createJobMutation = useMutation({
+    mutationFn: async (data: NewJobForm) => {
+      const res = await apiRequest("POST", "/api/jobs", data);
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || "Failed to create job");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
+      toast({
+        title: "Job created",
+        description: "The job has been created successfully.",
+      });
+      setShowNewJobDialog(false);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const createUserMutation = useMutation({
+    mutationFn: async (data: NewUserForm) => {
+      const res = await apiRequest("POST", "/api/register", data);
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || "Failed to create user");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      toast({
+        title: "User created",
+        description: "The user has been created successfully.",
+      });
+      setShowNewUserDialog(false);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+
   return (
     <div className="container py-10">
       <div className="flex items-center justify-between mb-8">
@@ -648,8 +716,15 @@ export default function AdminDashboardPage() {
         <TabsContent value="database">
           <div className="space-y-8">
             <Card>
-              <CardHeader>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0">
                 <CardTitle>Jobs Management</CardTitle>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setShowNewJobDialog(true)}
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
@@ -661,8 +736,15 @@ export default function AdminDashboardPage() {
             </Card>
 
             <Card>
-              <CardHeader>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0">
                 <CardTitle>Users Management</CardTitle>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setShowNewUserDialog(true)}
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
               </CardHeader>
               <CardContent>
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -746,7 +828,7 @@ export default function AdminDashboardPage() {
                 <Checkbox
                   id="isActive"
                   defaultChecked={selectedJob.isActive}
-                  onCheckedChange={(checked: boolean) => handleJobInputChange('isActive', checked)}
+                  onCheckedChange={(checked) => handleJobInputChange('isActive', checked === true)}
                 />
                 <Label htmlFor="isActive">Active</Label>
               </div>
@@ -828,6 +910,228 @@ export default function AdminDashboardPage() {
           </DialogContent>
         </Dialog>
       )}
+
+      <Dialog open={showNewJobDialog} onOpenChange={setShowNewJobDialog}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Create New Job</DialogTitle>
+            <DialogDescription>
+              Add a new job listing to the platform. Fill in all the required information below.
+            </DialogDescription>
+          </DialogHeader>
+          <Form {...useForm<NewJobForm>({
+            resolver: zodResolver(insertJobSchema),
+            defaultValues: {
+              title: "",
+              company:"",
+              description: "",
+              salary: "",
+              location: "",
+              requirements: "",
+              type: "",
+              isActive: true,
+            }
+          })}
+          onSubmit={(data: NewJobForm) => createJobMutation.mutate(data)}
+          >
+            {({ register, formState: { errors }}: FormFields) => (
+              <form onSubmit={(e) => e.preventDefault()} className="space-y-4">
+                <FormField
+                  name="title"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Title</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  name="company"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Company</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  name="description"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Description</FormLabel>
+                      <FormControl>
+                        <Textarea {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  name="salary"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Salary</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  name="location"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Location</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  name="requirements"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Requirements</FormLabel>
+                      <FormControl>
+                        <Textarea {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  name="type"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Type</FormLabel>
+                      <FormControl>
+                        <Select
+                          value={field.value}
+                          onValueChange={field.onChange}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select job type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Full-time">Full-time</SelectItem>
+                            <SelectItem value="Part-time">Part-time</SelectItem>
+                            <SelectItem value="Contract">Contract</SelectItem>
+                            <SelectItem value="Internship">Internship</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setShowNewJobDialog(false)}>
+                    Cancel
+                  </Button>
+                  <Button type="submit" disabled={createJobMutation.isPending}>
+                    {createJobMutation.isPending ? "Creating..." : "Create Job"}
+                  </Button>
+                </DialogFooter>
+              </form>
+            )}
+          </Form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showNewUserDialog} onOpenChange={setShowNewUserDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create New User</DialogTitle>
+            <DialogDescription>
+              Add a new user to the platform. The user will receive their login credentials via email.
+            </DialogDescription>
+          </DialogHeader>
+          <Form {...useForm<NewUserForm>({
+            resolver: zodResolver(insertUserSchema),
+            defaultValues: {
+              username: "",
+              email: "",
+              password: "",
+              isAdmin: false,
+            }
+          })}
+          onSubmit={(data: NewUserForm) => createUserMutation.mutate(data)}
+          >
+            {({ register, formState: { errors }}: FormFields) => (
+              <form onSubmit={(e) => e.preventDefault()} className="space-y-4">
+                <FormField
+                  name="username"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Username</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Email</FormLabel>
+                      <FormControl>
+                        <Input type="email" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  name="password"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Password</FormLabel>
+                      <FormControl>
+                        <Input type="password" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  name="isAdmin"
+                  render={({ field }) => (
+                    <FormItem className="flex items-center gap-2">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                      <FormLabel>Administrator Access</FormLabel>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setShowNewUserDialog(false)}>
+                    Cancel
+                  </Button>
+                  <Button type="submit" disabled={createUserMutation.isPending}>
+                    {createUserMutation.isPending ? "Creating..." : "Create User"}
+                  </Button>
+                </DialogFooter>
+              </form>
+            )}
+          </Form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
