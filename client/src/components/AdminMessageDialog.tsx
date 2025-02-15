@@ -77,7 +77,7 @@ export function AdminMessageDialog({
       return data;
     },
     onMutate: async (content) => {
-      // Cancel any outgoing refetches so they don't overwrite our optimistic update
+      // Cancel any outgoing refetches
       await queryClient.cancelQueries({ queryKey });
 
       // Snapshot the previous value
@@ -96,12 +96,10 @@ export function AdminMessageDialog({
 
       queryClient.setQueryData<Message[]>(queryKey, old => [...(old || []), optimisticMessage]);
 
-      // Return a context object with the snapshotted value
       return { previousMessages };
     },
     onError: (err, newMessage, context) => {
       console.error("Message error:", err);
-      // Roll back to the previous value if there was an error
       if (context?.previousMessages) {
         queryClient.setQueryData(queryKey, context.previousMessages);
       }
@@ -115,7 +113,7 @@ export function AdminMessageDialog({
       // Update the messages in the cache
       queryClient.setQueryData<Message[]>(queryKey, old => {
         const messages = [...(old || [])];
-        // Remove optimistic message if it exists and add the real one
+        // Remove optimistic message if it exists
         const optimisticIndex = messages.findIndex(m => m.id === Date.now());
         if (optimisticIndex > -1) {
           messages.splice(optimisticIndex, 1);
@@ -128,10 +126,6 @@ export function AdminMessageDialog({
         title: "Message sent",
         description: "Your message has been sent successfully.",
       });
-    },
-    onSettled: () => {
-      // Always refetch after error or success to ensure cache consistency
-      queryClient.invalidateQueries({ queryKey });
     }
   });
 
@@ -179,25 +173,27 @@ export function AdminMessageDialog({
             ) : (
               <div className="space-y-4">
                 {messages.map((message) => (
-                  <div
-                    key={message.id}
-                    className={`flex flex-col ${
-                      message.isFromAdmin ? "items-end" : "items-start"
-                    }`}
-                  >
+                  message.content && (
                     <div
-                      className={`max-w-[80%] rounded-lg p-3 ${
-                        message.isFromAdmin
-                          ? "bg-primary text-primary-foreground"
-                          : "bg-muted"
+                      key={message.id}
+                      className={`flex flex-col ${
+                        message.isFromAdmin ? "items-end" : "items-start"
                       }`}
                     >
-                      <p className="text-sm">{message.content}</p>
+                      <div
+                        className={`max-w-[80%] rounded-lg p-3 ${
+                          message.isFromAdmin
+                            ? "bg-primary text-primary-foreground"
+                            : "bg-muted"
+                        }`}
+                      >
+                        <p className="text-sm">{message.content}</p>
+                      </div>
+                      <div className="text-xs text-muted-foreground mt-1">
+                        {message.senderUsername} • {formatMessageDate(message.createdAt)}
+                      </div>
                     </div>
-                    <div className="text-xs text-muted-foreground mt-1">
-                      {message.senderUsername} • {formatMessageDate(message.createdAt)}
-                    </div>
-                  </div>
+                  )
                 ))}
               </div>
             )}
