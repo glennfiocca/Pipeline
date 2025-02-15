@@ -47,17 +47,15 @@ export function AdminMessageDialog({
 
   const sendMessageMutation = useMutation({
     mutationFn: async (content: string) => {
-      const messageData = {
-        applicationId,
-        content,
-        sender: companyName,
-        timestamp: new Date().toISOString()
-      };
-
       const response = await apiRequest(
         "POST",
-        `/api/messages`,
-        messageData
+        "/api/messages",
+        {
+          applicationId,
+          content,
+          sender: companyName,
+          timestamp: new Date().toISOString(),
+        }
       );
 
       if (!response.ok) {
@@ -84,9 +82,13 @@ export function AdminMessageDialog({
     },
   });
 
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
     if (!newMessage.trim()) return;
-    sendMessageMutation.mutate(newMessage);
+    try {
+      await sendMessageMutation.mutateAsync(newMessage);
+    } catch (error) {
+      console.error("Error sending message:", error);
+    }
   };
 
   return (
