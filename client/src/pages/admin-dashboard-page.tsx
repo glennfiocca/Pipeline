@@ -349,7 +349,13 @@ export default function AdminDashboardPage() {
             </DialogDescription>
           </DialogHeader>
           <NewUserForm
-            onSubmit={(data) => createUserMutation.mutate(data)}
+            onSubmit={(data) => {
+              try {
+                createUserMutation.mutate(data);
+              } catch (error) {
+                console.error("Error submitting form:", error);
+              }
+            }}
             onCancel={() => setShowNewUserDialog(false)}
           />
         </DialogContent>
