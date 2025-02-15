@@ -99,6 +99,8 @@ export function AdminMessageDialog({
   };
 
   const formatMessageDate = (dateString: string) => {
+    if (!dateString) return "";
+
     try {
       const date = parseISO(dateString);
       if (!isValid(date)) {
