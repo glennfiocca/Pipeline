@@ -402,14 +402,27 @@ export function registerRoutes(app: Express): Server {
         return res.status(400).json({ error: "Invalid application ID" });
       }
 
-      // Include the sender's username with the message
-      const parsed = insertMessageSchema.safeParse({
+      // Get the application to fetch job details
+      const application = await storage.getApplication(applicationId);
+      if (!application) {
+        return res.status(404).json({ error: "Application not found" });
+      }
+
+      // Get the job to get company information
+      const job = await storage.getJob(application.jobId);
+      if (!job) {
+        return res.status(404).json({ error: "Job not found" });
+      }
+
+      const messageData = {
         ...req.body,
         applicationId,
         isFromAdmin: req.user?.isAdmin || false,
-        senderUsername: req.user?.username
-      });
+        // For admin messages, use company name, otherwise use actual username
+        senderUsername: req.user?.isAdmin ? job.company : req.user?.username
+      };
 
+      const parsed = insertMessageSchema.safeParse(messageData);
       if (!parsed.success) {
         return res.status(400).json(parsed.error);
       }
