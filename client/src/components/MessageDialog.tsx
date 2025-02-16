@@ -47,10 +47,12 @@ export function MessageDialog({ applicationId, jobTitle, company, isAdmin }: Mes
         throw new Error("User not authenticated");
       }
 
+      // Ensure we're setting the correct sender information
       const messageData = {
+        applicationId,
         content,
         isFromAdmin: false,
-        senderUsername: user.username
+        senderUsername: user.username // This is crucial - we're setting the actual username
       };
 
       const res = await apiRequest(
@@ -106,10 +108,6 @@ export function MessageDialog({ applicationId, jobTitle, company, isAdmin }: Mes
   const handleSend = () => {
     if (!newMessage.trim()) return;
     createMessageMutation.mutate(newMessage.trim());
-  };
-
-  const getSenderName = (message: Message) => {
-    return message.isFromAdmin ? company : message.senderUsername;
   };
 
   return (
