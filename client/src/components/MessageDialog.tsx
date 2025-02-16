@@ -6,7 +6,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Message } from "@shared/schema";
 import { format } from "date-fns";
-import { Mail } from "lucide-react";
+import { Mail, Loader2 } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -26,8 +26,10 @@ export function MessageDialog({ applicationId, jobTitle, company, isAdmin }: Mes
   const { user } = useAuth();
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  const queryKey = [`/api/applications/${applicationId}/messages`];
+
   const { data: messages = [] } = useQuery<Message[]>({
-    queryKey: [`/api/applications/${applicationId}/messages`],
+    queryKey,
     enabled: isOpen,
   });
 
@@ -67,7 +69,7 @@ export function MessageDialog({ applicationId, jobTitle, company, isAdmin }: Mes
       return res.json();
     },
     onSuccess: (newMessage) => {
-      queryClient.setQueryData<Message[]>([`/api/applications/${applicationId}/messages`], 
+      queryClient.setQueryData<Message[]>(queryKey, 
         old => [...(old || []), newMessage]
       );
       setNewMessage("");
@@ -99,7 +101,7 @@ export function MessageDialog({ applicationId, jobTitle, company, isAdmin }: Mes
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: [`/api/applications/${applicationId}/messages`],
+        queryKey: [`/api/applications/${applicationId}/messages/unread`],
       });
     },
   });
@@ -155,7 +157,7 @@ export function MessageDialog({ applicationId, jobTitle, company, isAdmin }: Mes
                       >
                         <div className="flex justify-between items-start mb-2">
                           <span className="font-medium">
-                            {message.isFromAdmin ? company : user?.username}
+                            {message.isFromAdmin ? company : message.senderUsername}
                           </span>
                           <span className="text-xs text-muted-foreground">
                             {format(new Date(message.createdAt), "MMM d, yyyy h:mm a")}
@@ -187,6 +189,11 @@ export function MessageDialog({ applicationId, jobTitle, company, isAdmin }: Mes
                 onClick={handleSend}
                 disabled={createMessageMutation.isPending}
               >
+                {createMessageMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                ) : (
+                  <Mail className="h-4 w-4 mr-2" />
+                )}
                 Send
               </Button>
             </div>

@@ -42,7 +42,7 @@ export function AdminMessageDialog({
   const [newMessage, setNewMessage] = useState("");
   const { toast } = useToast();
 
-  const queryKey = ["/api/applications", applicationId, "messages"];
+  const queryKey = [`/api/applications/${applicationId}/messages`];
 
   const { data: messages = [], isLoading } = useQuery<Message[]>({
     queryKey,
@@ -82,7 +82,7 @@ export function AdminMessageDialog({
     onError: (error: Error) => {
       toast({
         title: "Error",
-        description: "Failed to send message. Please try again.",
+        description: error.message || "Failed to send message",
         variant: "destructive",
       });
     }
@@ -148,7 +148,7 @@ export function AdminMessageDialog({
                         <p className="text-sm">{message.content}</p>
                       </div>
                       <div className="text-xs text-muted-foreground mt-1">
-                        {message.isFromAdmin ? companyName : message.senderUsername} • {formatMessageDate(message.createdAt)}
+                        {message.isFromAdmin ? companyName : username} • {formatMessageDate(message.createdAt)}
                       </div>
                     </div>
                   )
