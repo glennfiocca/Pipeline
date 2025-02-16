@@ -32,12 +32,12 @@ interface AdminMessageDialogProps {
   username: string;
 }
 
-export function AdminMessageDialog({ 
-  isOpen, 
-  onClose, 
-  applicationId, 
+export function AdminMessageDialog({
+  isOpen,
+  onClose,
+  applicationId,
   companyName,
-  username 
+  username
 }: AdminMessageDialogProps) {
   const [newMessage, setNewMessage] = useState("");
   const { toast } = useToast();
@@ -55,10 +55,8 @@ export function AdminMessageDialog({
         applicationId,
         content,
         isFromAdmin: true,
-        senderUsername: username
+        senderUsername: companyName
       };
-
-      console.log('Sending message data:', messageData);
 
       const response = await apiRequest(
         "POST",
@@ -68,13 +66,10 @@ export function AdminMessageDialog({
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error("Error response:", errorText);
         throw new Error(errorText || "Failed to send message");
       }
 
-      const data = await response.json();
-      console.log('Message response:', data);
-      return data;
+      return response.json();
     },
     onSuccess: (newMessage) => {
       queryClient.setQueryData<Message[]>(queryKey, old => [...(old || []), newMessage]);
@@ -85,7 +80,6 @@ export function AdminMessageDialog({
       });
     },
     onError: (error: Error) => {
-      console.error("Message error:", error);
       toast({
         title: "Error",
         description: "Failed to send message. Please try again.",
@@ -105,7 +99,6 @@ export function AdminMessageDialog({
 
   const formatMessageDate = (dateString: string) => {
     if (!dateString) return "";
-
     try {
       const date = parseISO(dateString);
       if (!isValid(date)) {
@@ -155,7 +148,7 @@ export function AdminMessageDialog({
                         <p className="text-sm">{message.content}</p>
                       </div>
                       <div className="text-xs text-muted-foreground mt-1">
-                        {message.senderUsername} • {formatMessageDate(message.createdAt)}
+                        {message.isFromAdmin ? companyName : message.senderUsername} • {formatMessageDate(message.createdAt)}
                       </div>
                     </div>
                   )

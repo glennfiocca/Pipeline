@@ -158,7 +158,7 @@ export function MessageDialog({ applicationId, jobTitle, company, isAdmin }: Mes
                       >
                         <div className="flex justify-between items-start mb-2">
                           <span className="font-medium">
-                            {getSenderName(message)}
+                            {message.isFromAdmin ? company : message.senderUsername}
                           </span>
                           <span className="text-xs text-muted-foreground">
                             {format(new Date(message.createdAt), "MMM d, yyyy h:mm a")}
