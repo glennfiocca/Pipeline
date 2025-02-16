@@ -47,12 +47,11 @@ export function MessageDialog({ applicationId, jobTitle, company, isAdmin }: Mes
         throw new Error("User not authenticated");
       }
 
-      // Ensure we're setting the correct sender information
       const messageData = {
         applicationId,
         content,
         isFromAdmin: false,
-        senderUsername: user.username // This is crucial - we're setting the actual username
+        senderUsername: user.username
       };
 
       const res = await apiRequest(
@@ -156,7 +155,7 @@ export function MessageDialog({ applicationId, jobTitle, company, isAdmin }: Mes
                       >
                         <div className="flex justify-between items-start mb-2">
                           <span className="font-medium">
-                            {message.isFromAdmin ? company : message.senderUsername}
+                            {message.isFromAdmin ? company : user?.username}
                           </span>
                           <span className="text-xs text-muted-foreground">
                             {format(new Date(message.createdAt), "MMM d, yyyy h:mm a")}

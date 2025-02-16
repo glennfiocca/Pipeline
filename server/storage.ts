@@ -360,12 +360,9 @@ export class DatabaseStorage implements IStorage {
         if (!job) {
           throw new Error(`Job not found for ID: ${application.jobId}`);
         }
-
-        // Set the sender username as the company name for admin messages
-        insertMessage.senderUsername = job.company;
       }
 
-      // Insert the message with the current timestamp
+      // Insert the message with the current timestamp and preserve the original sender
       const [message] = await db
         .insert(messages)
         .values({
