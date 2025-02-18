@@ -277,3 +277,40 @@ export const insertFeedbackSchema = createInsertSchema(feedback).omit({
 
 export type Feedback = typeof feedback.$inferSelect;
 export type InsertFeedback = z.infer<typeof insertFeedbackSchema>;
+
+// Add notifications table schema
+export const notifications = pgTable("notifications", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull(),
+  type: text("type").notNull(), // 'application_status', 'feedback_response', 'application_confirmation'
+  title: text("title").notNull(),
+  content: text("content").notNull(),
+  isRead: boolean("is_read").notNull().default(false),
+  relatedId: integer("related_id"), // ID of related entity (application/feedback)
+  relatedType: text("related_type"), // Type of related entity ('application', 'feedback')
+  metadata: jsonb("metadata").default({}),
+  createdAt: text("created_at").notNull().default(new Date().toISOString())
+});
+
+export const insertNotificationSchema = createInsertSchema(notifications).omit({
+  id: true,
+  createdAt: true
+}).extend({
+  type: z.enum([
+    'application_status',
+    'feedback_response',
+    'application_confirmation',
+    'message_received'
+  ]),
+  relatedType: z.enum(['application', 'feedback', 'message']).optional(),
+  metadata: z.object({
+    oldStatus: z.string().optional(),
+    newStatus: z.string().optional(),
+    applicationId: z.number().optional(),
+    feedbackId: z.number().optional(),
+    messageId: z.number().optional()
+  }).optional()
+});
+
+export type Notification = typeof notifications.$inferSelect;
+export type InsertNotification = z.infer<typeof insertNotificationSchema>;
