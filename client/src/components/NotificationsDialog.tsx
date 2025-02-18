@@ -14,12 +14,20 @@ import { Badge } from "@/components/ui/badge";
 import { useLocation } from "wouter";
 import { useState } from "react";
 import { JobModal } from "@/components/JobModal";
+import { useQuery } from "@tanstack/react-query";
+import { Job } from "@shared/schema";
 
 export function NotificationsDialog() {
   const { notifications, unreadCount, markAsRead, markAllAsRead, isLoading } = useNotifications();
   const [, setLocation] = useLocation();
   const [isOpen, setIsOpen] = useState(false);
   const [selectedJobId, setSelectedJobId] = useState<number | null>(null);
+
+  // Fetch job data when selectedJobId changes
+  const { data: selectedJob } = useQuery<Job>({
+    queryKey: [`/api/jobs/${selectedJobId}`],
+    enabled: !!selectedJobId,
+  });
 
   const handleNotificationClick = async (notification: any) => {
     // Mark as read if not already read
@@ -37,7 +45,7 @@ export function NotificationsDialog() {
         setLocation(`/dashboard?messageId=${notification.metadata.applicationId}`);
         break;
       case 'application_status_change':
-        // Open the job modal
+        // Set the selected job ID to trigger the job data fetch
         setSelectedJobId(notification.metadata.jobId);
         break;
       case 'admin_feedback':
@@ -130,9 +138,9 @@ export function NotificationsDialog() {
         </DialogContent>
       </Dialog>
 
-      {selectedJobId && (
+      {selectedJob && (
         <JobModal
-          jobId={selectedJobId}
+          job={selectedJob}
           isOpen={true}
           onClose={() => setSelectedJobId(null)}
         />
