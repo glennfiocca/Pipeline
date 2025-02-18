@@ -15,7 +15,7 @@ import { useLocation } from "wouter";
 import { useState } from "react";
 import { JobModal } from "@/components/JobModal";
 import { useQuery } from "@tanstack/react-query";
-import { Job } from "@shared/schema";
+import { Job, Application } from "@shared/schema";
 
 export function NotificationsDialog() {
   const { notifications, unreadCount, markAsRead, markAllAsRead, isLoading } = useNotifications();
@@ -28,6 +28,16 @@ export function NotificationsDialog() {
     queryKey: [`/api/jobs/${selectedJobId}`],
     enabled: !!selectedJobId,
   });
+
+  // Fetch user's applications
+  const { data: applications = [] } = useQuery<Application[]>({
+    queryKey: ["/api/applications"],
+  });
+
+  // Check if user has already applied for the selected job
+  const hasApplied = selectedJobId 
+    ? applications.some(app => app.jobId === selectedJobId)
+    : false;
 
   const handleNotificationClick = async (notification: any) => {
     // Mark as read if not already read
@@ -143,8 +153,8 @@ export function NotificationsDialog() {
           job={selectedJob}
           isOpen={true}
           onClose={() => setSelectedJobId(null)}
-          onApply={() => {}} 
-          viewOnly={true} 
+          onApply={() => {}}
+          alreadyApplied={hasApplied}
         />
       )}
     </>
