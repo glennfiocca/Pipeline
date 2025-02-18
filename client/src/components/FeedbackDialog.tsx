@@ -131,7 +131,7 @@ export function FeedbackDialog({ feedbackId, isReadOnly = false, isOpen: propIsO
       <DialogTrigger asChild>
         <Button
           variant="default"
-          className="fixed right-0 top-1/2 -translate-y-1/2 -rotate-90 origin-right transition-transform hover:translate-x-[-8px] shadow-md flex gap-2 items-center z-50 rounded-t-lg rounded-b-none"
+          className="fixed right-0 top-1/2 -translate-y-1/2 -rotate-90 origin-right translate-x-[-32px] transition-transform hover:translate-x-[-40px] shadow-md flex gap-2 items-center z-50 rounded-t-lg rounded-b-none"
         >
           <MessageSquarePlus className="h-4 w-4 rotate-90" />
           Feedback
