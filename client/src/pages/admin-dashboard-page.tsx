@@ -445,32 +445,34 @@ export default function AdminDashboardPage() {
 
       {/* Edit Dialogs */}
       <Dialog open={showEditJobDialog} onOpenChange={setShowEditJobDialog}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit Job</DialogTitle>
             <DialogDescription>
               Update job listing information.
             </DialogDescription>
           </DialogHeader>
-          <NewJobForm
-            initialData={selectedJob}
-            onSubmit={(data) => {
-              try {
-                editJobMutation.mutate(data);
-              } catch (error) {
-                console.error("Error submitting form:", error);
-              }
-            }}
-            onCancel={() => {
-              setShowEditJobDialog(false);
-              setSelectedJob(null);
-            }}
-          />
+          <div className="py-4">
+            <NewJobForm
+              initialData={selectedJob}
+              onSubmit={(data) => {
+                try {
+                  editJobMutation.mutate(data);
+                } catch (error) {
+                  console.error("Error submitting form:", error);
+                }
+              }}
+              onCancel={() => {
+                setShowEditJobDialog(false);
+                setSelectedJob(null);
+              }}
+            />
+          </div>
         </DialogContent>
       </Dialog>
 
       <Dialog open={showEditUserDialog} onOpenChange={setShowEditUserDialog}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit User</DialogTitle>
             <DialogDescription>
