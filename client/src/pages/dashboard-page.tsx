@@ -225,18 +225,6 @@ export default function DashboardPage() {
                           <Badge className={getStatusColor(application.status)}>
                             {application.status}
                           </Badge>
-                          <MessageDialog
-                            applicationId={application.id}
-                            jobTitle={job.title}
-                            company={job.company}
-                            onClick={() => setActiveMessageId(application.id)}
-                          />
-                          {application.status !== "Withdrawn" && (
-                            <WithdrawDialog
-                              onWithdraw={() => withdrawMutation.mutate(application.id)}
-                              isPending={withdrawMutation.isPending}
-                            />
-                          )}
                         </div>
                       </div>
 
