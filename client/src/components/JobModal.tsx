@@ -11,17 +11,19 @@ import { Building2, MapPin, DollarSign, CheckCircle2, ExternalLink, Loader2 } fr
 import { Link } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import type { Job } from "@shared/schema";
-import { useState } from "react";
+import { useState, ReactNode } from "react";
 import { ApplicationCreditsDialog } from "./ApplicationCreditsDialog";
 
 interface JobModalProps {
   job: Job | null;
   isOpen: boolean;
   onClose: () => void;
-  onApply: (jobId: number) => void;
+  onApply?: (jobId: number) => void;
   isApplied?: boolean;
   isApplying?: boolean;
   previouslyApplied?: boolean;
+  applicationControls?: ReactNode;
+  alreadyApplied?: boolean;
 }
 
 export function JobModal({ 
@@ -31,7 +33,9 @@ export function JobModal({
   onApply, 
   isApplied, 
   isApplying,
-  previouslyApplied
+  previouslyApplied,
+  applicationControls,
+  alreadyApplied
 }: JobModalProps) {
   const { user } = useAuth();
   const [showCreditsDialog, setShowCreditsDialog] = useState(false);
@@ -98,7 +102,9 @@ export function JobModal({
             </div>
 
             <div className="flex items-center justify-between pt-6 border-t">
-              {user ? (
+              {applicationControls ? (
+                applicationControls
+              ) : user && !alreadyApplied && onApply ? (
                 <Button
                   variant={previouslyApplied ? "default" : isApplied ? "outline" : "default"}
                   onClick={() => setShowCreditsDialog(true)}
@@ -117,13 +123,13 @@ export function JobModal({
                     </>
                   )}
                 </Button>
-              ) : (
+              ) : !user && !alreadyApplied ? (
                 <Link href="/auth/login" className="w-full">
                   <Button variant="default" className="w-full">
                     Sign in to Apply
                   </Button>
                 </Link>
-              )}
+              ) : null}
             </div>
 
             {job.source && (
@@ -143,15 +149,17 @@ export function JobModal({
         </DialogContent>
       </Dialog>
 
-      <ApplicationCreditsDialog
-        isOpen={showCreditsDialog}
-        onClose={() => setShowCreditsDialog(false)}
-        onConfirm={() => {
-          setShowCreditsDialog(false);
-          onApply(job.id);
-        }}
-        jobTitle={job.title}
-      />
+      {showCreditsDialog && onApply && (
+        <ApplicationCreditsDialog
+          isOpen={showCreditsDialog}
+          onClose={() => setShowCreditsDialog(false)}
+          onConfirm={() => {
+            setShowCreditsDialog(false);
+            onApply(job.id);
+          }}
+          jobTitle={job.title}
+        />
+      )}
     </>
   );
 }
