@@ -31,7 +31,7 @@ export function NotificationsDialog() {
         break;
       case 'application_status_change':
         // Navigate to the specific job
-        setLocation(`/jobs?jobId=${notification.metadata?.jobId}`);
+        setLocation(`/dashboard?applicationId=${notification.metadata.applicationId}`);
         break;
       case 'admin_feedback':
         // Navigate to the feedback view (read-only)
