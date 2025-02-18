@@ -83,8 +83,8 @@ export default function LoginPage() {
             <CardTitle>Login to Pipeline</CardTitle>
             <CardDescription>
               Don't have an account?{" "}
-              <Link href="/auth/register">
-                <a className="text-primary hover:underline">Sign up here</a>
+              <Link href="/auth/register" className="text-primary hover:underline">
+                Sign up here
               </Link>
             </CardDescription>
           </CardHeader>

@@ -67,8 +67,8 @@ export default function RegisterPage() {
             <CardTitle>Create Account</CardTitle>
             <CardDescription>
               Already have an account?{" "}
-              <Link href="/auth/login">
-                <a className="text-primary hover:underline">Login here</a>
+              <Link href="/auth/login" className="text-primary hover:underline">
+                Login here
               </Link>
             </CardDescription>
           </CardHeader>
