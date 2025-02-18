@@ -47,25 +47,42 @@ function useLogoutMutation() {
   const { toast } = useToast();
   return useMutation({
     mutationFn: async () => {
+      // First clear the user data to prevent unnecessary authenticated requests
+      queryClient.setQueryData(["/api/user"], null);
+
+      // Then perform the logout
       const res = await apiRequest("POST", "/api/logout");
       if (!res.ok) {
         const error = await res.json();
         throw new Error(error.error || "Logout failed");
       }
+
+      // Clear all queries from the cache
+      await queryClient.invalidateQueries();
+      queryClient.clear();
     },
     onSuccess: () => {
-      queryClient.setQueryData(["/api/user"], null);
       toast({
         title: "Logged out",
         description: "You have been successfully logged out.",
       });
+
+      // Redirect to login page
+      window.location.href = "/auth/login";
     },
     onError: (error: Error) => {
+      // If there's an error, we still want to clear the auth state
+      queryClient.setQueryData(["/api/user"], null);
+      queryClient.clear();
+
       toast({
-        title: "Logout failed",
-        description: error.message,
+        title: "Logout issue",
+        description: "You have been logged out but there was an issue with the server.",
         variant: "destructive",
       });
+
+      // Still redirect to login page
+      window.location.href = "/auth/login";
     },
   });
 }

@@ -3,6 +3,10 @@ import { QueryClient, QueryFunction } from "@tanstack/react-query";
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
     const text = (await res.text()) || res.statusText;
+    // Don't throw on 401 during logout
+    if (res.status === 401 && window.location.pathname === "/auth/login") {
+      return;
+    }
     throw new Error(`${res.status}: ${text}`);
   }
 }
@@ -44,10 +48,10 @@ export const getQueryFn: <T>(options: {
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      queryFn: getQueryFn({ on401: "throw" }),
+      queryFn: getQueryFn({ on401: "returnNull" }), // Changed to returnNull to handle 401s gracefully
       refetchInterval: false,
-      refetchOnWindowFocus: true, 
-      staleTime: 0, 
+      refetchOnWindowFocus: true,
+      staleTime: 0,
       retry: false,
     },
     mutations: {
