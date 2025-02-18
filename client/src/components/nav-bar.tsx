@@ -1,8 +1,9 @@
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { BriefcaseIcon, HomeIcon, UserCircleIcon, BarChartIcon, LogOutIcon, ShieldIcon } from "lucide-react";
+import { BriefcaseIcon, HomeIcon, UserCircleIcon, BarChartIcon, LogOutIcon, ShieldIcon, MessageSquareIcon } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { NotificationsDialog } from "@/components/NotificationsDialog";
+import { FeedbackDialog } from "@/components/FeedbackDialog";
 
 export function NavBar() {
   const { user, logoutMutation } = useAuth();
@@ -59,6 +60,12 @@ export function NavBar() {
             )}
           </div>
           <div className="flex items-center space-x-2">
+            {/* Prominent Feedback Button */}
+            <Button variant="secondary" size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90">
+              <MessageSquareIcon className="h-4 w-4 mr-2" />
+              <FeedbackDialog />
+            </Button>
+
             {user ? (
               <>
                 <NotificationsDialog />
