@@ -27,7 +27,8 @@ export function JobList() {
   const applyMutation = useMutation({
     mutationFn: async (jobId: number) => {
       const now = new Date().toISOString();
-      const res = await apiRequest(
+      // First create the application
+      const appRes = await apiRequest(
         "POST",
         "/api/applications",
         {
@@ -49,14 +50,40 @@ export function JobList() {
           lastStatusUpdate: now
         }
       );
-      if (!res.ok) {
-        const error = await res.json();
+
+      if (!appRes.ok) {
+        const error = await appRes.json();
         throw new Error(error.message || "Failed to submit application");
       }
-      return res.json();
+
+      // Create a notification for the application
+      const notifRes = await apiRequest(
+        "POST",
+        "/api/notifications",
+        {
+          userId: user!.id,
+          type: "application",
+          title: "Application Submitted",
+          message: `Your application has been submitted successfully.`,
+          metadata: {
+            jobId,
+            applicationId: (await appRes.json()).id
+          },
+          read: false,
+          createdAt: now
+        }
+      );
+
+      if (!notifRes.ok) {
+        console.error("Failed to create notification");
+      }
+
+      return appRes.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/applications"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/notifications"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/notifications/unread-count"] });
       toast({
         title: "Application submitted",
         description: "Your application has been successfully submitted.",

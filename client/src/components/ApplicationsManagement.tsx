@@ -44,6 +44,8 @@ export function ApplicationsManagement() {
   const updateStatusMutation = useMutation({
     mutationFn: async ({ applicationId, status }: { applicationId: number; status: string }) => {
       const now = new Date().toISOString();
+
+      // Update the application status
       const response = await apiRequest(
         "PATCH",
         `/api/applications/${applicationId}/status`,
@@ -61,10 +63,37 @@ export function ApplicationsManagement() {
         throw new Error(error.message || "Failed to update application status");
       }
 
-      return response.json();
+      const application = await response.json();
+
+      // Create a notification for the status change
+      const notifRes = await apiRequest(
+        "POST",
+        "/api/notifications",
+        {
+          userId: application.profileId,
+          type: "status_change",
+          title: "Application Status Updated",
+          message: `Your application status has been updated to ${status}.`,
+          metadata: {
+            applicationId,
+            status,
+            jobId: application.jobId
+          },
+          read: false,
+          createdAt: now
+        }
+      );
+
+      if (!notifRes.ok) {
+        console.error("Failed to create notification");
+      }
+
+      return application;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/applications"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/notifications"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/notifications/unread-count"] });
       toast({
         title: "Success",
         description: "Application status updated successfully",
