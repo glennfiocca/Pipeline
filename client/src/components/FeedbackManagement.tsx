@@ -101,9 +101,9 @@ export function FeedbackManagement() {
                     </p>
                   </div>
                 </div>
-                
+
                 <div className="mt-2 space-y-2">
-                  <p className="text-sm">{feedback.message}</p>
+                  <p className="text-sm">{feedback.comment}</p>
                   {feedback.adminResponse && (
                     <div className="mt-2 p-2 bg-muted rounded-md">
                       <p className="text-sm font-medium">Admin Response:</p>
