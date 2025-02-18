@@ -56,29 +56,40 @@ export function JobList() {
         throw new Error(error.message || "Failed to submit application");
       }
 
-      // Create a notification for the application
-      const notifRes = await apiRequest(
-        "POST",
-        "/api/notifications",
+      const appData = await appRes.json();
+
+      // Create notifications for the application
+      const notifications = [
+        // Application confirmation notification
         {
           userId: user!.id,
-          type: "application",
+          type: "application_submitted",
           title: "Application Submitted",
-          message: `Your application has been submitted successfully.`,
+          message: `Your application for the position at ${selectedJob?.company} has been submitted successfully.`,
           metadata: {
             jobId,
-            applicationId: (await appRes.json()).id
+            applicationId: appData.id,
+            company: selectedJob?.company
           },
           read: false,
           createdAt: now
         }
-      );
+      ];
 
-      if (!notifRes.ok) {
-        console.error("Failed to create notification");
+      // Create all notifications
+      for (const notification of notifications) {
+        const notifRes = await apiRequest(
+          "POST",
+          "/api/notifications",
+          notification
+        );
+
+        if (!notifRes.ok) {
+          console.error("Failed to create notification:", notification.type);
+        }
       }
 
-      return appRes.json();
+      return appData;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/applications"] });

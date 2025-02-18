@@ -363,8 +363,48 @@ export function registerRoutes(app: Express): Server {
         return res.status(400).json({ error: "Invalid status" });
       }
 
-      const application = await storage.updateApplicationStatus(parseInt(req.params.id), status);
-      res.json(application);
+      const applicationId = parseInt(req.params.id);
+      if (isNaN(applicationId)) {
+        return res.status(400).json({ error: "Invalid application ID" });
+      }
+
+      // Get the application to fetch user and job details
+      const application = await storage.getApplication(applicationId);
+      if (!application) {
+        return res.status(404).json({ error: "Application not found" });
+      }
+
+      // Get the job details
+      const job = await storage.getJob(application.jobId);
+      if (!job) {
+        return res.status(404).json({ error: "Job not found" });
+      }
+
+      // Update application status
+      const updatedApplication = await storage.updateApplicationStatus(applicationId, status);
+
+      // Create a notification for the status change
+      if (application.profileId) {
+        await storage.createNotification({
+          userId: application.profileId,
+          type: 'application_status_change',
+          title: 'Application Status Updated',
+          content: `Your application for ${job.title} at ${job.company} has been moved to ${status}`,
+          isRead: false,
+          relatedId: applicationId,
+          relatedType: 'application',
+          metadata: {
+            jobId: job.id,
+            applicationId: applicationId,
+            oldStatus: application.status,
+            newStatus: status,
+            company: job.company,
+            jobTitle: job.title
+          }
+        });
+      }
+
+      res.json(updatedApplication);
     } catch (error) {
       console.error('Error updating application status:', error);
       res.status(500).json({ error: (error as Error).message });
@@ -418,7 +458,6 @@ export function registerRoutes(app: Express): Server {
         ...req.body,
         applicationId,
         isFromAdmin: req.user?.isAdmin || false,
-        // For admin messages, use company name, otherwise use actual username
         senderUsername: req.user?.isAdmin ? job.company : req.user?.username
       };
 
@@ -428,6 +467,27 @@ export function registerRoutes(app: Express): Server {
       }
 
       const message = await storage.createMessage(parsed.data);
+
+      // Create a notification for the message if it's from admin/company
+      if (req.user?.isAdmin && application.profileId) {
+        await storage.createNotification({
+          userId: application.profileId,
+          type: 'new_company_message',
+          title: 'New Message from Company',
+          content: `You have a new message from ${job.company} regarding your application for ${job.title}`,
+          isRead: false,
+          relatedId: message.id,
+          relatedType: 'message',
+          metadata: {
+            jobId: job.id,
+            applicationId: applicationId,
+            messageId: message.id,
+            company: job.company,
+            jobTitle: job.title
+          }
+        });
+      }
+
       res.status(201).json(message);
     } catch (error) {
       console.error('Error creating message:', error);
