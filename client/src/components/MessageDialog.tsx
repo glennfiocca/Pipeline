@@ -17,14 +17,29 @@ interface MessageDialogProps {
   jobTitle: string;
   company: string;
   isAdmin?: boolean;
+  isOpen?: boolean;
+  onClose?: () => void;
 }
 
-export function MessageDialog({ applicationId, jobTitle, company, isAdmin }: MessageDialogProps) {
+export function MessageDialog({
+  applicationId,
+  jobTitle,
+  company,
+  isAdmin,
+  isOpen: propIsOpen,
+  onClose
+}: MessageDialogProps) {
   const [newMessage, setNewMessage] = useState("");
   const { toast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
   const { user } = useAuth();
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (propIsOpen !== undefined) {
+      setIsOpen(propIsOpen);
+    }
+  }, [propIsOpen]);
 
   const queryKey = [`/api/applications/${applicationId}/messages`];
 
@@ -69,7 +84,7 @@ export function MessageDialog({ applicationId, jobTitle, company, isAdmin }: Mes
       return res.json();
     },
     onSuccess: (newMessage) => {
-      queryClient.setQueryData<Message[]>(queryKey, 
+      queryClient.setQueryData<Message[]>(queryKey,
         old => [...(old || []), newMessage]
       );
       setNewMessage("");
@@ -112,7 +127,10 @@ export function MessageDialog({ applicationId, jobTitle, company, isAdmin }: Mes
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+    <Dialog open={isOpen} onOpenChange={(open) => {
+      setIsOpen(open);
+      if (!open) onClose?.();
+    }}>
       <DialogTrigger asChild>
         <Button variant="ghost" className="relative">
           <Mail className="h-4 w-4 mr-2" />

@@ -4,7 +4,7 @@ import { Application, Job } from "@shared/schema";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { Loader2, AlertCircle } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
@@ -14,6 +14,8 @@ import { queryClient } from "@/lib/queryClient";
 import { WithdrawDialog } from "@/components/WithdrawDialog";
 import { ApplicationCreditsCard } from "@/components/ApplicationCreditsCard";
 import { MessageDialog } from "@/components/MessageDialog";
+import { FeedbackDialog } from "@/components/FeedbackDialog";
+import { useLocation } from "wouter";
 
 interface StatusHistoryItem {
   status: string;
@@ -22,7 +24,27 @@ interface StatusHistoryItem {
 
 export default function DashboardPage() {
   const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
+  const [activeMessageId, setActiveMessageId] = useState<number | null>(null);
+  const [activeFeedbackId, setActiveFeedbackId] = useState<number | null>(null);
+  const [isReadOnly, setIsReadOnly] = useState(false);
   const { toast } = useToast();
+  const [location] = useLocation();
+
+  // Parse query parameters
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const messageId = params.get('messageId');
+    const feedbackId = params.get('feedbackId');
+    const readonly = params.get('readonly');
+
+    if (messageId) {
+      setActiveMessageId(parseInt(messageId));
+    }
+    if (feedbackId) {
+      setActiveFeedbackId(parseInt(feedbackId));
+      setIsReadOnly(readonly === 'true');
+    }
+  }, [location]);
 
   const { data: applications = [], isLoading: isLoadingApps } = useQuery<Application[]>({
     queryKey: ["/api/applications"],
@@ -30,10 +52,6 @@ export default function DashboardPage() {
 
   const { data: jobs = [], isLoading: isLoadingJobs } = useQuery<Job[]>({
     queryKey: ["/api/jobs"],
-  });
-
-  const { data: profiles = [] } = useQuery({
-    queryKey: ["/api/profiles"],
   });
 
   const getJob = (jobId: number) => jobs.find((job) => job.id === jobId);
@@ -204,6 +222,7 @@ export default function DashboardPage() {
                             applicationId={application.id}
                             jobTitle={job.title}
                             company={job.company}
+                            onClick={() => setActiveMessageId(application.id)}
                           />
                           {application.status !== "Withdrawn" && (
                             <WithdrawDialog
@@ -258,6 +277,28 @@ export default function DashboardPage() {
           </ScrollArea>
         </CardContent>
       </Card>
+
+      {activeMessageId && (
+        <MessageDialog
+          applicationId={activeMessageId}
+          jobTitle={jobs.find(j => j.id === applications.find(a => a.id === activeMessageId)?.jobId)?.title || ""}
+          company={jobs.find(j => j.id === applications.find(a => a.id === activeMessageId)?.jobId)?.company || ""}
+          onClose={() => setActiveMessageId(null)}
+          isOpen={true}
+        />
+      )}
+
+      {activeFeedbackId && (
+        <FeedbackDialog
+          feedbackId={activeFeedbackId}
+          isReadOnly={isReadOnly}
+          isOpen={true}
+          onClose={() => {
+            setActiveFeedbackId(null);
+            setIsReadOnly(false);
+          }}
+        />
+      )}
     </div>
   );
 }

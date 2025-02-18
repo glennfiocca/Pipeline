@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useState, useEffect } from "react";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import {
   Dialog,
   DialogContent,
@@ -38,20 +38,51 @@ const feedbackSchema = z.object({
   comment: z.string().min(10, "Please provide more detailed feedback"),
 });
 
-export function FeedbackDialog() {
+interface FeedbackDialogProps {
+  feedbackId?: number;
+  isReadOnly?: boolean;
+  isOpen?: boolean;
+  onClose?: () => void;
+}
+
+export function FeedbackDialog({ feedbackId, isReadOnly = false, isOpen: propIsOpen, onClose }: FeedbackDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
   const [hoveredStar, setHoveredStar] = useState(0);
 
+  // Query for specific feedback if feedbackId is provided
+  const { data: feedback, isLoading: isLoadingFeedback } = useQuery({
+    queryKey: [`/api/feedback/${feedbackId}`],
+    enabled: !!feedbackId,
+  });
+
   const form = useForm<z.infer<typeof feedbackSchema>>({
     resolver: zodResolver(feedbackSchema),
     defaultValues: {
-      rating: 0,
-      category: "general",
-      comment: "",
+      rating: feedback?.rating || 0,
+      category: feedback?.category || "general",
+      comment: feedback?.comment || "",
     },
   });
+
+  // Update form values when feedback data is loaded
+  useEffect(() => {
+    if (feedback) {
+      form.reset({
+        rating: feedback.rating,
+        category: feedback.category,
+        comment: feedback.comment,
+      });
+    }
+  }, [feedback, form]);
+
+  // Sync isOpen with prop
+  useEffect(() => {
+    if (propIsOpen !== undefined) {
+      setIsOpen(propIsOpen);
+    }
+  }, [propIsOpen]);
 
   const createFeedbackMutation = useMutation({
     mutationFn: async (values: z.infer<typeof feedbackSchema>) => {
@@ -79,6 +110,7 @@ export function FeedbackDialog() {
       });
       form.reset();
       setIsOpen(false);
+      onClose?.();
     },
     onError: (error: Error) => {
       toast({
@@ -90,11 +122,30 @@ export function FeedbackDialog() {
   });
 
   const onSubmit = (values: z.infer<typeof feedbackSchema>) => {
+    if (isReadOnly) return;
     createFeedbackMutation.mutate(values);
   };
 
+  if (isLoadingFeedback) {
+    return (
+      <Dialog open={isOpen} onOpenChange={(open) => {
+        setIsOpen(open);
+        if (!open) onClose?.();
+      }}>
+        <DialogContent className="sm:max-w-[425px]">
+          <div className="flex items-center justify-center p-4">
+            <Loader2 className="h-6 w-6 animate-spin" />
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+    <Dialog open={isOpen} onOpenChange={(open) => {
+      setIsOpen(open);
+      if (!open) onClose?.();
+    }}>
       <DialogTrigger asChild>
         <Button variant="ghost" size="sm">
           Feedback
@@ -102,7 +153,9 @@ export function FeedbackDialog() {
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Share your feedback</DialogTitle>
+          <DialogTitle>
+            {isReadOnly ? "Feedback Details" : "Share your feedback"}
+          </DialogTitle>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -115,13 +168,12 @@ export function FeedbackDialog() {
                   <FormControl>
                     <div className="flex gap-1">
                       {[1, 2, 3, 4, 5].map((star) => (
-                        <button
+                        <div
                           key={star}
-                          type="button"
-                          className="text-2xl focus:outline-none"
-                          onMouseEnter={() => setHoveredStar(star)}
-                          onMouseLeave={() => setHoveredStar(0)}
-                          onClick={() => field.onChange(star)}
+                          className="text-2xl"
+                          onMouseEnter={() => !isReadOnly && setHoveredStar(star)}
+                          onMouseLeave={() => !isReadOnly && setHoveredStar(0)}
+                          onClick={() => !isReadOnly && field.onChange(star)}
                         >
                           <Star
                             className={`h-6 w-6 ${
@@ -130,7 +182,7 @@ export function FeedbackDialog() {
                                 : "text-muted-foreground"
                             }`}
                           />
-                        </button>
+                        </div>
                       ))}
                     </div>
                   </FormControl>
@@ -147,6 +199,7 @@ export function FeedbackDialog() {
                   <Select
                     onValueChange={field.onChange}
                     defaultValue={field.value}
+                    disabled={isReadOnly}
                   >
                     <FormControl>
                       <SelectTrigger>
@@ -175,22 +228,25 @@ export function FeedbackDialog() {
                     <Textarea
                       placeholder="Tell us more about your experience..."
                       {...field}
+                      disabled={isReadOnly}
                     />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
-            <Button
-              type="submit"
-              className="w-full"
-              disabled={createFeedbackMutation.isPending}
-            >
-              {createFeedbackMutation.isPending ? (
-                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-              ) : null}
-              Submit Feedback
-            </Button>
+            {!isReadOnly && (
+              <Button
+                type="submit"
+                className="w-full"
+                disabled={createFeedbackMutation.isPending}
+              >
+                {createFeedbackMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                ) : null}
+                Submit Feedback
+              </Button>
+            )}
           </form>
         </Form>
       </DialogContent>

@@ -11,9 +11,36 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useNotifications } from "@/hooks/use-notifications";
 import { Badge } from "@/components/ui/badge";
+import { useLocation } from "wouter";
 
 export function NotificationsDialog() {
   const { notifications, unreadCount, markAsRead, markAllAsRead, isLoading } = useNotifications();
+  const [, setLocation] = useLocation();
+
+  const handleNotificationClick = async (notification: any) => {
+    // Mark as read if not already read
+    if (!notification.isRead) {
+      await markAsRead(notification.id);
+    }
+
+    // Navigate based on notification type
+    switch (notification.type) {
+      case 'new_company_message':
+        // Navigate to the specific message in the application chat
+        setLocation(`/dashboard?messageId=${notification.metadata?.messageId}`);
+        break;
+      case 'application_status_change':
+        // Navigate to the specific job
+        setLocation(`/jobs?jobId=${notification.metadata?.jobId}`);
+        break;
+      case 'admin_feedback':
+        // Navigate to the feedback view (read-only)
+        setLocation(`/dashboard?feedbackId=${notification.relatedId}&readonly=true`);
+        break;
+      default:
+        console.warn('Unknown notification type:', notification.type);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -61,10 +88,17 @@ export function NotificationsDialog() {
               {notifications.map((notification) => (
                 <div
                   key={notification.id}
-                  className={`p-4 rounded-lg border transition-colors ${
+                  className={`p-4 rounded-lg border transition-colors cursor-pointer hover:bg-accent ${
                     !notification.isRead ? "bg-muted/50" : ""
                   }`}
-                  onClick={() => !notification.isRead && markAsRead(notification.id)}
+                  onClick={() => handleNotificationClick(notification)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      handleNotificationClick(notification);
+                    }
+                  }}
                 >
                   <div className="flex items-start justify-between">
                     <div>
