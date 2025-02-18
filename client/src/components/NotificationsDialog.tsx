@@ -16,6 +16,9 @@ import { useState } from "react";
 import { JobModal } from "@/components/JobModal";
 import { useQuery } from "@tanstack/react-query";
 import { Job, Application } from "@shared/schema";
+import { MessageDialog } from "@/components/MessageDialog";
+import { WithdrawDialog } from "@/components/WithdrawDialog";
+import { apiRequest } from "@/lib/queryClient";
 
 export function NotificationsDialog() {
   const { notifications, unreadCount, markAsRead, markAllAsRead, isLoading } = useNotifications();
@@ -34,38 +37,36 @@ export function NotificationsDialog() {
     queryKey: ["/api/applications"],
   });
 
-  // Check if user has already applied for the selected job
-  const hasApplied = selectedJobId 
-    ? applications.some(app => app.jobId === selectedJobId)
-    : false;
-
+  // Handle notification click based on type
   const handleNotificationClick = async (notification: any) => {
     // Mark as read if not already read
-    if (!notification.isRead) {
+    if (!notification.read) {
       await markAsRead(notification.id);
     }
 
-    // Close the notifications dialog
-    setIsOpen(false);
+    // Close the notifications dialog if not showing job modal
+    if (notification.type !== 'application_status_change') {
+      setIsOpen(false);
+    }
 
     // Navigate based on notification type
     switch (notification.type) {
       case 'new_company_message':
-        // Navigate to the specific message in the application chat
         setLocation(`/dashboard?messageId=${notification.metadata.applicationId}`);
         break;
       case 'application_status_change':
-        // Set the selected job ID to trigger the job data fetch
         setSelectedJobId(notification.metadata.jobId);
         break;
       case 'admin_feedback':
-        // Navigate to the feedback view (read-only)
-        setLocation(`/dashboard?feedbackId=${notification.relatedId}&readonly=true`);
+        setLocation(`/dashboard?feedbackId=${notification.metadata.feedbackId}&readonly=true`);
         break;
       default:
         console.warn('Unknown notification type:', notification.type);
     }
   };
+
+  // Find the application for the selected job
+  const selectedApplication = applications.find(app => app.jobId === selectedJobId);
 
   if (isLoading) {
     return (
@@ -115,7 +116,7 @@ export function NotificationsDialog() {
                   <div
                     key={notification.id}
                     className={`p-4 rounded-lg border transition-colors cursor-pointer hover:bg-accent ${
-                      !notification.isRead ? "bg-muted/50" : ""
+                      !notification.read ? "bg-muted/50" : ""
                     }`}
                     onClick={() => handleNotificationClick(notification)}
                     role="button"
@@ -130,13 +131,13 @@ export function NotificationsDialog() {
                       <div>
                         <h4 className="text-sm font-medium">{notification.title}</h4>
                         <p className="mt-1 text-sm text-muted-foreground">
-                          {notification.content}
+                          {notification.message}
                         </p>
                         <p className="mt-2 text-xs text-muted-foreground">
                           {format(new Date(notification.createdAt), "PPp")}
                         </p>
                       </div>
-                      {!notification.isRead && (
+                      {!notification.read && (
                         <Badge variant="secondary" className="ml-2">New</Badge>
                       )}
                     </div>
@@ -148,13 +149,40 @@ export function NotificationsDialog() {
         </DialogContent>
       </Dialog>
 
-      {selectedJob && (
+      {selectedJob && selectedApplication && (
         <JobModal
           job={selectedJob}
-          isOpen={true}
-          onClose={() => setSelectedJobId(null)}
-          onApply={() => {}}
-          alreadyApplied={hasApplied}
+          isOpen={!!selectedJob}
+          onClose={() => {
+            setSelectedJobId(null);
+            setIsOpen(false);
+          }}
+          alreadyApplied={true}
+          applicationControls={
+            <div className="flex items-center gap-4 w-full justify-center">
+              <MessageDialog
+                applicationId={selectedApplication.id}
+                jobTitle={selectedJob.title}
+                company={selectedJob.company}
+              />
+              {selectedApplication.status !== "Withdrawn" && (
+                <WithdrawDialog
+                  onWithdraw={async () => {
+                    const res = await apiRequest(
+                      "PATCH",
+                      `/api/applications/${selectedApplication.id}`,
+                      { status: "Withdrawn" }
+                    );
+                    if (res.ok) {
+                      setSelectedJobId(null);
+                      setIsOpen(false);
+                    }
+                  }}
+                  isPending={false}
+                />
+              )}
+            </div>
+          }
         />
       )}
     </>
