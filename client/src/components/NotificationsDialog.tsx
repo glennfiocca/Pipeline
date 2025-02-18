@@ -1,4 +1,4 @@
-import { Bell } from "lucide-react";
+import { Bell, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import {
@@ -143,6 +143,8 @@ export function NotificationsDialog() {
           job={selectedJob}
           isOpen={true}
           onClose={() => setSelectedJobId(null)}
+          onApply={() => {}} 
+          viewOnly={true} 
         />
       )}
     </>
