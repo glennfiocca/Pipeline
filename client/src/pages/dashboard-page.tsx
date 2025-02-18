@@ -16,6 +16,7 @@ import { ApplicationCreditsCard } from "@/components/ApplicationCreditsCard";
 import { MessageDialog } from "@/components/MessageDialog";
 import { FeedbackDialog } from "@/components/FeedbackDialog";
 import { useLocation } from "wouter";
+import { JobModal } from "@/components/JobModal";
 
 interface StatusHistoryItem {
   status: string;
@@ -27,6 +28,7 @@ export default function DashboardPage() {
   const [activeMessageId, setActiveMessageId] = useState<number | null>(null);
   const [activeFeedbackId, setActiveFeedbackId] = useState<number | null>(null);
   const [isReadOnly, setIsReadOnly] = useState(false);
+  const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const { toast } = useToast();
   const [location] = useLocation();
 
@@ -119,6 +121,10 @@ export default function DashboardPage() {
     },
   });
 
+  const handleJobClick = (job: Job) => {
+    setSelectedJob(job);
+  };
+
   if (isLoadingApps || isLoadingJobs) {
     return (
       <div className="flex items-center justify-center min-h-[calc(100vh-4rem)]">
@@ -191,9 +197,10 @@ export default function DashboardPage() {
                     <div
                       key={application.id}
                       className={cn(
-                        "p-4 rounded-lg border space-y-3",
+                        "p-4 rounded-lg border space-y-3 cursor-pointer hover:bg-accent/50 transition-colors",
                         !job.isActive && "bg-muted/30"
                       )}
+                      onClick={() => handleJobClick(job)}
                     >
                       <div className="flex items-start justify-between">
                         <div className="space-y-1">
@@ -297,6 +304,32 @@ export default function DashboardPage() {
             setActiveFeedbackId(null);
             setIsReadOnly(false);
           }}
+        />
+      )}
+
+      {selectedJob && (
+        <JobModal
+          job={selectedJob}
+          isOpen={true}
+          onClose={() => setSelectedJob(null)}
+          alreadyApplied={true}
+          applicationControls={
+            <div className="flex items-center gap-4">
+              <MessageDialog
+                applicationId={applications.find(app => app.jobId === selectedJob.id)?.id || 0}
+                jobTitle={selectedJob.title}
+                company={selectedJob.company}
+              />
+              <WithdrawDialog
+                onWithdraw={() =>
+                  withdrawMutation.mutate(
+                    applications.find(app => app.jobId === selectedJob.id)?.id || 0
+                  )
+                }
+                isPending={withdrawMutation.isPending}
+              />
+            </div>
+          }
         />
       )}
     </div>
