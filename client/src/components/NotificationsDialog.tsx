@@ -27,7 +27,7 @@ export function NotificationsDialog() {
     switch (notification.type) {
       case 'new_company_message':
         // Navigate to the specific message in the application chat
-        setLocation(`/dashboard?messageId=${notification.metadata?.messageId}`);
+        setLocation(`/dashboard?messageId=${notification.metadata.applicationId}`);
         break;
       case 'application_status_change':
         // Navigate to the specific job
