@@ -13,6 +13,7 @@ import RegisterPage from "@/pages/register-page";
 import NotFound from "@/pages/not-found";
 import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from "@/hooks/use-auth";
+import { NotificationsProvider } from "@/hooks/use-notifications";
 
 function Router() {
   return (
@@ -33,14 +34,16 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <div className="min-h-screen bg-background font-sans antialiased flex flex-col">
-          <NavBar />
-          <main className="flex-1">
-            <Router />
-          </main>
-          <Footer />
-          <Toaster />
-        </div>
+        <NotificationsProvider>
+          <div className="min-h-screen bg-background font-sans antialiased flex flex-col">
+            <NavBar />
+            <main className="flex-1">
+              <Router />
+            </main>
+            <Footer />
+            <Toaster />
+          </div>
+        </NotificationsProvider>
       </AuthProvider>
     </QueryClientProvider>
   );
