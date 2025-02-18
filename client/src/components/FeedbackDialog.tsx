@@ -28,10 +28,9 @@ import { useToast } from "@/hooks/use-toast";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { apiRequest } from "@/lib/queryClient";
-import { Star, Loader2 } from "lucide-react";
+import { Star, MessageSquarePlus } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { z } from "zod";
-import { MessageSquarePlus } from "lucide-react"; // Add this import
 
 const feedbackSchema = z.object({
   rating: z.number().min(1).max(5),
@@ -52,8 +51,7 @@ export function FeedbackDialog({ feedbackId, isReadOnly = false, isOpen: propIsO
   const { user } = useAuth();
   const [hoveredStar, setHoveredStar] = useState(0);
 
-  // Query for specific feedback if feedbackId is provided
-  const { data: feedback, isLoading: isLoadingFeedback } = useQuery({
+  const { data: feedback } = useQuery({
     queryKey: [`/api/feedback/${feedbackId}`],
     enabled: !!feedbackId,
   });
@@ -61,24 +59,22 @@ export function FeedbackDialog({ feedbackId, isReadOnly = false, isOpen: propIsO
   const form = useForm<z.infer<typeof feedbackSchema>>({
     resolver: zodResolver(feedbackSchema),
     defaultValues: {
-      rating: feedback?.rating || 0,
-      category: feedback?.category || "general",
-      comment: feedback?.comment || "",
+      rating: 0,
+      category: "general",
+      comment: "",
     },
   });
 
-  // Update form values when feedback data is loaded
   useEffect(() => {
     if (feedback) {
       form.reset({
-        rating: feedback.rating,
-        category: feedback.category,
-        comment: feedback.comment,
+        rating: feedback.rating || 0,
+        category: feedback.category || "general",
+        comment: feedback.comment || "",
       });
     }
   }, [feedback, form]);
 
-  // Sync isOpen with prop
   useEffect(() => {
     if (propIsOpen !== undefined) {
       setIsOpen(propIsOpen);
@@ -127,21 +123,6 @@ export function FeedbackDialog({ feedbackId, isReadOnly = false, isOpen: propIsO
     createFeedbackMutation.mutate(values);
   };
 
-  if (isLoadingFeedback) {
-    return (
-      <Dialog open={isOpen} onOpenChange={(open) => {
-        setIsOpen(open);
-        if (!open) onClose?.();
-      }}>
-        <DialogContent className="sm:max-w-[425px]">
-          <div className="flex items-center justify-center p-4">
-            <Loader2 className="h-6 w-6 animate-spin" />
-          </div>
-        </DialogContent>
-      </Dialog>
-    );
-  }
-
   return (
     <Dialog open={isOpen} onOpenChange={(open) => {
       setIsOpen(open);
@@ -150,10 +131,9 @@ export function FeedbackDialog({ feedbackId, isReadOnly = false, isOpen: propIsO
       <DialogTrigger asChild>
         <Button
           variant="default"
-          size="md"
-          className="transition-all hover:scale-105 flex gap-2 items-center shadow-sm"
+          className="fixed right-0 top-1/2 -translate-y-1/2 -rotate-90 origin-right transition-transform hover:translate-x-[-8px] shadow-md flex gap-2 items-center z-50 rounded-t-lg rounded-b-none"
         >
-          <MessageSquarePlus className="h-4 w-4" />
+          <MessageSquarePlus className="h-4 w-4 rotate-90" />
           Feedback
         </Button>
       </DialogTrigger>
@@ -247,9 +227,9 @@ export function FeedbackDialog({ feedbackId, isReadOnly = false, isOpen: propIsO
                 className="w-full"
                 disabled={createFeedbackMutation.isPending}
               >
-                {createFeedbackMutation.isPending ? (
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                ) : null}
+                {createFeedbackMutation.isPending && (
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-background border-t-foreground mr-2" />
+                )}
                 Submit Feedback
               </Button>
             )}
