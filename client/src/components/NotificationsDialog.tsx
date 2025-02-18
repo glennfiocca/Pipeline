@@ -12,16 +12,21 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useNotifications } from "@/hooks/use-notifications";
 import { Badge } from "@/components/ui/badge";
 import { useLocation } from "wouter";
+import { useState } from "react";
 
 export function NotificationsDialog() {
   const { notifications, unreadCount, markAsRead, markAllAsRead, isLoading } = useNotifications();
   const [, setLocation] = useLocation();
+  const [isOpen, setIsOpen] = useState(false);
 
   const handleNotificationClick = async (notification: any) => {
     // Mark as read if not already read
     if (!notification.isRead) {
       await markAsRead(notification.id);
     }
+
+    // Close the dialog
+    setIsOpen(false);
 
     // Navigate based on notification type
     switch (notification.type) {
@@ -31,7 +36,7 @@ export function NotificationsDialog() {
         break;
       case 'application_status_change':
         // Navigate to the specific job
-        setLocation(`/dashboard?applicationId=${notification.metadata.applicationId}`);
+        setLocation(`/jobs/${notification.metadata.jobId}`);
         break;
       case 'admin_feedback':
         // Navigate to the feedback view (read-only)
@@ -51,7 +56,7 @@ export function NotificationsDialog() {
   }
 
   return (
-    <Dialog>
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
         <Button variant="ghost" size="icon" className="relative">
           <Bell className="h-5 w-5" />
