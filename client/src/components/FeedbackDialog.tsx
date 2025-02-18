@@ -31,6 +31,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { Star, Loader2 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { z } from "zod";
+import { MessageSquarePlus } from "lucide-react"; // Add this import
 
 const feedbackSchema = z.object({
   rating: z.number().min(1).max(5),
@@ -147,7 +148,12 @@ export function FeedbackDialog({ feedbackId, isReadOnly = false, isOpen: propIsO
       if (!open) onClose?.();
     }}>
       <DialogTrigger asChild>
-        <Button variant="ghost" size="sm">
+        <Button
+          variant="default"
+          size="md"
+          className="transition-all hover:scale-105 flex gap-2 items-center shadow-sm"
+        >
+          <MessageSquarePlus className="h-4 w-4" />
           Feedback
         </Button>
       </DialogTrigger>
