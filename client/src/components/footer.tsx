@@ -1,4 +1,5 @@
 import { Link } from "wouter";
+import { FeedbackDialog } from "./FeedbackDialog";
 
 export function Footer() {
   const currentYear = new Date().getFullYear();
@@ -12,6 +13,9 @@ export function Footer() {
             <p className="text-sm text-muted-foreground">
               Smart job searching platform powered by AI and advanced matching algorithms.
             </p>
+            <div className="pt-2">
+              <FeedbackDialog />
+            </div>
           </div>
 
           <div className="space-y-3">
