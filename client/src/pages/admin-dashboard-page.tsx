@@ -400,23 +400,25 @@ export default function AdminDashboardPage() {
 
       {/* Dialogs */}
       <Dialog open={showNewJobDialog} onOpenChange={setShowNewJobDialog}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Create New Job</DialogTitle>
             <DialogDescription>
               Add a new job listing to the platform.
             </DialogDescription>
           </DialogHeader>
-          <NewJobForm
-            onSubmit={(data) => {
-              try {
-                createJobMutation.mutate(data);
-              } catch (error) {
-                console.error("Error submitting form:", error);
-              }
-            }}
-            onCancel={() => setShowNewJobDialog(false)}
-          />
+          <div className="py-4">
+            <NewJobForm
+              onSubmit={(data) => {
+                try {
+                  createJobMutation.mutate(data);
+                } catch (error) {
+                  console.error("Error submitting form:", error);
+                }
+              }}
+              onCancel={() => setShowNewJobDialog(false)}
+            />
+          </div>
         </DialogContent>
       </Dialog>
 
