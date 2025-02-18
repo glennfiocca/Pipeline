@@ -56,9 +56,16 @@ export function FeedbackManagement() {
   });
 
   const handleRespond = (feedback: Feedback) => {
+    if (feedback.adminResponse) {
+      toast({
+        title: "Notice",
+        description: "This feedback has already been responded to.",
+      });
+      return;
+    }
     setSelectedFeedback(feedback);
     responseForm.reset({
-      adminResponse: feedback.adminResponse || "",
+      adminResponse: "",
       status: feedback.status || "pending"
     });
     setShowResponseDialog(true);
@@ -116,8 +123,9 @@ export function FeedbackManagement() {
                   <Button
                     variant="outline"
                     onClick={() => handleRespond(feedback)}
+                    disabled={!!feedback.adminResponse}
                   >
-                    Respond
+                    {feedback.adminResponse ? "Responded" : "Respond"}
                   </Button>
                 </div>
               </div>

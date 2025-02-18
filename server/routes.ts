@@ -518,11 +518,35 @@ export function registerRoutes(app: Express): Server {
         return res.status(400).json({ error: "Status is required" });
       }
 
+      // Get the original feedback to get the user ID
+      const originalFeedback = await storage.getFeedbackById(feedbackId);
+      if (!originalFeedback) {
+        return res.status(404).json({ error: "Feedback not found" });
+      }
+
+      // Update the feedback status and response
       const feedback = await storage.updateFeedbackStatus(
         feedbackId, 
         status,
         adminResponse
       );
+
+      // Create a notification for the user if there's an admin response
+      if (adminResponse && originalFeedback.userId) {
+        await storage.createNotification({
+          userId: originalFeedback.userId,
+          type: 'feedback_response',
+          title: 'Admin Response to Your Feedback',
+          content: `An admin has responded to your feedback: "${adminResponse}"`,
+          isRead: false,
+          relatedId: feedbackId,
+          relatedType: 'feedback',
+          metadata: {
+            feedbackId: feedbackId
+          }
+        });
+      }
+
       res.json(feedback);
     } catch (error) {
       console.error('Error updating feedback:', error);
