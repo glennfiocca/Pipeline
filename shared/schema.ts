@@ -250,3 +250,30 @@ export const insertMessageSchema = createInsertSchema(messages).omit({
 // Types remain unchanged except for Message which will now include senderUsername
 export type Message = typeof messages.$inferSelect;
 export type InsertMessage = z.infer<typeof insertMessageSchema>;
+
+export const feedback = pgTable("feedback", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id"),
+  rating: integer("rating").notNull(),
+  comment: text("comment"),
+  category: text("category").notNull(),
+  status: text("status").notNull().default("pending"),
+  createdAt: text("created_at").notNull().default(new Date().toISOString()),
+  resolved: boolean("resolved").notNull().default(false),
+  adminResponse: text("admin_response"),
+  metadata: jsonb("metadata").default({})
+});
+
+export const insertFeedbackSchema = createInsertSchema(feedback).omit({
+  id: true,
+  createdAt: true,
+  resolved: true,
+  adminResponse: true
+}).extend({
+  rating: z.number().min(1).max(5),
+  category: z.enum(["bug", "feature", "general", "ui", "other"]),
+  status: z.enum(["pending", "in_progress", "resolved", "rejected"])
+});
+
+export type Feedback = typeof feedback.$inferSelect;
+export type InsertFeedback = z.infer<typeof insertFeedbackSchema>;

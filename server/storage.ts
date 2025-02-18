@@ -4,10 +4,11 @@ import { eq, desc, and } from "drizzle-orm";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
 import { 
-  messages, applications, jobs, profiles, users,
+  messages, applications, jobs, profiles, users, feedback,
   type Message, type InsertMessage,
   type Job, type Profile, type Application, type User,
-  type InsertJob, type InsertProfile, type InsertApplication, type InsertUser 
+  type InsertJob, type InsertProfile, type InsertApplication, type InsertUser,
+  type Feedback, type InsertFeedback
 } from "@shared/schema";
 import { db } from "./db";
 
@@ -68,6 +69,13 @@ export interface IStorage {
   deleteUser(id: number): Promise<void>;
   getAdminUsers(): Promise<User[]>;
   deleteJob(id: number): Promise<void>;
+
+  // Feedback methods
+  getFeedback(): Promise<Feedback[]>;
+  getFeedbackById(id: number): Promise<Feedback | undefined>;
+  createFeedback(feedback: InsertFeedback): Promise<Feedback>;
+  updateFeedbackStatus(id: number, status: string, adminResponse?: string): Promise<Feedback>;
+  getUnresolvedFeedback(): Promise<Feedback[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -453,6 +461,54 @@ export class DatabaseStorage implements IStorage {
   }
   async deleteJob(id: number): Promise<void> {
     await db.delete(jobs).where(eq(jobs.id, id));
+  }
+
+  async getFeedback(): Promise<Feedback[]> {
+    return await db.select().from(feedback).orderBy(desc(feedback.createdAt));
+  }
+
+  async getFeedbackById(id: number): Promise<Feedback | undefined> {
+    const [result] = await db
+      .select()
+      .from(feedback)
+      .where(eq(feedback.id, id));
+    return result;
+  }
+
+  async createFeedback(insertFeedback: InsertFeedback): Promise<Feedback> {
+    const [result] = await db
+      .insert(feedback)
+      .values({
+        ...insertFeedback,
+        createdAt: new Date().toISOString()
+      })
+      .returning();
+    return result;
+  }
+
+  async updateFeedbackStatus(
+    id: number,
+    status: string,
+    adminResponse?: string
+  ): Promise<Feedback> {
+    const [result] = await db
+      .update(feedback)
+      .set({
+        status,
+        adminResponse,
+        resolved: status === "resolved",
+      })
+      .where(eq(feedback.id, id))
+      .returning();
+    return result;
+  }
+
+  async getUnresolvedFeedback(): Promise<Feedback[]> {
+    return await db
+      .select()
+      .from(feedback)
+      .where(eq(feedback.resolved, false))
+      .orderBy(desc(feedback.createdAt));
   }
 }
 
