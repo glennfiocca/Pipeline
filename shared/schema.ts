@@ -37,8 +37,10 @@ export const insertUserSchema = baseUserSchema.extend({
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
 
+// Jobs table schema update
 export const jobs = pgTable("jobs", {
   id: serial("id").primaryKey(),
+  jobIdentifier: text("job_identifier").notNull().unique(), // New field
   title: text("title").notNull(),
   company: text("company").notNull(),
   description: text("description").notNull(),
@@ -52,6 +54,15 @@ export const jobs = pgTable("jobs", {
   isActive: boolean("is_active").default(true),
   lastCheckedAt: text("last_checked_at").notNull().default(new Date().toISOString()),
   deactivatedAt: text("deactivated_at")
+});
+
+// Update insert job schema
+export const insertJobSchema = createInsertSchema(jobs).omit({ 
+  id: true,
+  lastCheckedAt: true,
+  deactivatedAt: true 
+}).extend({
+  jobIdentifier: z.string().regex(/^PL\d{6}$/, "Job identifier must be 'PL' followed by 6 digits")
 });
 
 export const profiles = pgTable("profiles", {
@@ -192,7 +203,7 @@ export const insertProfileSchema = createInsertSchema(profiles).extend({
   referenceList: z.array(referenceSchema).optional()
 });
 
-export const insertJobSchema = createInsertSchema(jobs).omit({ id: true });
+
 export const insertApplicationSchema = createInsertSchema(applications).omit({ 
   id: true 
 }).extend({

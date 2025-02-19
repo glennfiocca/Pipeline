@@ -157,9 +157,32 @@ export class DatabaseStorage implements IStorage {
     return job;
   }
 
+  private async generateUniqueJobIdentifier(): Promise<string> {
+    let isUnique = false;
+    let jobIdentifier = '';
+
+    while (!isUnique) {
+      const randomNum = Math.floor(Math.random() * 900000) + 100000;
+      jobIdentifier = `PL${randomNum}`;
+
+      const [existingJob] = await db
+        .select()
+        .from(jobs)
+        .where(eq(jobs.jobIdentifier, jobIdentifier));
+
+      if (!existingJob) {
+        isUnique = true;
+      }
+    }
+
+    return jobIdentifier;
+  }
+
   async createJob(insertJob: InsertJob): Promise<Job> {
+    const jobIdentifier = await this.generateUniqueJobIdentifier();
     const [job] = await db.insert(jobs).values({
       ...insertJob,
+      jobIdentifier,
       lastCheckedAt: new Date().toISOString(),
       published: true,
       isActive: true
@@ -206,14 +229,13 @@ export class DatabaseStorage implements IStorage {
 
   async createApplication(insertApplication: InsertApplication): Promise<Application> {
     const now = new Date().toISOString();
-    // Capitalize the first letter of status to ensure consistency
     const status = insertApplication.status.charAt(0).toUpperCase() + insertApplication.status.slice(1).toLowerCase();
 
     const [application] = await db
       .insert(applications)
       .values({
         ...insertApplication,
-        status, // Use normalized status
+        status,
         appliedAt: now,
         lastStatusUpdate: now,
         statusHistory: [{
@@ -237,7 +259,6 @@ export class DatabaseStorage implements IStorage {
     }
 
     const now = new Date().toISOString();
-    // Normalize status case
     const normalizedStatus = status.charAt(0).toUpperCase() + status.slice(1).toLowerCase();
 
     const newHistoryEntry = {
@@ -307,7 +328,6 @@ export class DatabaseStorage implements IStorage {
 
   async getMessages(applicationId: number): Promise<Message[]> {
     try {
-      // Get the application to fetch the job details
       const [application] = await db
         .select()
         .from(applications)
@@ -318,7 +338,6 @@ export class DatabaseStorage implements IStorage {
         return [];
       }
 
-      // Get the job to get the company name
       const [job] = await db
         .select()
         .from(jobs)
@@ -329,15 +348,12 @@ export class DatabaseStorage implements IStorage {
         return [];
       }
 
-      // Get all messages for this application
-      // Changed to ascending order (removed desc) so new messages appear at the bottom
       const applicationMessages = await db
         .select()
         .from(messages)
         .where(eq(messages.applicationId, applicationId))
         .orderBy(messages.createdAt);
 
-      // Map and enhance messages with sender information
       return applicationMessages.map(message => ({
         ...message,
         senderUsername: message.isFromAdmin ? job.company : message.senderUsername
@@ -358,7 +374,6 @@ export class DatabaseStorage implements IStorage {
 
   async createMessage(insertMessage: InsertMessage): Promise<Message> {
     try {
-      // Get the application and job details for admin messages
       if (insertMessage.isFromAdmin) {
         const [application] = await db
           .select()
@@ -379,7 +394,6 @@ export class DatabaseStorage implements IStorage {
         }
       }
 
-      // Insert the message with the current timestamp and preserve the original sender
       const [message] = await db
         .insert(messages)
         .values({
