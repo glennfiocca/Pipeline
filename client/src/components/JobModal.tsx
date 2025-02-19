@@ -59,7 +59,7 @@ export function JobModal({
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold relative">
               {job.title}
-              <span className="absolute top-0 right-0 text-xs text-muted-foreground font-mono">
+              <span className="absolute top-0 right-8 text-xs text-muted-foreground font-mono">
                 {job.jobIdentifier}
               </span>
             </DialogTitle>
