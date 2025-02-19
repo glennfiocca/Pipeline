@@ -261,6 +261,8 @@ export const feedback = pgTable("feedback", {
   createdAt: text("created_at").notNull().default(new Date().toISOString()),
   resolved: boolean("resolved").notNull().default(false),
   adminResponse: text("admin_response"),
+  internalNotes: text("internal_notes"),
+  archived: boolean("archived").notNull().default(false),
   metadata: jsonb("metadata").default({})
 });
 
@@ -268,13 +270,16 @@ export const insertFeedbackSchema = createInsertSchema(feedback).omit({
   id: true,
   createdAt: true,
   resolved: true,
-  adminResponse: true
+  adminResponse: true,
+  internalNotes: true,
+  archived: true
 }).extend({
   rating: z.number().min(1).max(5),
   category: z.enum(["bug", "feature", "general", "ui", "other"]),
   status: z.enum(["pending", "in_progress", "resolved", "rejected", "received"])
 });
 
+// Types remain unchanged except for Feedback which will now include new fields
 export type Feedback = typeof feedback.$inferSelect;
 export type InsertFeedback = z.infer<typeof insertFeedbackSchema>;
 

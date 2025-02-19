@@ -77,6 +77,7 @@ export interface IStorage {
   createFeedback(feedback: InsertFeedback): Promise<Feedback>;
   updateFeedbackStatus(id: number, status: string, adminResponse?: string): Promise<Feedback>;
   getUnresolvedFeedback(): Promise<Feedback[]>;
+  updateFeedback(id: number, updates: Partial<Feedback>): Promise<Feedback>;
 
   // Add notification methods
   getNotifications(userId: number): Promise<Notification[]>;
@@ -472,7 +473,10 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getFeedback(): Promise<Feedback[]> {
-    return await db.select().from(feedback).orderBy(desc(feedback.createdAt));
+    return await db
+      .select()
+      .from(feedback)
+      .orderBy(desc(feedback.createdAt));
   }
 
   async getFeedbackById(id: number): Promise<Feedback | undefined> {
@@ -506,6 +510,18 @@ export class DatabaseStorage implements IStorage {
         adminResponse,
         resolved: status === "resolved",
       })
+      .where(eq(feedback.id, id))
+      .returning();
+    return result;
+  }
+
+  async updateFeedback(
+    id: number,
+    updates: Partial<Feedback>
+  ): Promise<Feedback> {
+    const [result] = await db
+      .update(feedback)
+      .set(updates)
       .where(eq(feedback.id, id))
       .returning();
     return result;
