@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import {
   Dialog,
   DialogContent,
@@ -38,25 +38,15 @@ const feedbackSchema = z.object({
   comment: z.string().min(10, "Please provide more detailed feedback"),
 });
 
-interface FeedbackDialogProps {
-  feedbackId?: number;
-  isReadOnly?: boolean;
-  isOpen?: boolean;
-  onClose?: () => void;
-}
+type FeedbackFormData = z.infer<typeof feedbackSchema>;
 
-export function FeedbackDialog({ feedbackId, isReadOnly = false, isOpen: propIsOpen, onClose }: FeedbackDialogProps) {
+export function FeedbackDialog() {
   const [isOpen, setIsOpen] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
   const [hoveredStar, setHoveredStar] = useState(0);
 
-  const { data: feedback } = useQuery({
-    queryKey: [`/api/feedback/${feedbackId}`],
-    enabled: !!feedbackId,
-  });
-
-  const form = useForm<z.infer<typeof feedbackSchema>>({
+  const form = useForm<FeedbackFormData>({
     resolver: zodResolver(feedbackSchema),
     defaultValues: {
       rating: 0,
@@ -65,31 +55,14 @@ export function FeedbackDialog({ feedbackId, isReadOnly = false, isOpen: propIsO
     },
   });
 
-  useEffect(() => {
-    if (feedback) {
-      form.reset({
-        rating: feedback.rating || 0,
-        category: feedback.category || "general",
-        comment: feedback.comment || "",
-      });
-    }
-  }, [feedback, form]);
-
-  useEffect(() => {
-    if (propIsOpen !== undefined) {
-      setIsOpen(propIsOpen);
-    }
-  }, [propIsOpen]);
-
   const createFeedbackMutation = useMutation({
-    mutationFn: async (values: z.infer<typeof feedbackSchema>) => {
+    mutationFn: async (values: FeedbackFormData) => {
       const response = await apiRequest(
         "POST",
         "/api/feedback",
         {
           ...values,
           userId: user?.id,
-          status: "pending",
         }
       );
 
@@ -103,11 +76,10 @@ export function FeedbackDialog({ feedbackId, isReadOnly = false, isOpen: propIsO
     onSuccess: () => {
       toast({
         title: "Thank you for your feedback!",
-        description: "We appreciate your input and will review it shortly.",
+        description: "We appreciate your input.",
       });
       form.reset();
       setIsOpen(false);
-      onClose?.();
     },
     onError: (error: Error) => {
       toast({
@@ -118,16 +90,12 @@ export function FeedbackDialog({ feedbackId, isReadOnly = false, isOpen: propIsO
     },
   });
 
-  const onSubmit = (values: z.infer<typeof feedbackSchema>) => {
-    if (isReadOnly) return;
+  const onSubmit = (values: FeedbackFormData) => {
     createFeedbackMutation.mutate(values);
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => {
-      setIsOpen(open);
-      if (!open) onClose?.();
-    }}>
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
         <Button
           variant="default"
@@ -139,9 +107,7 @@ export function FeedbackDialog({ feedbackId, isReadOnly = false, isOpen: propIsO
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>
-            {isReadOnly ? "Feedback Details" : "Share your feedback"}
-          </DialogTitle>
+          <DialogTitle>Share your feedback</DialogTitle>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -157,9 +123,9 @@ export function FeedbackDialog({ feedbackId, isReadOnly = false, isOpen: propIsO
                         <div
                           key={star}
                           className="text-2xl"
-                          onMouseEnter={() => !isReadOnly && setHoveredStar(star)}
-                          onMouseLeave={() => !isReadOnly && setHoveredStar(0)}
-                          onClick={() => !isReadOnly && field.onChange(star)}
+                          onMouseEnter={() => setHoveredStar(star)}
+                          onMouseLeave={() => setHoveredStar(0)}
+                          onClick={() => field.onChange(star)}
                         >
                           <Star
                             className={`h-6 w-6 ${
@@ -185,7 +151,6 @@ export function FeedbackDialog({ feedbackId, isReadOnly = false, isOpen: propIsO
                   <Select
                     onValueChange={field.onChange}
                     defaultValue={field.value}
-                    disabled={isReadOnly}
                   >
                     <FormControl>
                       <SelectTrigger>
@@ -214,25 +179,22 @@ export function FeedbackDialog({ feedbackId, isReadOnly = false, isOpen: propIsO
                     <Textarea
                       placeholder="Tell us more about your experience..."
                       {...field}
-                      disabled={isReadOnly}
                     />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
-            {!isReadOnly && (
-              <Button
-                type="submit"
-                className="w-full"
-                disabled={createFeedbackMutation.isPending}
-              >
-                {createFeedbackMutation.isPending && (
-                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-background border-t-foreground mr-2" />
-                )}
-                Submit Feedback
-              </Button>
-            )}
+            <Button
+              type="submit"
+              className="w-full"
+              disabled={createFeedbackMutation.isPending}
+            >
+              {createFeedbackMutation.isPending && (
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-background border-t-foreground mr-2" />
+              )}
+              Submit Feedback
+            </Button>
           </form>
         </Form>
       </DialogContent>

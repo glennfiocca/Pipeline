@@ -532,7 +532,7 @@ export function registerRoutes(app: Express): Server {
       const feedback = await storage.createFeedback({
         ...parsed.data,
         userId: req.user?.id,
-        status: "pending"
+        status: "received"
       });
 
       res.status(201).json(feedback);
@@ -545,74 +545,6 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Admin routes for feedback management
-  app.get("/api/feedback", isAdmin, async (_req, res) => {
-    try {
-      const feedbackList = await storage.getFeedback();
-      res.json(feedbackList);
-    } catch (error) {
-      console.error('Error fetching feedback:', error);
-      res.status(500).json({ error: "Failed to fetch feedback" });
-    }
-  });
-
-  app.get("/api/feedback/unresolved", isAdmin, async (_req, res) => {
-    try {
-      const feedbackList = await storage.getUnresolvedFeedback();
-      res.json(feedbackList);
-    } catch (error) {
-      console.error('Error fetching unresolved feedback:', error);
-      res.status(500).json({ error: "Failed to fetch unresolved feedback" });
-    }
-  });
-
-  app.patch("/api/feedback/:id", isAdmin, async (req, res) => {
-    try {
-      const feedbackId = parseInt(req.params.id);
-      if (isNaN(feedbackId)) {
-        return res.status(400).json({ error: "Invalid feedback ID" });
-      }
-
-      const { status, adminResponse } = req.body;
-      if (!status) {
-        return res.status(400).json({ error: "Status is required" });
-      }
-
-      // Get the original feedback to get the user ID
-      const originalFeedback = await storage.getFeedbackById(feedbackId);
-      if (!originalFeedback) {
-        return res.status(404).json({ error: "Feedback not found" });
-      }
-
-      // Update the feedback status and response
-      const feedback = await storage.updateFeedbackStatus(
-        feedbackId, 
-        status,
-        adminResponse
-      );
-
-      // Create a notification for the user if there's an admin response
-      if (adminResponse && originalFeedback.userId) {
-        await storage.createNotification({
-          userId: originalFeedback.userId,
-          type: 'feedback_response',
-          title: 'Admin Response to Your Feedback',
-          content: `An admin has responded to your feedback: "${adminResponse}"`,
-          isRead: false,
-          relatedId: feedbackId,
-          relatedType: 'feedback',
-          metadata: {
-            feedbackId: feedbackId
-          }
-        });
-      }
-
-      res.json(feedback);
-    } catch (error) {
-      console.error('Error updating feedback:', error);
-      res.status(500).json({ error: "Failed to update feedback" });
-    }
-  });
 
   // Notifications routes
   app.get("/api/notifications", async (req: any, res) => {

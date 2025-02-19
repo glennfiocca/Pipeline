@@ -40,25 +40,25 @@ export function NotificationsDialog() {
   // Handle notification click based on type
   const handleNotificationClick = async (notification: any) => {
     // Mark as read if not already read
-    if (!notification.read) {
+    if (!notification.isRead) {
       await markAsRead(notification.id);
     }
 
     // Close the notifications dialog if not showing job modal
-    if (notification.type !== 'application_status_change') {
+    if (notification.type !== 'application_status') {
       setIsOpen(false);
     }
 
     // Navigate based on notification type
     switch (notification.type) {
-      case 'new_company_message':
+      case 'message_received':
         setLocation(`/dashboard?messageId=${notification.metadata.applicationId}`);
         break;
-      case 'application_status_change':
-        setSelectedJobId(notification.metadata.jobId);
+      case 'application_status':
+        setSelectedJobId(notification.metadata.applicationId);
         break;
-      case 'admin_feedback':
-        setLocation(`/dashboard?feedbackId=${notification.metadata.feedbackId}&readonly=true`);
+      case 'application_confirmation':
+        setLocation(`/dashboard`);
         break;
       default:
         console.warn('Unknown notification type:', notification.type);
@@ -116,7 +116,7 @@ export function NotificationsDialog() {
                   <div
                     key={notification.id}
                     className={`p-4 rounded-lg border transition-colors cursor-pointer hover:bg-accent ${
-                      !notification.read ? "bg-muted/50" : ""
+                      !notification.isRead ? "bg-muted/50" : ""
                     }`}
                     onClick={() => handleNotificationClick(notification)}
                     role="button"
@@ -131,13 +131,13 @@ export function NotificationsDialog() {
                       <div>
                         <h4 className="text-sm font-medium">{notification.title}</h4>
                         <p className="mt-1 text-sm text-muted-foreground">
-                          {notification.message}
+                          {notification.content}
                         </p>
                         <p className="mt-2 text-xs text-muted-foreground">
                           {format(new Date(notification.createdAt), "PPp")}
                         </p>
                       </div>
-                      {!notification.read && (
+                      {!notification.isRead && (
                         <Badge variant="secondary" className="ml-2">New</Badge>
                       )}
                     </div>
