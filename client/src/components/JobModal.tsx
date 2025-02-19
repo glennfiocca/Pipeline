@@ -57,7 +57,12 @@ export function JobModal({
       <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-2xl font-bold">{job.title}</DialogTitle>
+            <DialogTitle className="text-2xl font-bold relative">
+              {job.title}
+              <span className="absolute top-0 right-0 text-xs text-muted-foreground font-mono">
+                {job.jobIdentifier}
+              </span>
+            </DialogTitle>
             <DialogDescription>
               <div className="flex items-center text-lg text-foreground mt-2">
                 <Building2 className="mr-2 h-5 w-5" />

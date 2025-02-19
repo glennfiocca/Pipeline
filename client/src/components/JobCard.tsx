@@ -45,7 +45,12 @@ export function JobCard({
 
   return (
     <>
-      <Card className="w-full transition-shadow hover:shadow-md">
+      <Card className="w-full transition-shadow hover:shadow-md relative">
+        <div className="absolute top-2 right-2">
+          <span className="text-xs text-muted-foreground font-mono">
+            {job.jobIdentifier}
+          </span>
+        </div>
         <CardContent className="p-6">
           <div className="mb-4">
             <h3 className="text-xl font-semibold mb-2">{job.title}</h3>
