@@ -272,7 +272,7 @@ export const insertFeedbackSchema = createInsertSchema(feedback).omit({
 }).extend({
   rating: z.number().min(1).max(5),
   category: z.enum(["bug", "feature", "general", "ui", "other"]),
-  status: z.enum(["pending", "in_progress", "resolved", "rejected"])
+  status: z.enum(["pending", "in_progress", "resolved", "rejected", "received"])
 });
 
 export type Feedback = typeof feedback.$inferSelect;

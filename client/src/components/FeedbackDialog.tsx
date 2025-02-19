@@ -63,6 +63,7 @@ export function FeedbackDialog() {
         {
           ...values,
           userId: user?.id,
+          status: "received"
         }
       );
 
