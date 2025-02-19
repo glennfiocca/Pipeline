@@ -545,6 +545,36 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Admin feedback routes
+  app.get("/api/feedback", isAdmin, async (_req, res) => {
+    try {
+      const feedbackList = await storage.getFeedback();
+      res.json(feedbackList);
+    } catch (error) {
+      console.error('Error fetching feedback:', error);
+      res.status(500).json({ error: "Failed to fetch feedback" });
+    }
+  });
+
+  app.patch("/api/admin/feedback/:id", isAdmin, async (req, res) => {
+    try {
+      const feedbackId = parseInt(req.params.id);
+      if (isNaN(feedbackId)) {
+        return res.status(400).json({ error: "Invalid feedback ID" });
+      }
+
+      const feedback = await storage.getFeedbackById(feedbackId);
+      if (!feedback) {
+        return res.status(404).json({ error: "Feedback not found" });
+      }
+
+      const updatedFeedback = await storage.updateFeedback(feedbackId, req.body);
+      res.json(updatedFeedback);
+    } catch (error) {
+      console.error('Error updating feedback:', error);
+      res.status(500).json({ error: "Failed to update feedback" });
+    }
+  });
 
   // Notifications routes
   app.get("/api/notifications", async (req: any, res) => {
