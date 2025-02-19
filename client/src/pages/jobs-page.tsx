@@ -41,13 +41,24 @@ export default function JobsPage() {
   const { user } = useAuth();
   const [, navigate] = useLocation();
 
-  const { data: jobs = [], isLoading: isLoadingJobs } = useQuery<Job[]>({
-    queryKey: ["/api/jobs"]
+  // Always fetch jobs regardless of auth status
+  const { data: jobs = [], isLoading: isLoadingJobs, error: jobsError } = useQuery<Job[]>({
+    queryKey: ["/api/jobs"],
+    retry: 1,
+    onError: (error: Error) => {
+      toast({
+        title: "Error loading jobs",
+        description: "Please try again later",
+        variant: "destructive",
+      });
+    }
   });
 
-  const { data: applications = [], isLoading: isLoadingApplications } = useQuery<Application[]>({
+  // Only fetch applications if user is logged in
+  const { data: applications = [] } = useQuery<Application[]>({
     queryKey: ["/api/applications"],
-    enabled: !!user // Only fetch applications if user is logged in
+    enabled: !!user, // Only run query if user is logged in
+    staleTime: 1000 * 60 * 5, // Consider data fresh for 5 minutes
   });
 
   const applyMutation = useMutation({
@@ -98,11 +109,20 @@ export default function JobsPage() {
       navigate("/dashboard");
     },
     onError: (error: Error) => {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive"
-      });
+      if (error.message.includes("must be logged in")) {
+        navigate("/auth/login");
+        toast({
+          title: "Authentication required",
+          description: "Please log in to apply for jobs",
+          variant: "default",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: error.message,
+          variant: "destructive"
+        });
+      }
     }
   });
 
@@ -120,11 +140,26 @@ export default function JobsPage() {
     return matchesSearch && matchesIndustry && matchesLocation;
   });
 
-  // Only show loading state for jobs, not applications
+  // Show loading state
   if (isLoadingJobs) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
+
+  // Show error state if jobs failed to load
+  if (jobsError) {
+    return (
+      <div className="container py-10">
+        <div className="flex flex-col items-center justify-center gap-4">
+          <h2 className="text-2xl font-semibold">Unable to load jobs</h2>
+          <p className="text-muted-foreground">Please try again later</p>
+          <Button onClick={() => window.location.reload()}>
+            Refresh Page
+          </Button>
+        </div>
       </div>
     );
   }
@@ -250,7 +285,7 @@ export default function JobsPage() {
               />
             ))}
 
-            {filteredJobs.length === 0 && !isLoadingJobs && (
+            {filteredJobs.length === 0 && (
               <div className="text-center py-8">
                 <p className="text-muted-foreground">
                   No active jobs found matching your criteria. Try adjusting your filters.
