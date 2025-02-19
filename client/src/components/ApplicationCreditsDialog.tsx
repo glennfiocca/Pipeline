@@ -12,6 +12,7 @@ import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { CreditCard } from "lucide-react";
 import type { Application } from "@shared/schema";
+import { useAuth } from "@/hooks/use-auth";
 
 interface ApplicationCreditsDialogProps {
   isOpen: boolean;
@@ -26,14 +27,17 @@ export function ApplicationCreditsDialog({
   onConfirm,
   jobTitle,
 }: ApplicationCreditsDialogProps) {
+  const { user } = useAuth();
+
   const { data: applications = [] } = useQuery<Application[]>({
     queryKey: ["/api/applications"],
+    enabled: !!user && isOpen, // Only fetch if user is logged in and dialog is open
   });
 
   const today = new Date().toISOString().split('T')[0];
-  const applicationsToday = applications.filter(app =>
+  const applicationsToday = applications?.filter(app =>
     app.appliedAt.startsWith(today)
-  ).length;
+  )?.length ?? 0;
 
   const remainingCredits = 10 - applicationsToday;
   const resetTime = format(new Date().setHours(24, 0, 0, 0), "h:mm a");
@@ -43,6 +47,8 @@ export function ApplicationCreditsDialog({
       onConfirm();
     }
   };
+
+  if (!user) return null; // Don't render if not logged in
 
   return (
     <AlertDialog open={isOpen} onOpenChange={onClose}>
