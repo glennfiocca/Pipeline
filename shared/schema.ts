@@ -11,7 +11,10 @@ export const users = pgTable("users", {
   isAdmin: boolean("is_admin").notNull().default(false),
   resetToken: text("reset_token"),
   resetTokenExpiry: text("reset_token_expiry"),
-  createdAt: text("created_at").notNull().default(new Date().toISOString())
+  createdAt: text("created_at").notNull().default(new Date().toISOString()),
+  bankedCredits: integer("banked_credits").notNull().default(0),
+  referralCode: text("referral_code").unique(),
+  referredBy: text("referred_by"),
 });
 
 // Base schema for database operations
@@ -19,7 +22,10 @@ const baseUserSchema = createInsertSchema(users).omit({
   id: true,
   resetToken: true,
   resetTokenExpiry: true,
-  createdAt: true 
+  createdAt: true,
+  bankedCredits: true,
+  referralCode: true,
+  referredBy: true
 });
 
 // Extended schema for registration with validation

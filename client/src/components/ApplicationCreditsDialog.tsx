@@ -11,7 +11,7 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { CreditCard } from "lucide-react";
-import type { Application } from "@shared/schema";
+import type { Application, User } from "@shared/schema";
 import { useAuth } from "@/hooks/use-auth";
 
 interface ApplicationCreditsDialogProps {
@@ -31,7 +31,12 @@ export function ApplicationCreditsDialog({
 
   const { data: applications = [] } = useQuery<Application[]>({
     queryKey: ["/api/applications"],
-    enabled: !!user && isOpen, // Only fetch if user is logged in and dialog is open
+    enabled: !!user && isOpen,
+  });
+
+  const { data: userData } = useQuery<User>({
+    queryKey: ["/api/users", user?.id],
+    enabled: !!user && isOpen,
   });
 
   const today = new Date().toISOString().split('T')[0];
@@ -39,16 +44,17 @@ export function ApplicationCreditsDialog({
     app.appliedAt.startsWith(today)
   )?.length ?? 0;
 
-  const remainingCredits = 10 - applicationsToday;
+  const remainingDailyCredits = 10 - applicationsToday;
+  const bankedCredits = userData?.bankedCredits ?? 0;
   const resetTime = format(new Date().setHours(24, 0, 0, 0), "h:mm a");
 
   const handleConfirm = () => {
-    if (remainingCredits > 0) {
+    if (remainingDailyCredits > 0 || bankedCredits > 0) {
       onConfirm();
     }
   };
 
-  if (!user) return null; // Don't render if not logged in
+  if (!user) return null;
 
   return (
     <AlertDialog open={isOpen} onOpenChange={onClose}>
@@ -68,16 +74,26 @@ export function ApplicationCreditsDialog({
               <div className="rounded-md bg-primary/10 p-4">
                 <p className="font-semibold text-primary mb-2">Application Credits:</p>
                 <ul className="list-disc list-inside space-y-1">
-                  <li>You have {remainingCredits} credits remaining today</li>
-                  <li>Credits reset at {resetTime}</li>
-                  <li>Unused credits do not roll over</li>
+                  <li>Daily credits remaining: {remainingDailyCredits}</li>
+                  <li>Banked credits available: {bankedCredits}</li>
+                  <li>Daily credits reset at {resetTime}</li>
+                  <li>Daily credits do not roll over</li>
                 </ul>
               </div>
 
-              <p className="text-sm text-muted-foreground">
-                Note: Each user is limited to 10 applications per 24-hour period to ensure
-                quality applications and fair distribution of opportunities.
-              </p>
+              <div className="text-sm text-muted-foreground space-y-2">
+                <p>
+                  Each user gets 10 free applications per 24-hour period. Additional credits
+                  can be earned by referring friends to Pipeline.
+                </p>
+                {user.referralCode && (
+                  <p>
+                    Your referral code: <strong>{user.referralCode}</strong>
+                    <br />
+                    Share this code with friends to earn 5 banked credits for each signup!
+                  </p>
+                )}
+              </div>
             </div>
           </AlertDialogDescription>
         </AlertDialogHeader>
@@ -85,11 +101,11 @@ export function ApplicationCreditsDialog({
           <AlertDialogCancel onClick={onClose}>Cancel</AlertDialogCancel>
           <AlertDialogAction
             onClick={handleConfirm}
-            disabled={remainingCredits <= 0}
+            disabled={remainingDailyCredits <= 0 && bankedCredits <= 0}
           >
-            {remainingCredits > 0
+            {remainingDailyCredits > 0 || bankedCredits > 0
               ? "Use Credit & Apply"
-              : "No Credits Remaining"}
+              : "No Credits Available"}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

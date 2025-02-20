@@ -199,6 +199,8 @@ export default function DashboardPage() {
                   const job = getJob(application.jobId);
                   if (!job) return null;
 
+                  const statusHistory = application.statusHistory as StatusHistoryItem[];
+
                   return (
                     <div
                       key={application.id}
@@ -234,16 +236,16 @@ export default function DashboardPage() {
                         </div>
                       </div>
 
-                      {application.statusHistory && Array.isArray(application.statusHistory) && (
+                      {statusHistory && statusHistory.length > 0 && (
                         <div className="mt-2 text-sm">
                           <div className="font-medium mb-1">Status History:</div>
-                          {(application.statusHistory as StatusHistoryItem[]).map((history, index) => (
+                          {statusHistory.map((history, index) => (
                             <div key={index} className="flex items-center text-muted-foreground">
                               <span className="mr-2">
                                 {format(new Date(history.date), "MMM d, yyyy")}:
                               </span>
-                              <Badge variant="outline" className={getStatusColor(!job.isActive && index === application.statusHistory.length - 1 ? "archived" : history.status)}>
-                                {!job.isActive && index === application.statusHistory.length - 1 ? "Archived" : history.status}
+                              <Badge variant="outline" className={getStatusColor(!job.isActive && index === statusHistory.length - 1 ? "archived" : history.status)}>
+                                {!job.isActive && index === statusHistory.length - 1 ? "Archived" : history.status}
                               </Badge>
                             </div>
                           ))}
@@ -291,9 +293,9 @@ export default function DashboardPage() {
 
       {activeFeedbackId && (
         <FeedbackDialog
-          feedbackId={activeFeedbackId}
-          isReadOnly={isReadOnly}
-          isOpen={true}
+          id={activeFeedbackId}
+          readOnly={isReadOnly}
+          open={true}
           onClose={() => {
             setActiveFeedbackId(null);
             setIsReadOnly(false);
