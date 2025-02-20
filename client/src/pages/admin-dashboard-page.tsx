@@ -366,6 +366,13 @@ export default function AdminDashboardPage() {
                         >
                           Restore
                         </Button>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() => handleEditJob(job)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
                             <Button variant="destructive" size="icon">
