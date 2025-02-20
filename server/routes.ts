@@ -305,6 +305,33 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Add near other user-related routes
+  app.post("/api/users/:id/referral-code", async (req: any, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ error: "Authentication required" });
+      }
+
+      // Users can only generate their own referral code
+      if (req.user.id !== parseInt(req.params.id)) {
+        return res.status(403).json({ error: "Unauthorized" });
+      }
+
+      const user = await storage.getUser(parseInt(req.params.id));
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      // Generate a new referral code
+      const referralCode = await storage.generateReferralCode(user.id);
+      res.json({ referralCode });
+    } catch (error) {
+      console.error('Error generating referral code:', error);
+      res.status(500).json({ error: "Failed to generate referral code" });
+    }
+  });
+
+
   // Regular routes continue...
   app.post("/api/jobs/scrape", async (_req, res) => {
     try {
