@@ -132,7 +132,8 @@ export default function JobsPage() {
     const matchesSearch =
       job.title.toLowerCase().includes(search.toLowerCase()) ||
       job.company.toLowerCase().includes(search.toLowerCase()) ||
-      job.description.toLowerCase().includes(search.toLowerCase());
+      job.description.toLowerCase().includes(search.toLowerCase()) ||
+      job.jobIdentifier.toLowerCase().includes(search.toLowerCase());
 
     const matchesIndustry = industryType === "All" || job.type === industryType;
     const matchesLocation = location === "All" || job.location === location;
