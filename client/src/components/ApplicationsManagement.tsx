@@ -1,16 +1,16 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Application, Job } from "@shared/schema";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Archive, Loader2, RefreshCw } from "lucide-react";
+import { Archive, Loader2, MessageCircle, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest } from "@/lib/queryClient";
 import { queryClient } from "@/lib/queryClient";
-import { useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+import { AdminMessageDialog } from "./AdminMessageDialog";
 
 // Define status buckets for the dashboard
 const APPLICATION_STATUSES = ["Applied", "Interviewing", "Accepted", "Rejected", "Archived"];
@@ -158,22 +158,33 @@ export function ApplicationsManagement() {
                         <p className="text-xs text-muted-foreground mt-2">
                           Applied on {format(new Date(app.appliedAt), "MMM d, yyyy")}
                         </p>
-                        {isAdmin && status === "Archived" && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="mt-2"
-                            onClick={() => unarchiveMutation.mutate(job.id)}
-                            disabled={unarchiveMutation.isPending}
+                        <div className="flex items-center gap-2 mt-2">
+                          <AdminMessageDialog
+                            applicationId={app.id}
+                            jobTitle={job.title}
+                            company={job.company}
                           >
-                            {unarchiveMutation.isPending ? (
-                              <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                            ) : (
-                              <RefreshCw className="h-4 w-4 mr-2" />
-                            )}
-                            Unarchive Job
-                          </Button>
-                        )}
+                            <Button variant="outline" size="sm">
+                              <MessageCircle className="h-4 w-4 mr-2" />
+                              Message Applicant
+                            </Button>
+                          </AdminMessageDialog>
+                          {isAdmin && status === "Archived" && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => unarchiveMutation.mutate(job.id)}
+                              disabled={unarchiveMutation.isPending}
+                            >
+                              {unarchiveMutation.isPending ? (
+                                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                              ) : (
+                                <RefreshCw className="h-4 w-4 mr-2" />
+                              )}
+                              Unarchive Job
+                            </Button>
+                          )}
+                        </div>
                       </div>
                     </div>
                   ))}
