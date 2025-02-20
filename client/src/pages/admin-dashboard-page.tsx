@@ -11,7 +11,7 @@ import { queryClient } from "@/lib/queryClient";
 import { apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
 import { useLocation } from "wouter";
-import { Users, Mail, User as UserIcon, Edit, Trash2, Plus } from "lucide-react";
+import { Users, Mail, User as UserIcon, Edit, Trash2, Plus, CreditCard } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -21,9 +21,15 @@ import type { z } from 'zod';
 import { insertJobSchema, insertUserSchema } from "@shared/schema";
 import { ApplicationsManagement } from "@/components/ApplicationsManagement";
 import { FeedbackManagement } from "@/components/FeedbackManagement";
+import { ManageCreditsDialog } from "@/components/ManageCreditsDialog";
 
 type NewJobForm = z.infer<typeof insertJobSchema>;
 type NewUserForm = z.infer<typeof insertUserSchema>;
+
+type SelectedUserCredits = {
+  user: User;
+  action: 'manage_credits';
+} | null;
 
 export default function AdminDashboardPage() {
   const { user } = useAuth();
@@ -42,6 +48,7 @@ export default function AdminDashboardPage() {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [showEditJobDialog, setShowEditJobDialog] = useState(false);
   const [showEditUserDialog, setShowEditUserDialog] = useState(false);
+  const [selectedUserCredits, setSelectedUserCredits] = useState<SelectedUserCredits>(null);
 
   // Queries
   const { data: jobs = [], isLoading: isLoadingJobs } = useQuery<Job[]>({
@@ -233,6 +240,38 @@ export default function AdminDashboardPage() {
     setShowEditJobDialog(true);
   };
 
+  // Add mutation for managing credits
+  const manageUserCreditsMutation = useMutation({
+    mutationFn: async ({ userId, amount }: { userId: number; amount: number }) => {
+      const res = await apiRequest(
+        "PATCH",
+        `/api/admin/users/${userId}/credits`,
+        { amount }
+      );
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || "Failed to update user credits");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      toast({
+        title: "Success",
+        description: "User credits updated successfully",
+      });
+      setSelectedUserCredits(null);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+
   if (isLoadingJobs || isLoadingUsers) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -257,157 +296,157 @@ export default function AdminDashboardPage() {
         </TabsList>
 
         <TabsContent value="active-jobs">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0">
-                <CardTitle>Active Jobs Management</CardTitle>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => setShowNewJobDialog(true)}
-                >
-                  <Plus className="h-4 w-4" />
-                </Button>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {jobs.filter(job => job.isActive).map((job) => (
-                    <div
-                      key={job.id}
-                      className="flex items-center justify-between p-4 rounded-lg border"
-                    >
-                      <div>
-                        <h3 className="font-medium">
-                          {job.title}
-                          <span className="ml-2 text-sm text-muted-foreground">
-                            (ID: {job.jobIdentifier})
-                          </span>
-                        </h3>
-                        <p className="text-sm text-muted-foreground">
-                          {job.company} - {job.location}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          onClick={() => editJobMutation.mutate({ id: job.id, isActive: false })}
-                        >
-                          Archive
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          onClick={() => handleEditJob(job)}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button variant="destructive" size="icon">
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Delete Job</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                Are you sure you want to delete this job? This action cannot be undone.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancel</AlertDialogCancel>
-                              <AlertDialogAction
-                                onClick={() => deleteJobMutation.mutate(job.id)}
-                              >
-                                Delete
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      </div>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0">
+              <CardTitle>Active Jobs Management</CardTitle>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => setShowNewJobDialog(true)}
+              >
+                <Plus className="h-4 w-4" />
+              </Button>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {jobs.filter(job => job.isActive).map((job) => (
+                  <div
+                    key={job.id}
+                    className="flex items-center justify-between p-4 rounded-lg border"
+                  >
+                    <div>
+                      <h3 className="font-medium">
+                        {job.title}
+                        <span className="ml-2 text-sm text-muted-foreground">
+                          (ID: {job.jobIdentifier})
+                        </span>
+                      </h3>
+                      <p className="text-sm text-muted-foreground">
+                        {job.company} - {job.location}
+                      </p>
                     </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => editJobMutation.mutate({ id: job.id, isActive: false })}
+                      >
+                        Archive
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => handleEditJob(job)}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="destructive" size="icon">
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Delete Job</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Are you sure you want to delete this job? This action cannot be undone.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => deleteJobMutation.mutate(job.id)}
+                            >
+                              Delete
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-          <TabsContent value="archived-jobs">
-            <Card>
-              <CardHeader>
-                <CardTitle>Archived Jobs</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {jobs.filter(job => !job.isActive).map((job) => (
-                    <div
-                      key={job.id}
-                      className="flex items-center justify-between p-4 rounded-lg border"
-                    >
-                      <div>
-                        <h3 className="font-medium">
-                          {job.title}
-                          <span className="ml-2 text-sm text-muted-foreground">
-                            (ID: {job.jobIdentifier})
-                          </span>
-                        </h3>
-                        <p className="text-sm text-muted-foreground">
-                          {job.company} - {job.location}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          Archived on: {job.deactivatedAt ? format(new Date(job.deactivatedAt), "MMM d, yyyy") : "Unknown"}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          onClick={() => editJobMutation.mutate({ id: job.id, isActive: true })}
-                        >
-                          Restore
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          onClick={() => handleEditJob(job)}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button variant="destructive" size="icon">
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Delete Job</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                Are you sure you want to delete this archived job? This action cannot be undone.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancel</AlertDialogCancel>
-                              <AlertDialogAction
-                                onClick={() => deleteJobMutation.mutate(job.id)}
-                              >
-                                Delete
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      </div>
+        <TabsContent value="archived-jobs">
+          <Card>
+            <CardHeader>
+              <CardTitle>Archived Jobs</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {jobs.filter(job => !job.isActive).map((job) => (
+                  <div
+                    key={job.id}
+                    className="flex items-center justify-between p-4 rounded-lg border"
+                  >
+                    <div>
+                      <h3 className="font-medium">
+                        {job.title}
+                        <span className="ml-2 text-sm text-muted-foreground">
+                          (ID: {job.jobIdentifier})
+                        </span>
+                      </h3>
+                      <p className="text-sm text-muted-foreground">
+                        {job.company} - {job.location}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        Archived on: {job.deactivatedAt ? format(new Date(job.deactivatedAt), "MMM d, yyyy") : "Unknown"}
+                      </p>
                     </div>
-                  ))}
-                  {jobs.filter(job => !job.isActive).length === 0 && (
-                    <div className="text-center py-8 text-muted-foreground">
-                      No archived jobs found
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => editJobMutation.mutate({ id: job.id, isActive: true })}
+                      >
+                        Restore
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => handleEditJob(job)}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="destructive" size="icon">
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Delete Job</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Are you sure you want to delete this archived job? This action cannot be undone.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => deleteJobMutation.mutate(job.id)}
+                            >
+                              Delete
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
                     </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
+                  </div>
+                ))}
+                {jobs.filter(job => !job.isActive).length === 0 && (
+                  <div className="text-center py-8 text-muted-foreground">
+                    No archived jobs found
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         <TabsContent value="users">
           <Card>
@@ -440,8 +479,19 @@ export default function AdminDashboardPage() {
                           <Mail className="h-4 w-4" />
                           {user.email}
                         </div>
+                        <div className="text-sm text-muted-foreground flex items-center gap-2">
+                          <CreditCard className="h-4 w-4" />
+                          {user.bankedCredits || 0} banked credits
+                        </div>
                       </div>
                       <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() => setSelectedUserCredits({ user, action: 'manage_credits' })}
+                        >
+                          <CreditCard className="h-4 w-4" />
+                        </Button>
                         <Button
                           variant="outline"
                           size="icon"
@@ -587,6 +637,20 @@ export default function AdminDashboardPage() {
           />
         </DialogContent>
       </Dialog>
+
+      {selectedUserCredits && (
+        <ManageCreditsDialog
+          isOpen={true}
+          onClose={() => setSelectedUserCredits(null)}
+          user={selectedUserCredits.user}
+          onConfirm={(amount) => {
+            manageUserCreditsMutation.mutate({
+              userId: selectedUserCredits.user.id,
+              amount
+            });
+          }}
+        />
+      )}
     </div>
   );
 }

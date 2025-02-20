@@ -252,6 +252,33 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Admin routes continue...
+  app.patch("/api/admin/users/:id/credits", isAdmin, async (req, res) => {
+    try {
+      const userId = parseInt(req.params.id);
+      if (isNaN(userId)) {
+        return res.status(400).json({ error: "Invalid user ID" });
+      }
+
+      const { amount } = req.body;
+      if (typeof amount !== 'number') {
+        return res.status(400).json({ error: "Invalid amount" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      // Add the banked credits using the storage interface
+      const updatedUser = await storage.addBankedCredits(userId, amount);
+      res.json(updatedUser);
+    } catch (error) {
+      console.error('Error updating user credits:', error);
+      res.status(500).json({ error: "Failed to update user credits" });
+    }
+  });
+
   // Regular routes continue...
   app.post("/api/jobs/scrape", async (_req, res) => {
     try {
