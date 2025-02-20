@@ -6,7 +6,7 @@ import { format } from "date-fns";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Archive, Loader2 } from "lucide-react";
 
-// Include "Archived" in the statuses
+// Define status buckets for the dashboard
 const APPLICATION_STATUSES = ["Applied", "Interviewing", "Accepted", "Rejected", "Archived"];
 
 export function ApplicationsManagement() {
@@ -18,17 +18,17 @@ export function ApplicationsManagement() {
     queryKey: ["/api/jobs"],
   });
 
-  // Modified grouping logic to prioritize archived jobs
+  // Group applications by status, with special handling for archived jobs
   const groupedApplications = applications.reduce((acc, app) => {
     const job = jobs.find(j => j.id === app.jobId);
     if (!job) return acc;
 
-    // If job is archived, put in archived bucket regardless of current status
+    // If the job is not active (archived), put it in the archived bucket
     if (!job.isActive) {
       acc.archived = acc.archived || [];
       acc.archived.push({ app, job });
     } else {
-      // Otherwise, group by application status
+      // Otherwise, use the application's current status
       const status = app.status.toLowerCase();
       acc[status] = acc[status] || [];
       acc[status].push({ app, job });
@@ -56,19 +56,17 @@ export function ApplicationsManagement() {
 
   if (isLoadingApps || isLoadingJobs) {
     return (
-      <div className="flex justify-center p-8">
-        <div className="grid grid-cols-5 gap-4">
-          {APPLICATION_STATUSES.map((status) => (
-            <Card key={status} className="w-48">
-              <CardHeader className="p-4">
-                <CardTitle className="text-lg">{status}</CardTitle>
-              </CardHeader>
-              <CardContent className="p-4">
-                <div className="h-4 w-16 bg-gray-200 rounded animate-pulse" />
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+      <div className="grid grid-cols-5 gap-4">
+        {APPLICATION_STATUSES.map((status) => (
+          <Card key={status}>
+            <CardHeader className="p-4">
+              <CardTitle className="text-lg">{status}</CardTitle>
+            </CardHeader>
+            <CardContent className="p-4">
+              <div className="h-4 w-16 bg-gray-200 rounded animate-pulse" />
+            </CardContent>
+          </Card>
+        ))}
       </div>
     );
   }
@@ -107,8 +105,8 @@ export function ApplicationsManagement() {
                           {job.company}
                         </p>
                         <div className="flex items-center gap-2 mt-2">
-                          <Badge className={getStatusColor(app.status)}>
-                            {app.status}
+                          <Badge className={getStatusColor(status)}>
+                            {status}
                           </Badge>
                           {status === "Archived" && (
                             <Badge variant="secondary" className="flex items-center gap-1">
