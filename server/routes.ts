@@ -279,6 +279,32 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Add this endpoint near other user-related routes
+  app.get("/api/users/:id", async (req: any, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ error: "Authentication required" });
+      }
+
+      // Users can only access their own data
+      if (req.user.id !== parseInt(req.params.id) && !req.user.isAdmin) {
+        return res.status(403).json({ error: "Unauthorized" });
+      }
+
+      const user = await storage.getUser(parseInt(req.params.id));
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      // Don't send sensitive information
+      const { password, resetToken, resetTokenExpiry, ...safeUser } = user;
+      res.json(safeUser);
+    } catch (error) {
+      console.error('Error fetching user:', error);
+      res.status(500).json({ error: "Failed to fetch user" });
+    }
+  });
+
   // Regular routes continue...
   app.post("/api/jobs/scrape", async (_req, res) => {
     try {

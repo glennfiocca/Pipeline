@@ -13,8 +13,16 @@ export function ApplicationCreditsCard() {
     enabled: !!user,
   });
 
+  // Update the query to use the correct endpoint
   const { data: userData } = useQuery<User>({
     queryKey: ["/api/users", user?.id],
+    queryFn: async () => {
+      const response = await fetch(`/api/users/${user?.id}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch user data');
+      }
+      return response.json();
+    },
     enabled: !!user,
   });
 
