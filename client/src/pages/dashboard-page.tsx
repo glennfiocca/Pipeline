@@ -101,9 +101,21 @@ export default function DashboardPage() {
     }
   };
 
-  const filteredApplications = selectedStatus
-    ? applications.filter((app) => app.status === selectedStatus)
-    : applications;
+  const filteredApplications = applications.filter((app) => {
+    const job = jobs.find(j => j.id === app.jobId);
+    if (!job) return false;
+
+    if (selectedStatus === "Archived") {
+      // For Archived bucket, show all applications from inactive jobs
+      return !job.isActive;
+    } else if (!job.isActive) {
+      // Don't show archived job applications in other buckets
+      return false;
+    } else {
+      // For other buckets, only show applications from active jobs with matching status
+      return selectedStatus ? app.status === selectedStatus : true;
+    }
+  });
 
   const withdrawMutation = useMutation({
     mutationFn: async (applicationId: number) => {
