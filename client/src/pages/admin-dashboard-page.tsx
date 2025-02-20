@@ -350,7 +350,7 @@ export default function AdminDashboardPage() {
                         className="h-8 w-8"
                         title="Restore job"
                       >
-                        <ArchiveRestore className="h-4 w-4" />
+                        <ArchiveRestore className="h-4 w-4 transform rotate-180" />
                       </Button>
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
