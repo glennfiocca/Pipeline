@@ -239,18 +239,19 @@ export default function AdminDashboardPage() {
         <h1 className="text-3xl font-bold">Admin Dashboard</h1>
       </div>
 
-      <Tabs defaultValue="jobs" className="space-y-4">
+      <Tabs defaultValue="active-jobs" className="space-y-4">
         <TabsList>
-          <TabsTrigger value="jobs">Jobs</TabsTrigger>
+          <TabsTrigger value="active-jobs">Active Jobs</TabsTrigger>
+          <TabsTrigger value="archived-jobs">Archived Jobs</TabsTrigger>
           <TabsTrigger value="users">Users</TabsTrigger>
           <TabsTrigger value="applications">Applications</TabsTrigger>
           <TabsTrigger value="feedback">Feedback</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="jobs">
+        <TabsContent value="active-jobs">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0">
-              <CardTitle>Jobs Management</CardTitle>
+              <CardTitle>Active Jobs Management</CardTitle>
               <Button
                 variant="outline"
                 size="icon"
@@ -261,7 +262,7 @@ export default function AdminDashboardPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {jobs.map((job) => (
+                {jobs.filter(job => job.isActive).map((job) => (
                   <div
                     key={job.id}
                     className="flex items-center justify-between p-4 rounded-lg border"
@@ -271,15 +272,15 @@ export default function AdminDashboardPage() {
                       <p className="text-sm text-muted-foreground">
                         {job.company} - {job.location}
                       </p>
-                      <div className="flex items-center gap-2 mt-1">
-                        {!job.isActive && (
-                          <Badge variant="secondary" className="text-xs">
-                            Inactive
-                          </Badge>
-                        )}
-                      </div>
                     </div>
                     <div className="flex items-center gap-2">
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => editJobMutation.mutate({ id: job.id, isActive: false })}
+                      >
+                        Archive
+                      </Button>
                       <Button
                         variant="outline"
                         size="icon"
@@ -313,6 +314,71 @@ export default function AdminDashboardPage() {
                     </div>
                   </div>
                 ))}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="archived-jobs">
+          <Card>
+            <CardHeader>
+              <CardTitle>Archived Jobs</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {jobs.filter(job => !job.isActive).map((job) => (
+                  <div
+                    key={job.id}
+                    className="flex items-center justify-between p-4 rounded-lg border"
+                  >
+                    <div>
+                      <h3 className="font-medium">{job.title}</h3>
+                      <p className="text-sm text-muted-foreground">
+                        {job.company} - {job.location}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        Archived on: {job.deactivatedAt ? format(new Date(job.deactivatedAt), "MMM d, yyyy") : "Unknown"}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => editJobMutation.mutate({ id: job.id, isActive: true })}
+                      >
+                        Restore
+                      </Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="destructive" size="icon">
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Delete Job</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Are you sure you want to delete this archived job? This action cannot be undone.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => deleteJobMutation.mutate(job.id)}
+                            >
+                              Delete
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
+                  </div>
+                ))}
+                {jobs.filter(job => !job.isActive).length === 0 && (
+                  <div className="text-center py-8 text-muted-foreground">
+                    No archived jobs found
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
