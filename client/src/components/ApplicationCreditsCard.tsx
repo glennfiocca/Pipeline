@@ -47,7 +47,7 @@ export function ApplicationCreditsCard() {
           <span className="font-medium">{bankedCredits}</span> banked credits
           <span className="text-muted-foreground"> · Daily resets at {resetTime}</span>
         </span>
-        <TooltipProvider>
+        <TooltipProvider delayDuration={0}>
           <Tooltip>
             <TooltipTrigger>
               <HelpCircle className="h-4 w-4 text-muted-foreground" />
