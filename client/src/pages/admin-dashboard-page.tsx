@@ -128,8 +128,16 @@ export default function AdminDashboardPage() {
   // Edit mutations
   const editJobMutation = useMutation({
     mutationFn: async (data: Partial<Job>) => {
-      if (!selectedJob) throw new Error("No job selected");
-      const res = await apiRequest("PATCH", `/api/admin/jobs/${selectedJob.id}`, data);
+      if (!selectedJob && !data.id) throw new Error("No job selected");
+      const jobId = data.id || selectedJob?.id;
+
+      // Add deactivatedAt when archiving, remove it when restoring
+      const updateData = {
+        ...data,
+        deactivatedAt: data.isActive === false ? new Date().toISOString() : null
+      };
+
+      const res = await apiRequest("PATCH", `/api/admin/jobs/${jobId}`, updateData);
       if (!res.ok) {
         const error = await res.json();
         throw new Error(error.message || "Failed to update job");

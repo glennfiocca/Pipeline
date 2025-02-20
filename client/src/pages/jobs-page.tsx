@@ -127,6 +127,7 @@ export default function JobsPage() {
   });
 
   const filteredJobs = jobs.filter((job) => {
+    // First check if job is active
     if (!job.isActive) return false;
 
     const matchesSearch =
