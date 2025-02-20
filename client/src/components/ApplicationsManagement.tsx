@@ -1,15 +1,12 @@
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Application, User, Job } from "@shared/schema";
+import { Application, Job } from "@shared/schema";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { useToast } from "@/hooks/use-toast";
-import { queryClient } from "@/lib/queryClient";
-import { apiRequest } from "@/lib/queryClient";
-import { Archive } from "lucide-react";
+import { Archive, Loader2 } from "lucide-react";
 
+// Include "Archived" in the statuses
 const APPLICATION_STATUSES = ["Applied", "Interviewing", "Accepted", "Rejected", "Archived"];
 
 export function ApplicationsManagement() {
@@ -21,25 +18,24 @@ export function ApplicationsManagement() {
     queryKey: ["/api/jobs"],
   });
 
-  // Group applications by status, handling archived jobs specially
+  // Modified grouping logic to prioritize archived jobs
   const groupedApplications = applications.reduce((acc, app) => {
     const job = jobs.find(j => j.id === app.jobId);
     if (!job) return acc;
 
-    // If the job is archived, put it in the archived bucket regardless of status
+    // If job is archived, put in archived bucket regardless of current status
     if (!job.isActive) {
       acc.archived = acc.archived || [];
-      acc.archived.push(app);
-      return acc;
+      acc.archived.push({ app, job });
+    } else {
+      // Otherwise, group by application status
+      const status = app.status.toLowerCase();
+      acc[status] = acc[status] || [];
+      acc[status].push({ app, job });
     }
 
-    // Otherwise group by the application's status
-    const status = app.status.toLowerCase();
-    acc[status] = acc[status] || [];
-    acc[status].push(app);
-
     return acc;
-  }, {} as Record<string, Application[]>);
+  }, {} as Record<string, Array<{ app: Application; job: Job }>>);
 
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
@@ -61,7 +57,7 @@ export function ApplicationsManagement() {
   if (isLoadingApps || isLoadingJobs) {
     return (
       <div className="flex justify-center p-8">
-        <div className="space-y-4">
+        <div className="grid grid-cols-5 gap-4">
           {APPLICATION_STATUSES.map((status) => (
             <Card key={status} className="w-48">
               <CardHeader className="p-4">
@@ -80,14 +76,18 @@ export function ApplicationsManagement() {
   return (
     <div className="grid grid-cols-5 gap-4">
       {APPLICATION_STATUSES.map((status) => {
-        const appsInStatus = groupedApplications[status.toLowerCase()] || [];
+        const statusLower = status.toLowerCase();
+        const appsInStatus = groupedApplications[statusLower] || [];
         const count = appsInStatus.length;
 
         return (
           <Card key={status}>
             <CardHeader className="p-4">
               <CardTitle className="text-lg flex items-center justify-between">
-                {status}
+                <div className="flex items-center gap-2">
+                  {status}
+                  {status === "Archived" && <Archive className="h-4 w-4" />}
+                </div>
                 <Badge variant="secondary">
                   {count}
                 </Badge>
@@ -96,38 +96,33 @@ export function ApplicationsManagement() {
             <CardContent className="p-4">
               <ScrollArea className="h-[calc(100vh-16rem)]">
                 <div className="space-y-4">
-                  {appsInStatus.map((app) => {
-                    const job = jobs.find(j => j.id === app.jobId);
-                    if (!job) return null;
-
-                    return (
-                      <div
-                        key={app.id}
-                        className="p-4 rounded-lg border space-y-2"
-                      >
-                        <div>
-                          <h4 className="font-medium">{job.title}</h4>
-                          <p className="text-sm text-muted-foreground">
-                            {job.company}
-                          </p>
-                          <div className="flex items-center gap-2 mt-2">
-                            <Badge className={getStatusColor(app.status)}>
-                              {app.status}
+                  {appsInStatus.map(({ app, job }) => (
+                    <div
+                      key={app.id}
+                      className="p-4 rounded-lg border space-y-2"
+                    >
+                      <div>
+                        <h4 className="font-medium">{job.title}</h4>
+                        <p className="text-sm text-muted-foreground">
+                          {job.company}
+                        </p>
+                        <div className="flex items-center gap-2 mt-2">
+                          <Badge className={getStatusColor(app.status)}>
+                            {app.status}
+                          </Badge>
+                          {status === "Archived" && (
+                            <Badge variant="secondary" className="flex items-center gap-1">
+                              <Archive className="h-3 w-3" />
+                              Job Archived
                             </Badge>
-                            {!job.isActive && (
-                              <Badge variant="secondary" className="flex items-center gap-1">
-                                <Archive className="h-3 w-3" />
-                                Archived
-                              </Badge>
-                            )}
-                          </div>
-                          <p className="text-xs text-muted-foreground mt-2">
-                            Applied on {format(new Date(app.appliedAt), "MMM d, yyyy")}
-                          </p>
+                          )}
                         </div>
+                        <p className="text-xs text-muted-foreground mt-2">
+                          Applied on {format(new Date(app.appliedAt), "MMM d, yyyy")}
+                        </p>
                       </div>
-                    );
-                  })}
+                    </div>
+                  ))}
                   {count === 0 && (
                     <p className="text-center text-sm text-muted-foreground py-4">
                       No applications
