@@ -1,9 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { CreditCard } from "lucide-react";
+import { CreditCard, HelpCircle } from "lucide-react";
 import type { Application, User } from "@shared/schema";
 import { Card, CardContent } from "@/components/ui/card";
 import { useAuth } from "@/hooks/use-auth";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 export function ApplicationCreditsCard() {
   const { user } = useAuth();
@@ -46,6 +47,18 @@ export function ApplicationCreditsCard() {
           <span className="font-medium">{bankedCredits}</span> banked credits
           <span className="text-muted-foreground"> · Daily resets at {resetTime}</span>
         </span>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger>
+              <HelpCircle className="h-4 w-4 text-muted-foreground" />
+            </TooltipTrigger>
+            <TooltipContent>
+              <p className="max-w-xs">
+                Daily credits are used first before banked credits. Banked credits never expire and can be earned through referrals.
+              </p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       </CardContent>
     </Card>
   );
