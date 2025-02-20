@@ -11,7 +11,7 @@ import { queryClient } from "@/lib/queryClient";
 import { apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
 import { useLocation } from "wouter";
-import { Users, Mail, User as UserIcon, Edit, Trash2, Plus } from "lucide-react";
+import { Users, Mail, User as UserIcon, Edit, Trash2, Plus, Archive, ArchiveRestore } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -275,11 +275,13 @@ export default function AdminDashboardPage() {
                     </div>
                     <div className="flex items-center gap-2">
                       <Button
-                        variant="secondary"
-                        size="sm"
+                        variant="ghost"
+                        size="icon"
                         onClick={() => editJobMutation.mutate({ id: job.id, isActive: false })}
+                        className="h-8 w-8"
+                        title="Archive job"
                       >
-                        Archive
+                        <Archive className="h-4 w-4" />
                       </Button>
                       <Button
                         variant="outline"
@@ -342,11 +344,13 @@ export default function AdminDashboardPage() {
                     </div>
                     <div className="flex items-center gap-2">
                       <Button
-                        variant="secondary"
-                        size="sm"
+                        variant="ghost"
+                        size="icon"
                         onClick={() => editJobMutation.mutate({ id: job.id, isActive: true })}
+                        className="h-8 w-8"
+                        title="Restore job"
                       >
-                        Restore
+                        <ArchiveRestore className="h-4 w-4" />
                       </Button>
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
