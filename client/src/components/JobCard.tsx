@@ -1,7 +1,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Building2, MapPin, DollarSign, Loader2, CheckCircle2 } from "lucide-react";
+import { Building2, MapPin, DollarSign, Loader2, CheckCircle2, Archive } from "lucide-react";
 import { Link } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import type { Job } from "@shared/schema";
@@ -15,6 +15,7 @@ interface JobCardProps {
   isApplied?: boolean;
   isApplying?: boolean;
   previouslyApplied?: boolean;
+  isArchived?: boolean;
 }
 
 export function JobCard({ 
@@ -23,7 +24,8 @@ export function JobCard({
   onViewDetails, 
   isApplied, 
   isApplying,
-  previouslyApplied 
+  previouslyApplied,
+  isArchived 
 }: JobCardProps) {
   const { user } = useAuth();
   const [showCreditsDialog, setShowCreditsDialog] = useState(false);
@@ -36,7 +38,7 @@ export function JobCard({
     ? "Applied" 
     : "Apply";
 
-  const isButtonDisabled = isApplying || (isApplied && !previouslyApplied);
+  const isButtonDisabled = isApplying || (isApplied && !previouslyApplied) || isArchived;
 
   const handleApplyClick = () => {
     if (!user) return;
@@ -46,10 +48,16 @@ export function JobCard({
   return (
     <>
       <Card className="w-full transition-shadow hover:shadow-md relative">
-        <div className="absolute top-2 right-2">
+        <div className="absolute top-2 right-2 flex items-center gap-2">
           <span className="text-xs text-muted-foreground font-mono">
             {job.jobIdentifier}
           </span>
+          {isArchived && (
+            <Badge variant="secondary" className="flex items-center gap-1">
+              <Archive className="h-3 w-3" />
+              Archived
+            </Badge>
+          )}
         </div>
         <CardContent className="p-6">
           <div className="mb-4">
@@ -93,7 +101,7 @@ export function JobCard({
                 ) : (
                   <CheckCircle2 className="mr-2 h-4 w-4" />
                 )}
-                {buttonText}
+                {isArchived ? "Archived" : buttonText}
               </Button>
             ) : (
               <Link href="/auth/login" className="flex-1">
