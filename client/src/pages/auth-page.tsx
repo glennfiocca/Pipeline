@@ -9,13 +9,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { insertUserSchema, type InsertUser } from "@shared/schema";
 import { useAuth } from "@/hooks/use-auth";
-import { useLocation } from "wouter";
+import { useLocation, useSearch } from "wouter";
 
 export default function AuthPage() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
+  const [search] = useSearch();
   const { loginMutation, registerMutation } = useAuth();
   const [isResettingPassword, setIsResettingPassword] = useState(false);
+  const referralCode = new URLSearchParams(search).get('ref');
 
   const loginForm = useForm({
     defaultValues: {
@@ -30,7 +32,8 @@ export default function AuthPage() {
       username: "",
       email: "",
       password: "",
-      confirmPassword: ""
+      confirmPassword: "",
+      referralCode: referralCode || ""
     }
   });
 
@@ -268,6 +271,22 @@ export default function AuthPage() {
                         </FormItem>
                       )}
                     />
+
+                    {referralCode && (
+                      <FormField
+                        control={registerForm.control}
+                        name="referralCode"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Referral Code</FormLabel>
+                            <FormControl>
+                              <Input {...field} disabled />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    )}
 
                     <Button
                       type="submit"
