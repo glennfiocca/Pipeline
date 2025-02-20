@@ -9,7 +9,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
 import { apiRequest } from "@/lib/queryClient";
-import { ChevronRight, Loader2, MessageSquare } from "lucide-react";
+import { ChevronRight, Loader2, MessageSquare, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
@@ -175,11 +175,22 @@ export function ApplicationsManagement() {
                     {userApps.map((app) => (
                       <div
                         key={app.id}
-                        className="p-4 rounded-lg border space-y-2"
+                        className={cn(
+                          "p-4 rounded-lg border space-y-2",
+                          !app.job.isActive && "bg-muted/30"
+                        )}
                       >
                         <div className="flex items-center justify-between">
                           <div>
-                            <h4 className="font-medium">{app.job.title}</h4>
+                            <h4 className="font-medium flex items-center gap-2">
+                              {app.job.title}
+                              {!app.job.isActive && (
+                                <Badge variant="secondary" className="flex items-center gap-1">
+                                  <AlertCircle className="h-3 w-3" />
+                                  Archived Job
+                                </Badge>
+                              )}
+                            </h4>
                             <p className="text-sm text-muted-foreground">
                               {app.job.company}
                             </p>
