@@ -58,18 +58,20 @@ export default function DashboardPage() {
 
   const getJob = (jobId: number) => jobs.find((job) => job.id === jobId);
 
-  const stats = {
-    Applied: applications.filter((app) => app.status === "Applied").length,
-    Interviewing: applications.filter((app) => app.status === "Interviewing").length,
-    Accepted: applications.filter((app) => app.status === "Accepted").length,
-    Rejected: applications.filter((app) => app.status === "Rejected").length,
-    total: 0, // Will be calculated below
+  // Function to check if an application is for an archived job
+  const isArchivedJob = (application: Application) => {
+    const job = getJob(application.jobId);
+    return job && !job.isActive;
   };
 
-  // Calculate total as sum of all status counts
-  stats.total = Object.entries(stats)
-    .filter(([key]) => key !== 'total') // Exclude the total field itself
-    .reduce((sum, [_, count]) => sum + count, 0);
+  const stats = {
+    Applied: applications.filter((app) => app.status === "Applied" && !isArchivedJob(app)).length,
+    Interviewing: applications.filter((app) => app.status === "Interviewing" && !isArchivedJob(app)).length,
+    Accepted: applications.filter((app) => app.status === "Accepted" && !isArchivedJob(app)).length,
+    Rejected: applications.filter((app) => app.status === "Rejected" && !isArchivedJob(app)).length,
+    Archived: applications.filter((app) => isArchivedJob(app)).length,
+    total: applications.length,
+  };
 
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
@@ -83,13 +85,17 @@ export default function DashboardPage() {
         return "bg-red-500/10 text-red-500";
       case "withdrawn":
         return "bg-gray-500/10 text-gray-500";
+      case "archived":
+        return "bg-purple-500/10 text-purple-500";
       default:
         return "bg-gray-500/10 text-gray-500";
     }
   };
 
   const filteredApplications = selectedStatus
-    ? applications.filter((app) => app.status === selectedStatus)
+    ? selectedStatus === "Archived"
+      ? applications.filter(app => isArchivedJob(app))
+      : applications.filter(app => app.status === selectedStatus && !isArchivedJob(app))
     : applications;
 
   const withdrawMutation = useMutation({
