@@ -228,8 +228,8 @@ export default function DashboardPage() {
                           <div className="text-sm text-muted-foreground">
                             {job.location}
                           </div>
-                          <Badge className={getStatusColor(application.status)}>
-                            {application.status}
+                          <Badge className={getStatusColor(!job.isActive ? "archived" : application.status)}>
+                            {!job.isActive ? "Archived" : application.status}
                           </Badge>
                         </div>
                       </div>
@@ -242,8 +242,8 @@ export default function DashboardPage() {
                               <span className="mr-2">
                                 {format(new Date(history.date), "MMM d, yyyy")}:
                               </span>
-                              <Badge variant="outline" className={getStatusColor(history.status)}>
-                                {history.status}
+                              <Badge variant="outline" className={getStatusColor(!job.isActive && index === application.statusHistory.length - 1 ? "archived" : history.status)}>
+                                {!job.isActive && index === application.statusHistory.length - 1 ? "Archived" : history.status}
                               </Badge>
                             </div>
                           ))}
