@@ -24,25 +24,6 @@ export function JobList() {
     enabled: !!user,
   });
 
-  // Group applications by status
-  const groupedApplications = applications.reduce((acc, app) => {
-    const job = jobs.find(j => j.id === app.jobId);
-    if (!job) return acc;
-
-    // If job is archived, put it in archived bucket regardless of status
-    if (!job.isActive) {
-      acc.archived = acc.archived || [];
-      acc.archived.push({ application: app, job });
-      return acc;
-    }
-
-    // Otherwise group by status
-    const status = app.status.toLowerCase();
-    acc[status] = acc[status] || [];
-    acc[status].push({ application: app, job });
-    return acc;
-  }, {} as Record<string, Array<{ application: Application; job: Job }>>);
-
   const applyMutation = useMutation({
     mutationFn: async (jobId: number) => {
       const now = new Date().toISOString();
@@ -185,9 +166,9 @@ export function JobList() {
     <>
       <ScrollArea className="h-[calc(100vh-4rem)] w-full px-4">
         <div className="grid gap-4 pb-4 md:grid-cols-2 lg:grid-cols-3">
-          {/* Show archived jobs first */}
-          {groupedApplications.archived?.map(({ job }) => {
+          {jobs.map((job) => {
             const { isApplied, previouslyApplied } = getApplicationStatus(job.id);
+
             return (
               <JobCard
                 key={job.id}
@@ -197,26 +178,8 @@ export function JobList() {
                 isApplied={isApplied}
                 isApplying={applyMutation.isPending && selectedJob?.id === job.id}
                 previouslyApplied={previouslyApplied}
-                isArchived={true}
               />
             );
-          })}
-          {/* Then show active jobs */}
-          {jobs
-            .filter(job => job.isActive)
-            .map((job) => {
-              const { isApplied, previouslyApplied } = getApplicationStatus(job.id);
-              return (
-                <JobCard
-                  key={job.id}
-                  job={job}
-                  onApply={() => handleApply(job.id)}
-                  onViewDetails={() => setSelectedJob(job)}
-                  isApplied={isApplied}
-                  isApplying={applyMutation.isPending && selectedJob?.id === job.id}
-                  previouslyApplied={previouslyApplied}
-                />
-              );
           })}
         </div>
       </ScrollArea>

@@ -59,28 +59,17 @@ export default function DashboardPage() {
   const getJob = (jobId: number) => jobs.find((job) => job.id === jobId);
 
   const stats = {
-    Applied: applications.filter((app) => {
-      const job = jobs.find(j => j.id === app.jobId);
-      return job?.isActive && app.status === "Applied";
-    }).length,
-    Interviewing: applications.filter((app) => {
-      const job = jobs.find(j => j.id === app.jobId);
-      return job?.isActive && app.status === "Interviewing";
-    }).length,
-    Accepted: applications.filter((app) => {
-      const job = jobs.find(j => j.id === app.jobId);
-      return job?.isActive && app.status === "Accepted";
-    }).length,
-    Rejected: applications.filter((app) => {
-      const job = jobs.find(j => j.id === app.jobId);
-      return job?.isActive && app.status === "Rejected";
-    }).length,
-    Archived: applications.filter((app) => {
-      const job = jobs.find(j => j.id === app.jobId);
-      return job && !job.isActive;
-    }).length,
-    total: applications.length,
+    Applied: applications.filter((app) => app.status === "Applied").length,
+    Interviewing: applications.filter((app) => app.status === "Interviewing").length,
+    Accepted: applications.filter((app) => app.status === "Accepted").length,
+    Rejected: applications.filter((app) => app.status === "Rejected").length,
+    total: 0, // Will be calculated below
   };
+
+  // Calculate total as sum of all status counts
+  stats.total = Object.entries(stats)
+    .filter(([key]) => key !== 'total') // Exclude the total field itself
+    .reduce((sum, [_, count]) => sum + count, 0);
 
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
@@ -94,28 +83,14 @@ export default function DashboardPage() {
         return "bg-red-500/10 text-red-500";
       case "withdrawn":
         return "bg-gray-500/10 text-gray-500";
-      case "archived":
-        return "bg-gray-500/10 text-gray-500"; // Added color for archived status
       default:
         return "bg-gray-500/10 text-gray-500";
     }
   };
 
-  const filteredApplications = applications.filter((app) => {
-    const job = jobs.find(j => j.id === app.jobId);
-    if (!job) return false;
-
-    if (selectedStatus === "Archived") {
-      // For Archived bucket, show all applications from inactive jobs
-      return !job.isActive;
-    } else if (!job.isActive) {
-      // Don't show archived job applications in other buckets
-      return false;
-    } else {
-      // For other buckets, only show applications from active jobs with matching status
-      return selectedStatus ? app.status === selectedStatus : true;
-    }
-  });
+  const filteredApplications = selectedStatus
+    ? applications.filter((app) => app.status === selectedStatus)
+    : applications;
 
   const withdrawMutation = useMutation({
     mutationFn: async (applicationId: number) => {
@@ -172,7 +147,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-6">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
         {Object.entries(stats).map(([status, count]) => (
           <Card
             key={status}

@@ -11,7 +11,7 @@ import { queryClient } from "@/lib/queryClient";
 import { apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
 import { useLocation } from "wouter";
-import { Users, Mail, User as UserIcon, Edit, Trash2, Plus, Archive } from "lucide-react";
+import { Users, Mail, User as UserIcon, Edit, Trash2, Plus } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -215,35 +215,6 @@ export default function AdminDashboardPage() {
     },
   });
 
-  // Add new mutation for archiving jobs
-  const archiveJobMutation = useMutation({
-    mutationFn: async (jobId: number) => {
-      const res = await apiRequest("PATCH", `/api/admin/jobs/${jobId}`, {
-        isActive: false,
-        deactivatedAt: new Date().toISOString()
-      });
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.message || "Failed to archive job");
-      }
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
-      toast({
-        title: "Success",
-        description: "Job archived successfully",
-      });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
-
   const handleEditUser = (user: User) => {
     setSelectedUser(user);
     setShowEditUserDialog(true);
@@ -253,10 +224,6 @@ export default function AdminDashboardPage() {
     setSelectedJob(job);
     setShowEditJobDialog(true);
   };
-
-  // Separate active and archived jobs
-  const activeJobs = jobs.filter(job => job.isActive);
-  const archivedJobs = jobs.filter(job => !job.isActive);
 
   if (isLoadingJobs || isLoadingUsers) {
     return (
@@ -274,8 +241,7 @@ export default function AdminDashboardPage() {
 
       <Tabs defaultValue="jobs" className="space-y-4">
         <TabsList>
-          <TabsTrigger value="jobs">Active Jobs</TabsTrigger>
-          <TabsTrigger value="archived">Archived Jobs</TabsTrigger>
+          <TabsTrigger value="jobs">Jobs</TabsTrigger>
           <TabsTrigger value="users">Users</TabsTrigger>
           <TabsTrigger value="applications">Applications</TabsTrigger>
           <TabsTrigger value="feedback">Feedback</TabsTrigger>
@@ -284,7 +250,7 @@ export default function AdminDashboardPage() {
         <TabsContent value="jobs">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0">
-              <CardTitle>Active Jobs Management</CardTitle>
+              <CardTitle>Jobs Management</CardTitle>
               <Button
                 variant="outline"
                 size="icon"
@@ -295,21 +261,23 @@ export default function AdminDashboardPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {activeJobs.map((job) => (
+                {jobs.map((job) => (
                   <div
                     key={job.id}
                     className="flex items-center justify-between p-4 rounded-lg border"
                   >
                     <div>
-                      <h3 className="font-medium flex items-center gap-2">
-                        {job.title}
-                        <span className="text-xs text-muted-foreground font-mono">
-                          {job.jobIdentifier}
-                        </span>
-                      </h3>
+                      <h3 className="font-medium">{job.title}</h3>
                       <p className="text-sm text-muted-foreground">
                         {job.company} - {job.location}
                       </p>
+                      <div className="flex items-center gap-2 mt-1">
+                        {!job.isActive && (
+                          <Badge variant="secondary" className="text-xs">
+                            Inactive
+                          </Badge>
+                        )}
+                      </div>
                     </div>
                     <div className="flex items-center gap-2">
                       <Button
@@ -318,13 +286,6 @@ export default function AdminDashboardPage() {
                         onClick={() => handleEditJob(job)}
                       >
                         <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={() => archiveJobMutation.mutate(job.id)}
-                      >
-                        <Archive className="h-4 w-4" />
                       </Button>
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
@@ -352,59 +313,6 @@ export default function AdminDashboardPage() {
                     </div>
                   </div>
                 ))}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="archived">
-          <Card>
-            <CardHeader>
-              <CardTitle>Archived Jobs</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {archivedJobs.map((job) => (
-                  <div
-                    key={job.id}
-                    className="flex items-center justify-between p-4 rounded-lg border"
-                  >
-                    <div>
-                      <h3 className="font-medium flex items-center gap-2">
-                        {job.title}
-                        <span className="text-xs text-muted-foreground font-mono">
-                          {job.jobIdentifier}
-                        </span>
-                      </h3>
-                      <p className="text-sm text-muted-foreground">
-                        {job.company} - {job.location}
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Archived on: {format(new Date(job.deactivatedAt!), 'MMM dd, yyyy')}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={() => {
-                          editJobMutation.mutate({
-                            id: job.id,
-                            isActive: true,
-                            deactivatedAt: null
-                          });
-                        }}
-                      >
-                        <Archive className="h-4 w-4 rotate-180" />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-                {archivedJobs.length === 0 && (
-                  <p className="text-center text-muted-foreground py-4">
-                    No archived jobs found
-                  </p>
-                )}
               </div>
             </CardContent>
           </Card>
