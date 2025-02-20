@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Application, Job } from "@shared/schema";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
-import { Loader2, AlertCircle, RefreshCw } from "lucide-react";
+import { Loader2, AlertCircle } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -95,7 +95,7 @@ export default function DashboardPage() {
       case "withdrawn":
         return "bg-gray-500/10 text-gray-500";
       case "archived":
-        return "bg-gray-500/10 text-gray-500";
+        return "bg-gray-500/10 text-gray-500"; // Added color for archived status
       default:
         return "bg-gray-500/10 text-gray-500";
     }
@@ -106,10 +106,13 @@ export default function DashboardPage() {
     if (!job) return false;
 
     if (selectedStatus === "Archived") {
+      // For Archived bucket, show all applications from inactive jobs
       return !job.isActive;
     } else if (!job.isActive) {
+      // Don't show archived job applications in other buckets
       return false;
     } else {
+      // For other buckets, only show applications from active jobs with matching status
       return selectedStatus ? app.status === selectedStatus : true;
     }
   });
@@ -132,36 +135,6 @@ export default function DashboardPage() {
       toast({
         title: "Application withdrawn",
         description: "Your application has been withdrawn successfully.",
-      });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
-
-  const unarchiveMutation = useMutation({
-    mutationFn: async (jobId: number) => {
-      const response = await apiRequest(
-        "PATCH",
-        `/api/jobs/${jobId}/unarchive`,
-        {}
-      );
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || "Failed to unarchive job");
-      }
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/applications"] });
-      toast({
-        title: "Job unarchived",
-        description: "The job has been unarchived and all applications restored.",
       });
     },
     onError: (error: Error) => {
@@ -315,26 +288,6 @@ export default function DashboardPage() {
                             )}
                           </p>
                         </div>
-                      )}
-
-                      {!job.isActive && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="mt-2"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            unarchiveMutation.mutate(job.id);
-                          }}
-                          disabled={unarchiveMutation.isPending}
-                        >
-                          {unarchiveMutation.isPending ? (
-                            <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                          ) : (
-                            <RefreshCw className="h-4 w-4 mr-2" />
-                          )}
-                          Unarchive Job
-                        </Button>
                       )}
                     </div>
                   );

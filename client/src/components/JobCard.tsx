@@ -1,16 +1,12 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Building2, MapPin, DollarSign, Loader2, CheckCircle2, Archive, RefreshCw } from "lucide-react";
+import { Building2, MapPin, DollarSign, Loader2, CheckCircle2, Archive } from "lucide-react";
 import { Link } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import type { Job } from "@shared/schema";
 import { useState } from "react";
 import { ApplicationCreditsDialog } from "./ApplicationCreditsDialog";
-import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
-import { queryClient } from "@/lib/queryClient";
-import { useMutation } from "@tanstack/react-query";
 
 interface JobCardProps {
   job: Job;
@@ -20,7 +16,6 @@ interface JobCardProps {
   isApplying?: boolean;
   previouslyApplied?: boolean;
   isArchived?: boolean;
-  isAdmin?: boolean;
 }
 
 export function JobCard({ 
@@ -30,11 +25,9 @@ export function JobCard({
   isApplied, 
   isApplying,
   previouslyApplied,
-  isArchived,
-  isAdmin = false
+  isArchived 
 }: JobCardProps) {
   const { user } = useAuth();
-  const { toast } = useToast();
   const [showCreditsDialog, setShowCreditsDialog] = useState(false);
 
   const buttonText = isApplying 
@@ -51,36 +44,6 @@ export function JobCard({
     if (!user) return;
     setShowCreditsDialog(true);
   };
-
-  const unarchiveMutation = useMutation({
-    mutationFn: async () => {
-      const response = await apiRequest(
-        "PATCH",
-        `/api/jobs/${job.id}/unarchive`,
-        {}
-      );
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || "Failed to unarchive job");
-      }
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/applications"] });
-      toast({
-        title: "Job unarchived",
-        description: "The job has been unarchived and all applications restored.",
-      });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
 
   return (
     <>
@@ -126,21 +89,7 @@ export function JobCard({
           </p>
 
           <div className="flex gap-4">
-            {isAdmin && isArchived ? (
-              <Button
-                variant="default"
-                onClick={() => unarchiveMutation.mutate()}
-                disabled={unarchiveMutation.isPending}
-                className="flex-1"
-              >
-                {unarchiveMutation.isPending ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <RefreshCw className="mr-2 h-4 w-4" />
-                )}
-                Unarchive Job
-              </Button>
-            ) : user ? (
+            {user ? (
               <Button 
                 variant={previouslyApplied ? "default" : isApplied ? "outline" : "default"}
                 onClick={handleApplyClick}

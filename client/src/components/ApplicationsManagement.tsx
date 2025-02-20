@@ -1,61 +1,21 @@
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Application, Job } from "@shared/schema";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Archive, Loader2, MessageCircle, RefreshCw } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { useAuth } from "@/hooks/use-auth";
-import { apiRequest } from "@/lib/queryClient";
-import { queryClient } from "@/lib/queryClient";
-import { useToast } from "@/hooks/use-toast";
-import { AdminMessageDialog } from "./AdminMessageDialog";
+import { Archive, Loader2 } from "lucide-react";
 
 // Define status buckets for the dashboard
 const APPLICATION_STATUSES = ["Applied", "Interviewing", "Accepted", "Rejected", "Archived"];
 
 export function ApplicationsManagement() {
-  const { user } = useAuth();
-  const { toast } = useToast();
-  const isAdmin = user?.isAdmin;
-
   const { data: applications = [], isLoading: isLoadingApps } = useQuery<Application[]>({
     queryKey: ["/api/applications"],
   });
 
   const { data: jobs = [], isLoading: isLoadingJobs } = useQuery<Job[]>({
     queryKey: ["/api/jobs"],
-  });
-
-  const unarchiveMutation = useMutation({
-    mutationFn: async (jobId: number) => {
-      const response = await apiRequest(
-        "PATCH",
-        `/api/jobs/${jobId}/unarchive`,
-        {}
-      );
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || "Failed to unarchive job");
-      }
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/applications"] });
-      toast({
-        title: "Job unarchived",
-        description: "The job has been unarchived and all applications restored.",
-      });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
   });
 
   // Group applications by status, with special handling for archived jobs
@@ -158,33 +118,6 @@ export function ApplicationsManagement() {
                         <p className="text-xs text-muted-foreground mt-2">
                           Applied on {format(new Date(app.appliedAt), "MMM d, yyyy")}
                         </p>
-                        <div className="flex items-center gap-2 mt-2">
-                          <AdminMessageDialog
-                            applicationId={app.id}
-                            jobTitle={job.title}
-                            company={job.company}
-                          >
-                            <Button variant="outline" size="sm">
-                              <MessageCircle className="h-4 w-4 mr-2" />
-                              Message Applicant
-                            </Button>
-                          </AdminMessageDialog>
-                          {isAdmin && status === "Archived" && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => unarchiveMutation.mutate(job.id)}
-                              disabled={unarchiveMutation.isPending}
-                            >
-                              {unarchiveMutation.isPending ? (
-                                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                              ) : (
-                                <RefreshCw className="h-4 w-4 mr-2" />
-                              )}
-                              Unarchive Job
-                            </Button>
-                          )}
-                        </div>
                       </div>
                     </div>
                   ))}

@@ -252,37 +252,6 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Add unarchive endpoint
-  app.patch("/api/jobs/:id/unarchive", isAdmin, async (req, res) => {
-    try {
-      const jobId = parseInt(req.params.id);
-      if (isNaN(jobId)) {
-        return res.status(400).json({ error: "Invalid job ID" });
-      }
-
-      const job = await storage.getJob(jobId);
-      if (!job) {
-        return res.status(404).json({ error: "Job not found" });
-      }
-
-      if (job.isActive) {
-        return res.status(400).json({ error: "Job is already active" });
-      }
-
-      // Update the job to be active
-      const updatedJob = await storage.updateJob(jobId, {
-        ...job,
-        isActive: true
-      });
-
-      // Return success response
-      res.json(updatedJob);
-    } catch (error) {
-      console.error('Error unarchiving job:', error);
-      res.status(500).json({ error: "Failed to unarchive job" });
-    }
-  });
-
   // Regular routes continue...
   app.post("/api/jobs/scrape", async (_req, res) => {
     try {
