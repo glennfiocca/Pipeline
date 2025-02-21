@@ -41,6 +41,43 @@ export function registerRoutes(app: express.Express): Server {
     }
   });
 
+  // Admin routes
+  app.get("/api/admin/users", async (_req, res) => {
+    try {
+      const allUsers = await db.select().from(users);
+      res.json(allUsers);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch users" });
+    }
+  });
+
+  app.get("/api/jobs", async (_req, res) => {
+    try {
+      const allJobs = await db.select().from(jobs);
+      res.json(allJobs);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch jobs" });
+    }
+  });
+
+  app.get("/api/admin/feedback", async (_req, res) => {
+    try {
+      const allFeedback = await db.select().from(feedback);
+      res.json(allFeedback);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch feedback" });
+    }
+  });
+
+  app.get("/api/admin/applications", async (_req, res) => {
+    try {
+      const allApplications = await db.select().from(applications);
+      res.json(allApplications);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch applications" });
+    }
+  });
+
   // Basic health check
   app.get("/api/health", (_req, res) => {
     res.json({ status: "healthy" });
