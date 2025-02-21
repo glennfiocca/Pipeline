@@ -73,7 +73,7 @@ export default function AdminDashboardPage() {
     mutationFn: async (data: NewJobForm) => {
       const jobData = {
         ...data,
-        jobIdentifier: `PL${Date.now()}`, // Generate a temporary identifier
+        jobIdentifier: `PL${Date.now()}`,
         source: "Pipeline",
         sourceUrl: window.location.origin,
         lastCheckedAt: new Date().toISOString(),
@@ -553,11 +553,7 @@ export default function AdminDashboardPage() {
           <div className="py-4">
             <NewJobForm
               onSubmit={async (data) => {
-                try {
-                  await createJobMutation.mutateAsync(data);
-                } catch (error) {
-                  console.error("Error submitting form:", error);
-                }
+                await createJobMutation.mutateAsync(data);
               }}
               onCancel={() => setShowNewJobDialog(false)}
             />

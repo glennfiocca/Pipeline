@@ -34,18 +34,13 @@ export function NewJobForm({ onSubmit, onCancel, initialData }: JobFormProps) {
       salary: "",
       location: "",
       requirements: "",
-      type: "Full-time",
-      source: "Pipeline",
-      sourceUrl: window.location.origin,
-      isActive: true,
-      published: true,
+      type: "Full-time"
     }
   });
 
   const handleSubmit = async (data: NewJobForm) => {
     try {
       await onSubmit(data);
-      form.reset();
     } catch (error) {
       console.error('Form submission error:', error);
     }
@@ -61,12 +56,13 @@ export function NewJobForm({ onSubmit, onCancel, initialData }: JobFormProps) {
             <FormItem>
               <FormLabel>Title</FormLabel>
               <FormControl>
-                <Input {...field} />
+                <Input placeholder="Enter job title" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
+
         <FormField
           control={form.control}
           name="company"
@@ -74,12 +70,13 @@ export function NewJobForm({ onSubmit, onCancel, initialData }: JobFormProps) {
             <FormItem>
               <FormLabel>Company</FormLabel>
               <FormControl>
-                <Input {...field} />
+                <Input placeholder="Enter company name" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
+
         <FormField
           control={form.control}
           name="description"
@@ -87,12 +84,17 @@ export function NewJobForm({ onSubmit, onCancel, initialData }: JobFormProps) {
             <FormItem>
               <FormLabel>Description</FormLabel>
               <FormControl>
-                <Textarea className="min-h-[100px]" {...field} />
+                <Textarea 
+                  placeholder="Enter job description" 
+                  className="min-h-[100px]" 
+                  {...field} 
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
+
         <FormField
           control={form.control}
           name="salary"
@@ -100,12 +102,13 @@ export function NewJobForm({ onSubmit, onCancel, initialData }: JobFormProps) {
             <FormItem>
               <FormLabel>Salary</FormLabel>
               <FormControl>
-                <Input {...field} />
+                <Input placeholder="e.g. $80,000 - $100,000" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
+
         <FormField
           control={form.control}
           name="location"
@@ -113,12 +116,13 @@ export function NewJobForm({ onSubmit, onCancel, initialData }: JobFormProps) {
             <FormItem>
               <FormLabel>Location</FormLabel>
               <FormControl>
-                <Input {...field} />
+                <Input placeholder="e.g. San Francisco, CA" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
+
         <FormField
           control={form.control}
           name="requirements"
@@ -126,12 +130,17 @@ export function NewJobForm({ onSubmit, onCancel, initialData }: JobFormProps) {
             <FormItem>
               <FormLabel>Requirements</FormLabel>
               <FormControl>
-                <Textarea className="min-h-[100px]" {...field} />
+                <Textarea 
+                  placeholder="Enter job requirements (separate with semicolons)" 
+                  className="min-h-[100px]" 
+                  {...field} 
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
+
         <FormField
           control={form.control}
           name="type"
@@ -155,6 +164,7 @@ export function NewJobForm({ onSubmit, onCancel, initialData }: JobFormProps) {
             </FormItem>
           )}
         />
+
         <FormField
           control={form.control}
           name="isActive"
@@ -168,6 +178,23 @@ export function NewJobForm({ onSubmit, onCancel, initialData }: JobFormProps) {
               </FormControl>
               <div className="space-y-1 leading-none">
                 <FormLabel>Active</FormLabel>
+              </div>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="published"
+          render={({ field }) => (
+            <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+              <FormControl>
+                <Checkbox
+                  checked={field.value}
+                  onCheckedChange={field.onChange}
+                />
+              </FormControl>
+              <div className="space-y-1 leading-none">
+                <FormLabel>Published</FormLabel>
               </div>
             </FormItem>
           )}
