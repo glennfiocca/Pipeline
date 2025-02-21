@@ -13,6 +13,10 @@ import { useQuery } from "@tanstack/react-query";
 import { getQueryFn } from "@/lib/queryClient";
 import { useEffect, useState } from "react";
 
+interface ReferralInfo {
+  username: string;
+}
+
 export default function RegisterPage() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
@@ -21,9 +25,9 @@ export default function RegisterPage() {
   const referralCode = searchParams.get('ref');
 
   // Fetch referral info if code is present
-  const { data: referralInfo } = useQuery({
+  const { data: referralInfo } = useQuery<ReferralInfo>({
     queryKey: [`/api/referral/${referralCode}`],
-    queryFn: getQueryFn(),
+    queryFn: getQueryFn({ on401: "returnUndefined" }),
     enabled: !!referralCode
   });
 
