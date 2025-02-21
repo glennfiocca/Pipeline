@@ -81,24 +81,13 @@ export default function AdminDashboardPage() {
         lastCheckedAt: new Date().toISOString()
       };
 
-      const res = await apiRequest("POST", "/api/admin/jobs", formData);
-
-      if (!res.ok) {
-        const contentType = res.headers.get("content-type");
-        let errorMessage;
-
-        if (contentType?.includes("application/json")) {
-          const error = await res.json();
-          errorMessage = error.message;
-        } else {
-          errorMessage = await res.text();
-        }
-
-        throw new Error(errorMessage || "Failed to create job");
+      try {
+        const res = await apiRequest("POST", "/api/admin/jobs", formData);
+        return await res.json();
+      } catch (error: any) {
+        console.error("Job creation error details:", error);
+        throw new Error(error.message || "Failed to create job");
       }
-
-      const responseData = await res.json();
-      return responseData;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });

@@ -1,13 +1,4 @@
-import { queryClient } from "./queryClient";
+// This file is deprecated, use apiRequest from queryClient.ts instead
+import { apiRequest as queryClientApiRequest } from "./queryClient";
 
-type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
-
-export async function apiRequest(method: HttpMethod, path: string, body?: unknown) {
-  return fetch(path, {
-    method,
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: body ? JSON.stringify(body) : undefined,
-  });
-}
+export const apiRequest = queryClientApiRequest;
