@@ -21,6 +21,49 @@ const isAdmin = (req: any, res: any, next: any) => {
   next();
 };
 
+async function handleReferralCredits(referredBy: string, newUserId: number) {
+  try {
+    // Get the referring user
+    const referrer = await storage.getUserByUsername(referredBy);
+    if (!referrer) return;
+
+    // Add credits to the referring user
+    await storage.addBankedCredits(referrer.id, 5);
+
+    // Add credits to the new user
+    await storage.addBankedCredits(newUserId, 5);
+
+    // Create notifications for both users
+    await storage.createNotification({
+      userId: referrer.id,
+      type: "application_confirmation",
+      title: "Referral Bonus Received!",
+      content: "You received 5 banked credits for referring a new user!",
+      isRead: false,
+      relatedId: newUserId,
+      relatedType: "user",
+      metadata: {
+        creditsAwarded: 5
+      }
+    });
+
+    await storage.createNotification({
+      userId: newUserId,
+      type: "application_confirmation",
+      title: "Welcome Bonus!",
+      content: "You received 5 banked credits for joining through a referral!",
+      isRead: false,
+      relatedId: referrer.id,
+      relatedType: "user",
+      metadata: {
+        creditsAwarded: 5
+      }
+    });
+  } catch (error) {
+    console.error('Error handling referral credits:', error);
+  }
+}
+
 export function registerRoutes(app: Express): Server {
   // Add POST endpoint for job creation
   app.post("/api/jobs", async (req, res) => {
@@ -331,6 +374,69 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+
+  // Update the user registration route to handle referrals
+  app.post("/api/auth/register", async (req, res) => {
+    try {
+      const parsed = insertUserSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ 
+          error: "Invalid user data", 
+          details: parsed.error 
+        });
+      }
+
+      const { username, password, email, referredBy } = parsed.data;
+
+      // Check if username already exists
+      const existingUser = await storage.getUserByUsername(username);
+      if (existingUser) {
+        return res.status(400).json({ error: "Username already exists" });
+      }
+
+      // Hash password
+      const hashedPassword = await hashPassword(password);
+
+      // Create the new user
+      const user = await storage.createUser({
+        username,
+        email,
+        password: hashedPassword,
+        isAdmin: false,
+        resetToken: null,
+        resetTokenExpiry: null,
+        createdAt: new Date().toISOString(),
+        bankedCredits: 0,
+        referredBy
+      });
+
+      // If user was referred, handle the referral credits
+      if (referredBy) {
+        await handleReferralCredits(referredBy, user.id);
+      }
+
+      // Create session
+      req.login(user, (err) => {
+        if (err) {
+          console.error('Session creation error:', err);
+          return res.status(500).json({ error: "Error creating session" });
+        }
+        res.status(201).json({ 
+          id: user.id,
+          username: user.username,
+          email: user.email,
+          isAdmin: user.isAdmin,
+          bankedCredits: user.bankedCredits
+        });
+      });
+    } catch (error) {
+      console.error('Registration error:', error);
+      res.status(500).json({ 
+        error: "Failed to register user",
+        message: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
 
   // Regular routes continue...
   app.post("/api/jobs/scrape", async (_req, res) => {
