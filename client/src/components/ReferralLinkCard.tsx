@@ -8,11 +8,11 @@ import { useToast } from "@/hooks/use-toast";
 export function ReferralLinkCard() {
   const { user } = useAuth();
   const { toast } = useToast();
-  
+
   if (!user?.referralCode) return null;
-  
-  const referralLink = `${window.location.origin}/register?ref=${user.referralCode}`;
-  
+
+  const referralLink = `${window.location.origin}/auth?ref=${user.referralCode}`;
+
   const copyLink = async () => {
     try {
       await navigator.clipboard.writeText(referralLink);
@@ -30,13 +30,13 @@ export function ReferralLinkCard() {
   };
 
   return (
-    <Card>
+    <Card className="w-full">
       <CardHeader>
-        <CardTitle>Share & Earn Credits</CardTitle>
+        <CardTitle>Refer Friends</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <p className="text-sm text-muted-foreground">
-          Share this link with friends and you'll both get 5 credits when they sign up!
+          Share your referral link with friends. When they sign up, you'll both receive 5 bonus credits!
         </p>
         <div className="flex space-x-2">
           <Input
@@ -53,7 +53,7 @@ export function ReferralLinkCard() {
           </Button>
         </div>
         <div className="text-sm text-muted-foreground">
-          Your available credits: {user.bankedCredits}
+          Available credits: {user.bankedCredits}
         </div>
       </CardContent>
     </Card>
