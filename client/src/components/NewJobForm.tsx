@@ -42,14 +42,9 @@ export function NewJobForm({ onSubmit, onCancel, initialData }: JobFormProps) {
     }
   });
 
-  async function handleSubmit(data: NewJobForm) {
-    try {
-      console.log("Form data before submission:", data); // Debug log
-      await onSubmit(data);
-      form.reset();
-    } catch (error) {
-      console.error("Error in form submission:", error);
-    }
+  function handleSubmit(data: NewJobForm) {
+    onSubmit(data);
+    form.reset();
   }
 
   return (

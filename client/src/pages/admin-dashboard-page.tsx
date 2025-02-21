@@ -81,11 +81,8 @@ export default function AdminDashboardPage() {
         lastCheckedAt: new Date().toISOString()
       };
 
-      console.log('Sending data to server:', JSON.stringify(formData));
       const res = await apiRequest("POST", "/api/admin/jobs", formData);
-      const data = await res.json();
-      console.log('Server response:', data);
-      return data;
+      return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
@@ -95,8 +92,7 @@ export default function AdminDashboardPage() {
       });
       setShowNewJobDialog(false);
     },
-    onError: (error: Error) => {
-      console.error('Mutation error:', error);
+    onError: (error: any) => {
       toast({
         title: "Error",
         description: error.message || "Failed to create job",
@@ -551,11 +547,7 @@ export default function AdminDashboardPage() {
           <div className="py-4">
             <NewJobForm
               onSubmit={async (data) => {
-                try {
-                  await createJobMutation.mutateAsync(data);
-                } catch (error) {
-                  console.error("Error submitting form:", error);
-                }
+                createJobMutation.mutate(data);
               }}
               onCancel={() => setShowNewJobDialog(false)}
             />
@@ -573,11 +565,7 @@ export default function AdminDashboardPage() {
           </DialogHeader>
           <NewUserForm
             onSubmit={(data) => {
-              try {
-                createUserMutation.mutate(data);
-              } catch (error) {
-                console.error("Error submitting form:", error);
-              }
+              createUserMutation.mutate(data);
             }}
             onCancel={() => setShowNewUserDialog(false)}
           />
@@ -597,11 +585,7 @@ export default function AdminDashboardPage() {
             <NewJobForm
               initialData={selectedJob}
               onSubmit={(data) => {
-                try {
-                  editJobMutation.mutate(data);
-                } catch (error) {
-                  console.error("Error submitting form:", error);
-                }
+                editJobMutation.mutate(data);
               }}
               onCancel={() => {
                 setShowEditJobDialog(false);
@@ -623,11 +607,7 @@ export default function AdminDashboardPage() {
           <NewUserForm
             initialData={selectedUser}
             onSubmit={(data) => {
-              try {
-                editUserMutation.mutate(data);
-              } catch (error) {
-                console.error("Error submitting form:", error);
-              }
+              editUserMutation.mutate(data);
             }}
             onCancel={() => {
               setShowEditUserDialog(false);
