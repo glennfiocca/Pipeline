@@ -87,7 +87,6 @@ export interface IStorage {
   markAllNotificationsAsRead(userId: number): Promise<void>;
 
   addBankedCredits(userId: number, amount: number): Promise<User>;
-  generateReferralCode(userId: number): Promise<string>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -116,35 +115,9 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createUser(insertUser: Pick<InsertUser, "username" | "email" | "password"> & { createdAt: string }): Promise<User> {
-    try {
-        console.log('DEBUG: Creating new user:', {
-            username: insertUser.username,
-            email: insertUser.email,
-            hasPassword: !!insertUser.password,
-            createdAt: insertUser.createdAt
-        });
-
-        const [user] = await db
-            .insert(users)
-            .values({
-                ...insertUser,
-                bankedCredits: 0, // Explicitly set initial credits
-                isAdmin: false
-            })
-            .returning();
-
-        console.log('DEBUG: User created successfully:', {
-            userId: user.id,
-            username: user.username,
-            bankedCredits: user.bankedCredits
-        });
-
-        return user;
-    } catch (error) {
-        console.error('DEBUG: Error creating user:', error);
-        throw error;
-    }
-}
+    const [user] = await db.insert(users).values(insertUser).returning();
+    return user;
+  }
 
   async updateUserPassword(id: number, hashedPassword: string): Promise<User> {
     const [user] = await db
@@ -208,31 +181,15 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createJob(insertJob: InsertJob): Promise<Job> {
-    try {
-      console.log('DEBUG: Creating new job:', insertJob);
-
-      const jobIdentifier = await this.generateUniqueJobIdentifier();
-      console.log('DEBUG: Generated job identifier:', jobIdentifier);
-
-      const [job] = await db.insert(jobs).values({
-        ...insertJob,
-        jobIdentifier,
-        lastCheckedAt: new Date().toISOString(),
-        published: true,
-        isActive: true
-      }).returning();
-
-      console.log('DEBUG: Job created successfully:', {
-        jobId: job.id,
-        identifier: job.jobIdentifier,
-        title: job.title
-      });
-
-      return job;
-    } catch (error) {
-      console.error('DEBUG: Error in createJob:', error);
-      throw error;
-    }
+    const jobIdentifier = await this.generateUniqueJobIdentifier();
+    const [job] = await db.insert(jobs).values({
+      ...insertJob,
+      jobIdentifier,
+      lastCheckedAt: new Date().toISOString(),
+      published: true,
+      isActive: true
+    }).returning();
+    return job;
   }
 
   async getProfiles(): Promise<Profile[]> {
@@ -644,82 +601,20 @@ export class DatabaseStorage implements IStorage {
 
 
   async addBankedCredits(userId: number, amount: number): Promise<User> {
-    try {
-        console.log('DEBUG: Starting addBankedCredits:', { userId, amount });
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, userId));
 
-        // First get the current user and their credits
-        const [user] = await db
-            .select()
-            .from(users)
-            .where(eq(users.id, userId));
+    if (!user) throw new Error("User not found");
 
-        if (!user) {
-            console.error('DEBUG: User not found for credit addition:', userId);
-            throw new Error("User not found");
-        }
+    const [updatedUser] = await db
+      .update(users)
+      .set({ bankedCredits: (user.bankedCredits || 0) + amount })
+      .where(eq(users.id, userId))
+      .returning();
 
-        console.log('DEBUG: Current user state:', {
-            userId: user.id,
-            username: user.username,
-            currentCredits: user.bankedCredits
-        });
-
-        // Calculate new credits amount
-        const currentCredits = user.bankedCredits || 0;
-        const newCredits = currentCredits + amount;
-
-        console.log('DEBUG: Updating credits:', {
-            userId,
-            currentCredits,
-            adding: amount,
-            newTotal: newCredits
-        });
-
-        // Update the user's credits
-        const [updatedUser] = await db
-            .update(users)
-            .set({ 
-                bankedCredits: newCredits
-            })
-            .where(eq(users.id, userId))
-            .returning();
-
-        if (!updatedUser) {
-            throw new Error('Failed to update user credits');
-        }
-
-        console.log('DEBUG: Credits updated successfully:', {
-            userId,
-            oldCredits: currentCredits,
-            newCredits: updatedUser.bankedCredits
-        });
-
-        return updatedUser;
-    } catch (error) {
-        console.error('DEBUG: Error in addBankedCredits:', error);
-        throw error;
-    }
-}
-
-  async generateReferralCode(userId: number): Promise<string> {
-    try {
-      const user = await this.getUser(userId);
-      if (!user) throw new Error("User not found");
-
-      const randomStr = Math.random().toString(36).substring(2, 8).toUpperCase();
-      const referralCode = `${user.username.substring(0, 4).toUpperCase()}-${randomStr}`;
-
-      const [updatedUser] = await db
-        .update(users)
-        .set({ referralCode })
-        .where(eq(users.id, userId))
-        .returning();
-
-      return referralCode;
-    } catch (error) {
-      console.error('Error generating referral code:', error);
-      throw error;
-    }
+    return updatedUser;
   }
 }
 

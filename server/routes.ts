@@ -21,84 +21,12 @@ const isAdmin = (req: any, res: any, next: any) => {
   next();
 };
 
-async function handleReferralCredits(referredBy: string, newUserId: number) {
-    try {
-        console.log('DEBUG: Starting referral credit process', { referredBy, newUserId });
-
-        // Get the referring user
-        const referrer = await storage.getUserByUsername(referredBy);
-        if (!referrer) {
-            console.error('DEBUG: Referrer not found:', referredBy);
-            throw new Error('Referrer not found');
-        }
-        console.log('DEBUG: Found referrer:', { referrerId: referrer.id, username: referrer.username });
-
-        // Add credits to the referring user
-        console.log('DEBUG: Adding credits to referrer:', referrer.id);
-        await storage.addBankedCredits(referrer.id, 5);
-
-        // Add credits to the new user
-        console.log('DEBUG: Adding credits to new user:', newUserId);
-        await storage.addBankedCredits(newUserId, 5);
-
-        // Create notifications for both users
-        console.log('DEBUG: Creating notifications');
-        await storage.createNotification({
-            userId: referrer.id,
-            type: "referral_bonus",
-            title: "Referral Bonus Received!",
-            content: "You received 5 banked credits for referring a new user!",
-            isRead: false,
-            relatedId: newUserId,
-            relatedType: "user",
-            metadata: {
-                creditsAwarded: 5
-            }
-        });
-
-        await storage.createNotification({
-            userId: newUserId,
-            type: "referral_bonus",
-            title: "Welcome Bonus!",
-            content: "You received 5 banked credits for joining through a referral!",
-            isRead: false,
-            relatedId: referrer.id,
-            relatedType: "user",
-            metadata: {
-                creditsAwarded: 5
-            }
-        });
-        console.log('DEBUG: Referral process completed successfully');
-    } catch (error) {
-        console.error('DEBUG: Error in handleReferralCredits:', error);
-        throw error; // Re-throw to handle in the registration route
-    }
-}
-
 export function registerRoutes(app: Express): Server {
   // Add POST endpoint for job creation
-  app.post("/api/jobs", async (req: any, res) => {
+  app.post("/api/jobs", async (req, res) => {
     try {
-      // Check authentication
-      if (!req.isAuthenticated()) {
-        console.error('DEBUG: Job creation failed - user not authenticated');
-        return res.status(401).json({ error: "Authentication required" });
-      }
-
-      // Check admin status
-      if (!req.user?.isAdmin) {
-        console.error('DEBUG: Job creation failed - user not admin:', req.user?.username);
-        return res.status(403).json({ error: "Only administrators can create jobs" });
-      }
-
-      console.log('DEBUG: Job creation request received:', {
-        user: req.user?.username,
-        body: req.body
-      });
-
       const parsed = insertJobSchema.safeParse(req.body);
       if (!parsed.success) {
-        console.error('DEBUG: Job validation failed:', parsed.error);
         return res.status(400).json({ 
           error: "Invalid job data", 
           details: parsed.error 
@@ -106,15 +34,9 @@ export function registerRoutes(app: Express): Server {
       }
 
       const job = await storage.createJob(parsed.data);
-      console.log('DEBUG: Job created successfully:', {
-        jobId: job.id,
-        title: job.title,
-        company: job.company
-      });
-
       res.status(201).json(job);
     } catch (error) {
-      console.error('DEBUG: Error creating job:', error);
+      console.error('Error creating job:', error);
       res.status(500).json({ 
         error: "Failed to create job",
         message: error instanceof Error ? error.message : "Unknown error"
@@ -409,97 +331,6 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-
-  // Update the user registration route to handle referrals
-  app.post("/api/auth/register", async (req, res) => {
-    try {
-        console.log('DEBUG: Registration request received:', {
-            body: req.body,
-            hasReferredBy: !!req.body.referredBy
-        });
-
-        const parsed = insertUserSchema.safeParse(req.body);
-        if (!parsed.success) {
-            console.error('DEBUG: Validation failed:', parsed.error);
-            return res.status(400).json({ 
-                error: "Invalid user data", 
-                details: parsed.error 
-            });
-        }
-
-        const { username, password, email, referredBy } = parsed.data;
-        console.log('DEBUG: Parsed registration data:', { 
-            username, 
-            email, 
-            hasReferral: !!referredBy,
-            referredBy 
-        });
-
-        // Check if username already exists
-        const existingUser = await storage.getUserByUsername(username);
-        if (existingUser) {
-            console.log('DEBUG: Username already exists:', username);
-            return res.status(400).json({ error: "Username already exists" });
-        }
-
-        // Hash password
-        const hashedPassword = await hashPassword(password);
-
-        // Create the new user with explicit bankedCredits initialization
-        const user = await storage.createUser({
-            username,
-            email,
-            password: hashedPassword,
-            isAdmin: false,
-            resetToken: null,
-            resetTokenExpiry: null,
-            createdAt: new Date().toISOString(),
-            bankedCredits: 0,
-            referredBy: referredBy || null
-        });
-
-        console.log('DEBUG: New user created:', { 
-            userId: user.id, 
-            username: user.username,
-            referredBy: user.referredBy
-        });
-
-        // Handle referral credits if user was referred
-        if (referredBy) {
-            console.log('DEBUG: Processing referral for new user:', { 
-                referredBy, 
-                newUserId: user.id 
-            });
-            try {
-                await handleReferralCredits(referredBy, user.id);
-            } catch (error) {
-                console.error('DEBUG: Failed to process referral credits:', error);
-                // Continue with registration even if referral processing fails
-            }
-        }
-
-        // Create session
-        req.login(user, (err) => {
-            if (err) {
-                console.error('DEBUG: Session creation error:', err);
-                return res.status(500).json({ error: "Error creating session" });
-            }
-            res.status(201).json({ 
-                id: user.id,
-                username: user.username,
-                email: user.email,
-                isAdmin: user.isAdmin,
-                bankedCredits: user.bankedCredits
-            });
-        });
-    } catch (error) {
-        console.error('DEBUG: Registration error:', error);
-        res.status(500).json({ 
-            error: "Failed to register user",
-            message: error instanceof Error ? error.message : "Unknown error"
-        });
-    }
-});
 
   // Regular routes continue...
   app.post("/api/jobs/scrape", async (_req, res) => {

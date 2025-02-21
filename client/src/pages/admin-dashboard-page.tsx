@@ -71,20 +71,19 @@ export default function AdminDashboardPage() {
   // Create mutations
   const createJobMutation = useMutation({
     mutationFn: async (data: NewJobForm) => {
-      const jobData = {
+      const formData = {
         ...data,
-        jobIdentifier: `PL${Date.now()}`,
         source: "Pipeline",
         sourceUrl: window.location.origin,
-        lastCheckedAt: new Date().toISOString(),
         isActive: true,
-        published: true
+        published: true,
+        lastCheckedAt: new Date().toISOString(),
       };
 
-      const response = await apiRequest("POST", "/api/jobs", jobData);
+      const response = await apiRequest("POST", "/api/jobs", formData);
 
       if (!response.ok) {
-        const errorData = await response.json();
+        const errorData = await response.json().catch(() => ({ message: "Failed to create job" }));
         throw new Error(errorData.message || "Failed to create job");
       }
 
@@ -552,8 +551,12 @@ export default function AdminDashboardPage() {
           </DialogHeader>
           <div className="py-4">
             <NewJobForm
-              onSubmit={async (data) => {
-                await createJobMutation.mutateAsync(data);
+              onSubmit={(data) => {
+                try {
+                  createJobMutation.mutate(data);
+                } catch (error) {
+                  console.error("Error submitting form:", error);
+                }
               }}
               onCancel={() => setShowNewJobDialog(false)}
             />
