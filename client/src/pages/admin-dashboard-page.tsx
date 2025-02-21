@@ -84,7 +84,7 @@ export default function AdminDashboardPage() {
 
         console.log('Submitting job data:', JSON.stringify(formData, null, 2));
 
-        const res = await apiRequest("POST", "/api/admin/jobs", formData);
+        const res = await apiRequest("POST", "/api/jobs", formData);
         if (!res.ok) {
           const error = await res.text();
           console.error('Job creation failed:', error);
