@@ -167,8 +167,8 @@ export function NewJobForm({ onSubmit, onCancel, initialData }: JobFormProps) {
               <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
                 <FormControl>
                   <Checkbox
-                    checked={field.value}
-                    onCheckedChange={field.onChange}
+                    checked={field.value as boolean}
+                    onCheckedChange={(checked) => field.onChange(checked)}
                   />
                 </FormControl>
                 <div className="space-y-1 leading-none">
