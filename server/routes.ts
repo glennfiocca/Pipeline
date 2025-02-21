@@ -42,6 +42,16 @@ export function registerRoutes(app: express.Express): Server {
   });
 
   // Admin routes
+  app.post("/api/jobs", async (req, res) => {
+    try {
+      const [newJob] = await db.insert(jobs).values(req.body).returning();
+      res.json(newJob);
+    } catch (error) {
+      console.error('Job creation error:', error);
+      res.status(500).json({ error: "Failed to create job" });
+    }
+  });
+
   app.get("/api/admin/users", async (_req, res) => {
     try {
       const allUsers = await db.select().from(users);
