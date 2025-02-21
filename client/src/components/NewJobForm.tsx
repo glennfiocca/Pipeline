@@ -10,11 +10,12 @@ import { DialogFooter } from "@/components/ui/dialog";
 import { insertJobSchema } from "@shared/schema";
 import { z } from "zod";
 import type { Job } from "@shared/schema";
+import { Loader2 } from "lucide-react";
 
 type NewJobForm = z.infer<typeof insertJobSchema>;
 
 interface JobFormProps {
-  onSubmit: (data: NewJobForm) => void;
+  onSubmit: (data: NewJobForm) => Promise<void>;
   onCancel: () => void;
   initialData?: Job | null;
 }
@@ -175,11 +176,26 @@ export function NewJobForm({ onSubmit, onCancel, initialData }: JobFormProps) {
           />
         </div>
         <DialogFooter className="flex justify-between gap-2">
-          <Button type="button" variant="outline" onClick={onCancel}>
+          <Button 
+            type="button" 
+            variant="outline" 
+            onClick={onCancel}
+            disabled={form.formState.isSubmitting}
+          >
             Cancel
           </Button>
-          <Button type="submit" disabled={form.formState.isSubmitting}>
-            {initialData ? "Update Job" : "Create Job"}
+          <Button 
+            type="submit" 
+            disabled={form.formState.isSubmitting}
+          >
+            {form.formState.isSubmitting ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                {initialData ? "Updating..." : "Creating..."}
+              </>
+            ) : (
+              initialData ? "Update Job" : "Create Job"
+            )}
           </Button>
         </DialogFooter>
       </form>
