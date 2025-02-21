@@ -4,15 +4,28 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { insertUserSchema, type InsertUser } from "@shared/schema";
 import { useAuth } from "@/hooks/use-auth";
 import { useLocation, Link } from "wouter";
+import { useQuery } from "@tanstack/react-query";
+import { getQueryFn } from "@/lib/queryClient";
+import { useEffect, useState } from "react";
 
 export default function RegisterPage() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
   const { registerMutation } = useAuth();
+  const [searchParams] = useState(new URLSearchParams(window.location.search));
+  const referralCode = searchParams.get('ref');
+
+  // Fetch referral info if code is present
+  const { data: referralInfo } = useQuery({
+    queryKey: [`/api/referral/${referralCode}`],
+    queryFn: getQueryFn(),
+    enabled: !!referralCode
+  });
 
   const form = useForm<InsertUser>({
     resolver: zodResolver(insertUserSchema),
@@ -20,7 +33,8 @@ export default function RegisterPage() {
       username: "",
       email: "",
       password: "",
-      confirmPassword: ""
+      confirmPassword: "",
+      referredBy: referralCode || undefined
     }
   });
 
@@ -32,7 +46,6 @@ export default function RegisterPage() {
       console.error("Registration error:", error);
       const errorMessage = error.message || "Failed to create account";
       if (error.errors) {
-        // Handle validation errors
         toast({
           title: "Validation Error",
           description: error.errors,
@@ -60,6 +73,15 @@ export default function RegisterPage() {
               Create your account to start your job search journey with one-click applications and personalized job matches.
             </p>
           </div>
+
+          {referralInfo && (
+            <Alert className="bg-primary/10 border-primary text-primary">
+              <AlertDescription className="text-lg">
+                You've been referred by {referralInfo.username}! 
+                Sign up now and you'll both receive 5 bonus credits! 🎉
+              </AlertDescription>
+            </Alert>
+          )}
         </div>
 
         <Card>
