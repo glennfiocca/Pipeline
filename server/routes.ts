@@ -79,8 +79,11 @@ export function registerRoutes(app: Express): Server {
   // Add POST endpoint for job creation
   app.post("/api/jobs", async (req, res) => {
     try {
+      console.log('DEBUG: Job creation request received:', req.body);
+
       const parsed = insertJobSchema.safeParse(req.body);
       if (!parsed.success) {
+        console.error('DEBUG: Job validation failed:', parsed.error);
         return res.status(400).json({ 
           error: "Invalid job data", 
           details: parsed.error 
@@ -88,9 +91,10 @@ export function registerRoutes(app: Express): Server {
       }
 
       const job = await storage.createJob(parsed.data);
+      console.log('DEBUG: Job created successfully:', job);
       res.status(201).json(job);
     } catch (error) {
-      console.error('Error creating job:', error);
+      console.error('DEBUG: Error creating job:', error);
       res.status(500).json({ 
         error: "Failed to create job",
         message: error instanceof Error ? error.message : "Unknown error"
