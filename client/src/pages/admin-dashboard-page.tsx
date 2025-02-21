@@ -80,7 +80,7 @@ export default function AdminDashboardPage() {
         lastCheckedAt: new Date().toISOString(),
       };
 
-      const response = await apiRequest("POST", "/api/jobs", formData);
+      const response = await apiRequest("POST", "/api/admin/jobs", formData);
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: "Failed to create job" }));
