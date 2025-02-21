@@ -13,7 +13,8 @@ export function ReferralCard() {
   const copyReferralLink = async () => {
     if (!user?.username) return;
 
-    const referralLink = `${window.location.origin}/auth/login?ref=${user.username}`;
+    // Changed to explicitly use the register tab
+    const referralLink = `${window.location.origin}/auth/login?tab=register&ref=${user.username}`;
     await navigator.clipboard.writeText(referralLink);
     setCopied(true);
     toast({

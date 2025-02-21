@@ -17,7 +17,10 @@ export default function AuthPage() {
   const [search] = useSearch();
   const { loginMutation, registerMutation } = useAuth();
   const [isResettingPassword, setIsResettingPassword] = useState(false);
-  const referredBy = new URLSearchParams(search).get('ref');
+
+  const searchParams = new URLSearchParams(search);
+  const referredBy = searchParams.get('ref');
+  const defaultTab = searchParams.get('tab') || (referredBy ? 'register' : 'login');
 
   const loginForm = useForm({
     defaultValues: {
@@ -110,25 +113,32 @@ export default function AuthPage() {
     <div className="container flex items-center justify-center min-h-screen">
       <div className="grid lg:grid-cols-2 gap-8 w-full max-w-4xl">
         <div className="flex flex-col justify-center space-y-6">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tighter">
-              Welcome to Pipeline
-            </h1>
-            <p className="text-muted-foreground">
-              Your career journey starts here. Access the best jobs in tech and finance with one-click applications.
-            </p>
-          </div>
-          {referredBy && (
-            <div className="rounded-lg border p-4 bg-muted">
-              <p className="text-sm text-muted-foreground">
-                You've been referred by {referredBy}! Create an account to receive 5 bonus credits.
+          {referredBy ? (
+            <>
+              <h1 className="text-3xl font-bold tracking-tighter">
+                Welcome to Pipeline!
+              </h1>
+              <p className="text-xl text-muted-foreground">
+                {referredBy} thinks we can help make your job search easier!
+              </p>
+              <p className="text-muted-foreground">
+                Create an account to get started and receive 5 bonus credits.
+              </p>
+            </>
+          ) : (
+            <div>
+              <h1 className="text-3xl font-bold tracking-tighter">
+                Welcome to Pipeline
+              </h1>
+              <p className="text-muted-foreground">
+                Your career journey starts here. Access the best jobs in tech and finance with one-click applications.
               </p>
             </div>
           )}
         </div>
 
         <Card>
-          <Tabs defaultValue={referredBy ? "register" : "login"} className="w-full">
+          <Tabs defaultValue={defaultTab} className="w-full">
             <CardHeader>
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="login">Login</TabsTrigger>
