@@ -124,11 +124,11 @@ export default function AuthPage() {
         <div className="flex flex-col justify-center space-y-6">
           {referredBy ? (
             <>
-              <h1 className="text-3xl font-bold tracking-tighter">
+              <h1 className="text-3xl font-bold tracking-tighter text-blue-600">
                 Welcome to Pipeline!
               </h1>
               <p className="text-xl text-muted-foreground">
-                {referredBy} thinks we can help make your job search easier!
+                You were referred by {referredBy}! They think we can help make your job search easier.
               </p>
               <p className="text-muted-foreground">
                 Create an account to get started and receive 5 bonus credits.
@@ -156,7 +156,7 @@ export default function AuthPage() {
             </CardHeader>
 
             <CardContent>
-              <TabsContent value="login">
+              <TabsContent value="login" className={activeTab === 'login' ? 'block' : 'hidden'}>
                 {!isResettingPassword ? (
                   <Form {...loginForm}>
                     <form onSubmit={loginForm.handleSubmit(onLogin)} className="space-y-4">
@@ -240,7 +240,7 @@ export default function AuthPage() {
                 )}
               </TabsContent>
 
-              <TabsContent value="register">
+              <TabsContent value="register" className={activeTab === 'register' ? 'block' : 'hidden'}>
                 <Form {...registerForm}>
                   <form onSubmit={registerForm.handleSubmit(onSubmit)} className="space-y-4">
                     <FormField
