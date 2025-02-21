@@ -33,7 +33,8 @@ export default function AuthPage() {
       email: "",
       password: "",
       confirmPassword: "",
-      referralCode: referralCode || ""
+      isAdmin: false,
+      referralCode: referralCode || undefined 
     }
   });
 
@@ -117,10 +118,17 @@ export default function AuthPage() {
               Your career journey starts here. Access the best jobs in tech and finance with one-click applications.
             </p>
           </div>
+          {referralCode && (
+            <div className="rounded-lg border p-4 bg-muted">
+              <p className="text-sm text-muted-foreground">
+                You've been referred by a friend! Create an account to get started.
+              </p>
+            </div>
+          )}
         </div>
 
         <Card>
-          <Tabs defaultValue="login" className="w-full">
+          <Tabs defaultValue={referralCode ? "register" : "login"} className="w-full">
             <CardHeader>
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="login">Login</TabsTrigger>
@@ -271,22 +279,6 @@ export default function AuthPage() {
                         </FormItem>
                       )}
                     />
-
-                    {referralCode && (
-                      <FormField
-                        control={registerForm.control}
-                        name="referralCode"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Referral Code</FormLabel>
-                            <FormControl>
-                              <Input {...field} disabled />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    )}
 
                     <Button
                       type="submit"

@@ -2,7 +2,7 @@ import { pgTable, text, serial, boolean, integer, jsonb } from "drizzle-orm/pg-c
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-// User table schema
+// Update user schema to simplify referral fields
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   username: text("username").notNull().unique(),
@@ -14,7 +14,27 @@ export const users = pgTable("users", {
   createdAt: text("created_at").notNull().default(new Date().toISOString()),
   bankedCredits: integer("banked_credits").notNull().default(0),
   referralCode: text("referral_code").unique(),
-  referredBy: text("referred_by"),
+  referredBy: text("referred_by")
+});
+
+// Update the insertUserSchema to include referral code
+export const insertUserSchema = createInsertSchema(users).omit({
+  id: true,
+  resetToken: true,
+  resetTokenExpiry: true,
+  createdAt: true,
+  bankedCredits: true,
+  referralCode: true,
+  referredBy: true
+}).extend({
+  confirmPassword: z.string(),
+  username: z.string().min(3, "Username must be at least 3 characters"),
+  email: z.string().email("Invalid email format"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
+  referralCode: z.string().optional()
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "Passwords don't match",
+  path: ["confirmPassword"]
 });
 
 // Base schema for database operations
@@ -26,17 +46,6 @@ const baseUserSchema = createInsertSchema(users).omit({
   bankedCredits: true,
   referralCode: true,
   referredBy: true
-});
-
-// Extended schema for registration with validation
-export const insertUserSchema = baseUserSchema.extend({
-  confirmPassword: z.string(),
-  username: z.string().min(3, "Username must be at least 3 characters"),
-  email: z.string().email("Invalid email format"),
-  password: z.string().min(6, "Password must be at least 6 characters")
-}).refine((data) => data.password === data.confirmPassword, {
-  message: "Passwords don't match",
-  path: ["confirmPassword"]
 });
 
 // Types

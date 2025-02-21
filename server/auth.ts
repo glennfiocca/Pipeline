@@ -12,8 +12,9 @@ import { ZodError } from "zod";
 // Correctly extend Express.User interface
 declare global {
   namespace Express {
-    // Use type intersection instead of extends
-    interface User extends Omit<User, keyof Express.User> {}
+    interface User extends Omit<User, 'id'> {
+      id: number;
+    }
   }
 }
 
@@ -38,7 +39,7 @@ async function comparePasswords(supplied: string, stored: string) {
 }
 
 export function setupAuth(app: Express) {
-  // Session configuration
+  // Session configuration remains unchanged
   const sessionSettings: session.SessionOptions = {
     secret: process.env.REPLIT_ID || 'development-secret',
     resave: false,
@@ -71,15 +72,10 @@ export function setupAuth(app: Express) {
     })
   );
 
-  // Serialize user by ID
   passport.serializeUser((user, done) => {
-    if (!user || typeof user.id !== 'number') {
-      return done(new Error('Invalid user object during serialization'));
-    }
     done(null, user.id);
   });
 
-  // Deserialize user from ID
   passport.deserializeUser(async (id: number, done) => {
     try {
       const user = await storage.getUser(id);
@@ -92,7 +88,7 @@ export function setupAuth(app: Express) {
     }
   });
 
-  // Registration endpoint
+  // Updated registration endpoint with referral handling
   app.post("/api/register", async (req, res) => {
     try {
       const validatedData = insertUserSchema.parse(req.body);
@@ -109,14 +105,33 @@ export function setupAuth(app: Express) {
         return res.status(400).json({ error: "Email already registered" });
       }
 
-      // Create new user with hashed password
-      const hashedPassword = await hashPassword(validatedData.password);
+      // Generate a unique referral code for the new user
+      const referralCode = `PL${randomBytes(3).toString('hex').toUpperCase()}`;
+
+      // Handle referral if provided
+      let referredBy: string | undefined = undefined;
+      if (validatedData.referralCode) {
+        const referrer = await storage.getUserByReferralCode(validatedData.referralCode);
+        if (!referrer) {
+          return res.status(400).json({ error: "Invalid referral code" });
+        }
+        referredBy = validatedData.referralCode;
+
+        // Award credits to referrer (50 credits for each successful referral)
+        await storage.addBankedCredits(referrer.id, 50);
+      }
+
+      // Create new user with hashed password and referral info
       const { confirmPassword, ...userDataWithoutConfirm } = validatedData;
+      const hashedPassword = await hashPassword(validatedData.password);
 
       const user = await storage.createUser({
         ...userDataWithoutConfirm,
         password: hashedPassword,
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
+        referralCode,
+        referredBy,
+        bankedCredits: referredBy ? 25 : 0 // Give 25 credits to new users who used a referral code
       });
 
       // Log in the user after registration
@@ -154,7 +169,6 @@ export function setupAuth(app: Express) {
           console.error("Session creation error:", err);
           return res.status(500).json({ error: "Error creating session" });
         }
-        console.log("User logged in successfully:", user.username);
         return res.json(user);
       });
     })(req, res, next);
@@ -179,7 +193,6 @@ export function setupAuth(app: Express) {
     if (!req.isAuthenticated()) {
       return res.status(401).json({ error: "Not authenticated" });
     }
-    console.log("Current authenticated user:", req.user?.username);
     res.json(req.user);
   });
 }
