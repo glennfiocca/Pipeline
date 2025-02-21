@@ -42,9 +42,30 @@ export function registerRoutes(app: express.Express): Server {
   });
 
   // Admin routes
-  app.post("/api/jobs", async (req, res) => {
+  app.post("/api/admin/users", async (req, res) => {
     try {
-      const [newJob] = await db.insert(jobs).values(req.body).returning();
+      const hashedPassword = await hashPassword(req.body.password);
+      const [newUser] = await db.insert(users).values({
+        ...req.body,
+        password: hashedPassword,
+        bankedCredits: 5,
+        referralCode: Math.random().toString(36).substring(2, 8).toUpperCase()
+      }).returning();
+      res.json(newUser);
+    } catch (error) {
+      console.error('User creation error:', error);
+      res.status(500).json({ error: "Failed to create user" });
+    }
+  });
+
+  app.post("/api/admin/jobs", async (req, res) => {
+    try {
+      const jobData = {
+        ...req.body,
+        jobIdentifier: `PL${String(Date.now()).slice(-6)}`,
+        lastCheckedAt: new Date().toISOString()
+      };
+      const [newJob] = await db.insert(jobs).values(jobData).returning();
       res.json(newJob);
     } catch (error) {
       console.error('Job creation error:', error);
