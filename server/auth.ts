@@ -104,24 +104,27 @@ export function setupAuth(app: Express) {
         return res.status(400).json({ error: "Email already registered" });
       }
 
-      // Handle referral if provided
+      // Handle referral and credits
       let referredBy: string | null = null;
       let initialCredits = 0;
+      const REFERRAL_BONUS = 5;
 
       if (validatedData.referredBy) {
         const referrer = await storage.getUserByUsername(validatedData.referredBy);
         if (!referrer) {
           return res.status(400).json({ error: "Invalid referral code" });
         }
-        referredBy = validatedData.referredBy;
-        initialCredits = 5; // Give 5 credits to new users who were referred
 
-        // Award credits to referrer (5 credits for each successful referral)
-        await storage.addBankedCredits(referrer.id, 5);
-        console.log(`Awarded 5 credits to referrer ${referrer.username}`);
+        // Set referral data
+        referredBy = validatedData.referredBy;
+        initialCredits = REFERRAL_BONUS;
+
+        // Add credits to referrer
+        await storage.addBankedCredits(referrer.id, REFERRAL_BONUS);
+        console.log(`Added ${REFERRAL_BONUS} credits to referrer ${referrer.username}`);
       }
 
-      // Create new user with hashed password and referral info
+      // Create new user
       const { confirmPassword, ...userDataWithoutConfirm } = validatedData;
       const hashedPassword = await hashPassword(validatedData.password);
 

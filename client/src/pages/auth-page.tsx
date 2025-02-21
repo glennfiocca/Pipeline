@@ -22,7 +22,14 @@ export default function AuthPage() {
   const referredBy = searchParams.get('ref');
 
   // Always show register tab when there's a referral
-  const [activeTab, setActiveTab] = useState(referredBy ? 'register' : 'login');
+  const [activeTab, setActiveTab] = useState<'login' | 'register'>(referredBy ? 'register' : 'login');
+
+  // Effect to switch to register tab when referral code is present
+  useEffect(() => {
+    if (referredBy) {
+      setActiveTab('register');
+    }
+  }, [referredBy]);
 
   const loginForm = useForm({
     defaultValues: {
@@ -42,13 +49,6 @@ export default function AuthPage() {
       referredBy: referredBy || undefined
     }
   });
-
-  // If accessed via referral link, ensure we're on register tab
-  useEffect(() => {
-    if (referredBy) {
-      setActiveTab('register');
-    }
-  }, [referredBy]);
 
   const resetPasswordForm = useForm({
     defaultValues: {
@@ -161,7 +161,7 @@ export default function AuthPage() {
             </CardHeader>
 
             <CardContent>
-              <TabsContent value="login" className={activeTab === 'login' ? 'block' : 'hidden'}>
+              <TabsContent value="login" className="space-y-4">
                 {!isResettingPassword ? (
                   <Form {...loginForm}>
                     <form onSubmit={loginForm.handleSubmit(onLogin)} className="space-y-4">
@@ -245,7 +245,7 @@ export default function AuthPage() {
                 )}
               </TabsContent>
 
-              <TabsContent value="register" className={activeTab === 'register' ? 'block' : 'hidden'}>
+              <TabsContent value="register" className="space-y-4">
                 <Form {...registerForm}>
                   <form onSubmit={registerForm.handleSubmit(onSubmit)} className="space-y-4">
                     <FormField
