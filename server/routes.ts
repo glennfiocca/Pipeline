@@ -1,176 +1,868 @@
+import type { Express } from "express";
+import { createServer, type Server } from "http";
+import { storage } from "./storage";
+import { insertJobSchema, insertApplicationSchema, insertProfileSchema, insertMessageSchema, insertUserSchema, insertFeedbackSchema } from "@shared/schema";
+import { ScraperManager } from './services/scraper/manager';
+import { db } from './db';
+import { users } from '@shared/schema';
+import { hashPassword } from './utils/password'; // Assuming this function exists
 
-import express from "express";
-import { Server } from "http";
-import { db } from "./db";
-import { jobs, users, applications, feedback, notifications, referrals } from "../shared/schema";
-import { eq } from "drizzle-orm";
-import { hashPassword } from "./utils/password";
+// Enhanced admin middleware with specific user check
+const isAdmin = (req: any, res: any, next: any) => {
+  if (!req.isAuthenticated()) {
+    return res.status(401).json({ error: "Authentication required" });
+  }
 
-export function registerRoutes(app: express.Express): Server {
-  const server = new Server(app);
+  // Check admin status
+  if (!req.user?.isAdmin) {
+    return res.status(403).json({ error: "Unauthorized. Admin access required." });
+  }
 
-  // User routes
-  app.post("/api/users", async (req, res) => {
-    const { username, email, password, referredBy } = req.body;
-    const hashedPassword = await hashPassword(password);
-    
+  next();
+};
+
+async function handleReferralCredits(referredBy: string, newUserId: number) {
     try {
-      // Create new user
-      const [newUser] = await db.insert(users).values({
-        username,
-        email,
-        password: hashedPassword,
-        isAdmin: false,
-        bankedCredits: 5, // Initial credits
-        referredBy
-      }).returning();
+        console.log('DEBUG: Starting referral credit process', { referredBy, newUserId });
 
-      // If referred, award credits to referrer
-      if (referredBy) {
-        await db.update(users)
-          .set({ 
-            bankedCredits: sql`banked_credits + 5` 
-          })
-          .where(eq(users.username, referredBy));
-      }
-      
-      res.json(newUser);
+        // Get the referring user
+        const referrer = await storage.getUserByUsername(referredBy);
+        if (!referrer) {
+            console.error('DEBUG: Referrer not found:', referredBy);
+            throw new Error('Referrer not found');
+        }
+        console.log('DEBUG: Found referrer:', { referrerId: referrer.id, username: referrer.username });
+
+        // Add credits to the referring user
+        console.log('DEBUG: Adding credits to referrer:', referrer.id);
+        await storage.addBankedCredits(referrer.id, 5);
+
+        // Add credits to the new user
+        console.log('DEBUG: Adding credits to new user:', newUserId);
+        await storage.addBankedCredits(newUserId, 5);
+
+        // Create notifications for both users
+        console.log('DEBUG: Creating notifications');
+        await storage.createNotification({
+            userId: referrer.id,
+            type: "referral_bonus",
+            title: "Referral Bonus Received!",
+            content: "You received 5 banked credits for referring a new user!",
+            isRead: false,
+            relatedId: newUserId,
+            relatedType: "user",
+            metadata: {
+                creditsAwarded: 5
+            }
+        });
+
+        await storage.createNotification({
+            userId: newUserId,
+            type: "referral_bonus",
+            title: "Welcome Bonus!",
+            content: "You received 5 banked credits for joining through a referral!",
+            isRead: false,
+            relatedId: referrer.id,
+            relatedType: "user",
+            metadata: {
+                creditsAwarded: 5
+            }
+        });
+        console.log('DEBUG: Referral process completed successfully');
     } catch (error) {
-      console.error('User creation error:', error);
-      res.status(400).json({ error: "User creation failed" });
+        console.error('DEBUG: Error in handleReferralCredits:', error);
+        throw error; // Re-throw to handle in the registration route
     }
-  });
+}
 
-  // Admin routes
+export function registerRoutes(app: Express): Server {
+  // Add POST endpoint for job creation
   app.post("/api/jobs", async (req, res) => {
     try {
-      const jobData = {
-        ...req.body,
-        jobIdentifier: `PL${String(Date.now()).slice(-6)}`,
-        lastCheckedAt: new Date().toISOString()
-      };
-      const [newJob] = await db.insert(jobs).values(jobData).returning();
-      res.json(newJob);
+      const parsed = insertJobSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ 
+          error: "Invalid job data", 
+          details: parsed.error 
+        });
+      }
+
+      const job = await storage.createJob(parsed.data);
+      res.status(201).json(job);
     } catch (error) {
-      console.error('Job creation error:', error);
-      res.status(500).json({ error: "Failed to create job" });
+      console.error('Error creating job:', error);
+      res.status(500).json({ 
+        error: "Failed to create job",
+        message: error instanceof Error ? error.message : "Unknown error"
+      });
     }
   });
 
-  app.post("/api/admin/users", async (req, res) => {
-    try {
-      const hashedPassword = await hashPassword(req.body.password);
-      const [newUser] = await db.insert(users).values({
-        ...req.body,
-        password: hashedPassword,
-        bankedCredits: 5,
-        referralCode: Math.random().toString(36).substring(2, 8).toUpperCase()
-      }).returning();
-      res.json(newUser);
-    } catch (error) {
-      console.error('User creation error:', error);
-      res.status(500).json({ error: "Failed to create user" });
-    }
-  });
-
-  app.post("/api/admin/jobs", async (req, res) => {
-    try {
-      const jobData = {
-        ...req.body,
-        jobIdentifier: `PL${String(Date.now()).slice(-6)}`,
-        lastCheckedAt: new Date().toISOString()
-      };
-      const [newJob] = await db.insert(jobs).values(jobData).returning();
-      res.json(newJob);
-    } catch (error) {
-      console.error('Job creation error:', error);
-      res.status(500).json({ error: "Failed to create job" });
-    }
-  });
-
-  app.get("/api/admin/users", async (_req, res) => {
-    try {
-      const allUsers = await db.select().from(users);
-      res.json(allUsers);
-    } catch (error) {
-      res.status(500).json({ error: "Failed to fetch users" });
-    }
-  });
-
+  // Jobs
   app.get("/api/jobs", async (_req, res) => {
     try {
-      const allJobs = await db.select().from(jobs);
-      res.json(allJobs);
+      const jobs = await storage.getJobs();
+      res.json(jobs);
     } catch (error) {
+      console.error('Error fetching jobs:', error);
       res.status(500).json({ error: "Failed to fetch jobs" });
     }
   });
 
-  app.get("/api/admin/feedback", async (_req, res) => {
-    try {
-      const allFeedback = await db.select().from(feedback);
-      res.json(allFeedback);
-    } catch (error) {
-      res.status(500).json({ error: "Failed to fetch feedback" });
+  app.get("/api/jobs/:id", async (req, res) => {
+    const jobId = parseInt(req.params.id);
+    if (isNaN(jobId)) {
+      return res.status(400).json({ error: "Invalid job ID" });
     }
+    const job = await storage.getJob(jobId);
+    if (!job) return res.sendStatus(404);
+    res.json(job);
   });
 
-  app.get("/api/admin/applications", async (_req, res) => {
+  // Admin routes
+  app.get("/api/admin/applications", isAdmin, async (_req, res) => {
     try {
-      const allApplications = await db.select().from(applications);
-      res.json(allApplications);
+      const applications = await storage.getApplications();
+      res.json(applications);
     } catch (error) {
+      console.error('Error fetching applications:', error);
       res.status(500).json({ error: "Failed to fetch applications" });
     }
   });
 
-  // Admin CRUD endpoints
-  app.delete("/api/admin/users/:id", async (req, res) => {
+  app.get("/api/admin/profiles", isAdmin, async (_req, res) => {
     try {
-      await db.delete(users).where(eq(users.id, parseInt(req.params.id)));
-      res.json({ success: true });
+      const profiles = await storage.getProfiles();
+      res.json(profiles);
     } catch (error) {
-      res.status(500).json({ error: "Failed to delete user" });
+      console.error('Error fetching profiles:', error);
+      res.status(500).json({ error: "Failed to fetch profiles" });
     }
   });
 
-  app.patch("/api/admin/users/:id", async (req, res) => {
+  app.patch("/api/admin/applications/:id", isAdmin, async (req, res) => {
     try {
-      const [updatedUser] = await db.update(users)
-        .set(req.body)
-        .where(eq(users.id, parseInt(req.params.id)))
-        .returning();
+      const { status, notes, nextStep, nextStepDueDate } = req.body;
+      const applicationId = parseInt(req.params.id);
+
+      if (isNaN(applicationId)) {
+        return res.status(400).json({ error: "Invalid application ID" });
+      }
+
+      const application = await storage.getApplication(applicationId);
+      if (!application) {
+        return res.status(404).json({ error: "Application not found" });
+      }
+
+      const updatedApplication = await storage.updateApplication(applicationId, {
+        status,
+        notes,
+        nextStep,
+        nextStepDueDate
+      });
+
+      res.json(updatedApplication);
+    } catch (error) {
+      console.error('Error updating application:', error);
+      res.status(500).json({ error: "Failed to update application" });
+    }
+  });
+
+  app.get("/api/admin/users", isAdmin, async (_req, res) => {
+    try {
+      const usersList = await db.select().from(users);
+      res.json(usersList);
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      res.status(500).json({ error: "Failed to fetch users" });
+    }
+  });
+
+
+  // Admin route for updating users
+  app.patch("/api/admin/users/:id", isAdmin, async (req, res) => {
+    try {
+      const userId = parseInt(req.params.id);
+      if (isNaN(userId)) {
+        return res.status(400).json({ error: "Invalid user ID" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      // Update the user using the storage interface
+      const updatedUser = await storage.updateUser(userId, req.body);
       res.json(updatedUser);
     } catch (error) {
+      console.error('Error updating user:', error);
       res.status(500).json({ error: "Failed to update user" });
     }
   });
 
-  app.delete("/api/admin/jobs/:id", async (req, res) => {
+  // Admin routes for database management
+  app.patch("/api/admin/jobs/:id", isAdmin, async (req, res) => {
     try {
-      await db.delete(jobs).where(eq(jobs.id, parseInt(req.params.id)));
-      res.json({ success: true });
-    } catch (error) {
-      res.status(500).json({ error: "Failed to delete job" });
-    }
-  });
+      const jobId = parseInt(req.params.id);
+      if (isNaN(jobId)) {
+        return res.status(400).json({ error: "Invalid job ID" });
+      }
 
-  app.patch("/api/admin/jobs/:id", async (req, res) => {
-    try {
-      const [updatedJob] = await db.update(jobs)
-        .set(req.body)
-        .where(eq(jobs.id, parseInt(req.params.id)))
-        .returning();
+      const job = await storage.getJob(jobId);
+      if (!job) {
+        return res.status(404).json({ error: "Job not found" });
+      }
+
+      // Update the job using the storage interface
+      const updatedJob = await storage.updateJob(jobId, req.body);
       res.json(updatedJob);
     } catch (error) {
+      console.error('Error updating job:', error);
       res.status(500).json({ error: "Failed to update job" });
     }
   });
 
-  // Basic health check
-  app.get("/api/health", (_req, res) => {
-    res.json({ status: "healthy" });
+  app.delete("/api/admin/jobs/:id", isAdmin, async (req, res) => {
+    try {
+      const jobId = parseInt(req.params.id);
+      if (isNaN(jobId)) {
+        return res.status(400).json({ error: "Invalid job ID" });
+      }
+
+      const job = await storage.getJob(jobId);
+      if (!job) {
+        return res.status(404).json({ error: "Job not found" });
+      }
+
+      // Permanently delete the job
+      await storage.deleteJob(jobId);
+      res.json({ message: "Job deleted successfully" });
+    } catch (error) {
+      console.error('Error deleting job:', error);
+      res.status(500).json({ error: "Failed to delete job" });
+    }
   });
 
-  return server;
+  // Add delete route for users
+  app.delete("/api/admin/users/:id", isAdmin, async (req, res) => {
+    try {
+      const userId = parseInt(req.params.id);
+      if (isNaN(userId)) {
+        return res.status(400).json({ error: "Invalid user ID" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      // Don't allow deleting the last admin
+      const admins = await storage.getAdminUsers();
+      if (user.isAdmin && admins.length <= 1) {
+        return res.status(400).json({ error: "Cannot delete the last administrator" });
+      }
+
+      await storage.deleteUser(userId);
+      res.json({ message: "User deleted successfully" });
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      res.status(500).json({ error: "Failed to delete user" });
+    }
+  });
+
+  // Add POST endpoint for admin user creation
+  app.post("/api/admin/users", isAdmin, async (req, res) => {
+    try {
+      const parsed = insertUserSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ 
+          error: "Invalid user data", 
+          details: parsed.error 
+        });
+      }
+
+      const existingUser = await storage.getUserByUsername(parsed.data.username);
+      if (existingUser) {
+        return res.status(400).json({ error: "Username already exists" });
+      }
+
+      // Hash the password before storing
+      const hashedPassword = await hashPassword(parsed.data.password);
+
+      const user = await storage.createUser({
+        ...parsed.data,
+        password: hashedPassword,
+        createdAt: new Date().toISOString()
+      });
+
+      res.status(201).json(user);
+    } catch (error) {
+      console.error('Error creating user:', error);
+      res.status(500).json({ 
+        error: "Failed to create user",
+        message: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  // Admin routes continue...
+  app.patch("/api/admin/users/:id/credits", isAdmin, async (req, res) => {
+    try {
+      const userId = parseInt(req.params.id);
+      if (isNaN(userId)) {
+        return res.status(400).json({ error: "Invalid user ID" });
+      }
+
+      const { amount } = req.body;
+      if (typeof amount !== 'number') {
+        return res.status(400).json({ error: "Invalid amount" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      // Add the banked credits using the storage interface
+      const updatedUser = await storage.addBankedCredits(userId, amount);
+      res.json(updatedUser);
+    } catch (error) {
+      console.error('Error updating user credits:', error);
+      res.status(500).json({ error: "Failed to update user credits" });
+    }
+  });
+
+  // Add this endpoint near other user-related routes
+  app.get("/api/users/:id", async (req: any, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ error: "Authentication required" });
+      }
+
+      // Users can only access their own data
+      if (req.user.id !== parseInt(req.params.id) && !req.user.isAdmin) {
+        return res.status(403).json({ error: "Unauthorized" });
+      }
+
+      const user = await storage.getUser(parseInt(req.params.id));
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      // Don't send sensitive information
+      const { password, resetToken, resetTokenExpiry, ...safeUser } = user;
+      res.json(safeUser);
+    } catch (error) {
+      console.error('Error fetching user:', error);
+      res.status(500).json({ error: "Failed to fetch user" });
+    }
+  });
+
+  // Add near other user-related routes
+  app.post("/api/users/:id/referral-code", async (req: any, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ error: "Authentication required" });
+      }
+
+      // Users can only generate their own referral code
+      if (req.user.id !== parseInt(req.params.id)) {
+        return res.status(403).json({ error: "Unauthorized" });
+      }
+
+      const user = await storage.getUser(parseInt(req.params.id));
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      // Generate a new referral code
+      const referralCode = await storage.generateReferralCode(user.id);
+      res.json({ referralCode });
+    } catch (error) {
+      console.error('Error generating referral code:', error);
+      res.status(500).json({ error: "Failed to generate referral code" });
+    }
+  });
+
+
+  // Update the user registration route to handle referrals
+  app.post("/api/auth/register", async (req, res) => {
+    try {
+        console.log('DEBUG: Registration request received:', {
+            body: req.body,
+            hasReferredBy: !!req.body.referredBy
+        });
+
+        const parsed = insertUserSchema.safeParse(req.body);
+        if (!parsed.success) {
+            console.error('DEBUG: Validation failed:', parsed.error);
+            return res.status(400).json({ 
+                error: "Invalid user data", 
+                details: parsed.error 
+            });
+        }
+
+        const { username, password, email, referredBy } = parsed.data;
+        console.log('DEBUG: Parsed registration data:', { 
+            username, 
+            email, 
+            hasReferral: !!referredBy,
+            referredBy 
+        });
+
+        // Check if username already exists
+        const existingUser = await storage.getUserByUsername(username);
+        if (existingUser) {
+            console.log('DEBUG: Username already exists:', username);
+            return res.status(400).json({ error: "Username already exists" });
+        }
+
+        // Hash password
+        const hashedPassword = await hashPassword(password);
+
+        // Create the new user with explicit bankedCredits initialization
+        const user = await storage.createUser({
+            username,
+            email,
+            password: hashedPassword,
+            isAdmin: false,
+            resetToken: null,
+            resetTokenExpiry: null,
+            createdAt: new Date().toISOString(),
+            bankedCredits: 0,
+            referredBy: referredBy || null
+        });
+
+        console.log('DEBUG: New user created:', { 
+            userId: user.id, 
+            username: user.username,
+            referredBy: user.referredBy
+        });
+
+        // Handle referral credits if user was referred
+        if (referredBy) {
+            console.log('DEBUG: Processing referral for new user:', { 
+                referredBy, 
+                newUserId: user.id 
+            });
+            try {
+                await handleReferralCredits(referredBy, user.id);
+            } catch (error) {
+                console.error('DEBUG: Failed to process referral credits:', error);
+                // Continue with registration even if referral processing fails
+            }
+        }
+
+        // Create session
+        req.login(user, (err) => {
+            if (err) {
+                console.error('DEBUG: Session creation error:', err);
+                return res.status(500).json({ error: "Error creating session" });
+            }
+            res.status(201).json({ 
+                id: user.id,
+                username: user.username,
+                email: user.email,
+                isAdmin: user.isAdmin,
+                bankedCredits: user.bankedCredits
+            });
+        });
+    } catch (error) {
+        console.error('DEBUG: Registration error:', error);
+        res.status(500).json({ 
+            error: "Failed to register user",
+            message: error instanceof Error ? error.message : "Unknown error"
+        });
+    }
+});
+
+  // Regular routes continue...
+  app.post("/api/jobs/scrape", async (_req, res) => {
+    try {
+      console.log('Starting job scraping process...');
+      const manager = new ScraperManager();
+      const jobs = await manager.runScrapers();
+      console.log('Scraping completed, found jobs:', jobs?.length || 0);
+      res.json({
+        message: "Job scraping completed successfully",
+        jobCount: jobs?.length || 0,
+        jobs: jobs
+      });
+    } catch (error) {
+      console.error('Error running scrapers:', error);
+      res.status(500).json({ error: "Failed to scrape jobs", details: (error as Error).message });
+    }
+  });
+
+  // Profiles
+  app.get("/api/profiles", async (_req, res) => {
+    const profiles = await storage.getProfiles();
+    res.json(profiles);
+  });
+
+  app.get("/api/profiles/:id", async (req, res) => {
+    const profile = await storage.getProfile(parseInt(req.params.id));
+    if (!profile) return res.sendStatus(404);
+    res.json(profile);
+  });
+
+  app.post("/api/profiles", async (req, res) => {
+    try {
+      const parsed = insertProfileSchema.safeParse(req.body);
+      if (!parsed.success) {
+        console.error('Profile validation error:', parsed.error);
+        return res.status(400).json(parsed.error);
+      }
+      const profile = await storage.createProfile(parsed.data);
+      res.status(201).json(profile);
+    } catch (error) {
+      console.error('Profile creation error:', error);
+      res.status(500).json({ message: (error as Error).message });
+    }
+  });
+
+  app.patch("/api/profiles/:id", async (req, res) => {
+    try {
+      const profileId = parseInt(req.params.id);
+      if (isNaN(profileId)) {
+        return res.status(400).json({ error: "Invalid profile ID" });
+      }
+
+      const parsed = insertProfileSchema.partial().safeParse(req.body);
+      if (!parsed.success) {
+        console.error('Profile update validation error:', parsed.error);
+        return res.status(400).json(parsed.error);
+      }
+
+      const profile = await storage.updateProfile(profileId, parsed.data);
+      res.json(profile);
+    } catch (error) {
+      console.error('Profile update error:', error);
+      res.status(500).json({ message: (error as Error).message });
+    }
+  });
+
+
+  // Applications
+  app.get("/api/applications", async (req: any, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ error: "Authentication required" });
+      }
+      const applications = await storage.getApplications();
+      // Filter applications for regular users to only see their own
+      const userApplications = req.user.isAdmin
+        ? applications
+        : applications.filter((app: any) => app.profileId === req.user.id);
+      res.json(userApplications);
+    } catch (error) {
+      console.error('Error fetching applications:', error);
+      res.status(500).json({ error: "Failed to fetch applications" });
+    }
+  });
+
+  app.post("/api/applications", async (req, res) => {
+    try {
+      const parsed = insertApplicationSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json(parsed.error);
+      }
+
+      const application = await storage.createApplication({
+        ...parsed.data,
+        status: "Applied"
+      });
+      res.status(201).json(application);
+    } catch (error) {
+      console.error('Application creation error:', error);
+      res.status(500).json({ message: (error as Error).message });
+    }
+  });
+
+  app.patch("/api/applications/:id/status", async (req, res) => {
+    try {
+      const { status } = req.body;
+
+      if (!status || !["Applied", "Screening", "Interviewing", "Offered", "Accepted", "Rejected", "Withdrawn"].includes(status)) {
+        return res.status(400).json({ error: "Invalid status" });
+      }
+
+      const applicationId = parseInt(req.params.id);
+      if (isNaN(applicationId)) {
+        return res.status(400).json({ error: "Invalid application ID" });
+      }
+
+      // Get the application to fetch user and job details
+      const application = await storage.getApplication(applicationId);
+      if (!application) {
+        return res.status(404).json({ error: "Application not found" });
+      }
+
+      // Get the job details
+      const job = await storage.getJob(application.jobId);
+      if (!job) {
+        return res.status(404).json({ error: "Job not found" });
+      }
+
+      // Update application status
+      const updatedApplication = await storage.updateApplicationStatus(applicationId, status);
+
+      // Create a notification for the status change
+      if (application.profileId) {
+        await storage.createNotification({
+          userId: application.profileId,
+          type: 'application_status_change',
+          title: 'Application Status Updated',
+          content: `Your application for ${job.title} at ${job.company} has been moved to ${status}`,
+          isRead: false,
+          relatedId: applicationId,
+          relatedType: 'application',
+          metadata: {
+            jobId: job.id,
+            applicationId: applicationId,
+            oldStatus: application.status,
+            newStatus: status,
+            company: job.company,
+            jobTitle: job.title
+          }
+        });
+      }
+
+      res.json(updatedApplication);
+    } catch (error) {
+      console.error('Error updating application status:', error);
+      res.status(500).json({ error: (error as Error).message });
+    }
+  });
+
+  // Messages routes
+  app.get("/api/applications/:id/messages", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ error: "Authentication required" });
+      }
+
+      const applicationId = parseInt(req.params.id);
+      if (isNaN(applicationId)) {
+        return res.status(400).json({ error: "Invalid application ID" });
+      }
+
+      const messages = await storage.getMessages(applicationId);
+      res.json(messages);
+    } catch (error) {
+      console.error('Error fetching messages:', error);
+      res.status(500).json({ error: "Failed to fetch messages" });
+    }
+  });
+
+  app.post("/api/applications/:id/messages", async (req: any, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ error: "Authentication required" });
+      }
+
+      const applicationId = parseInt(req.params.id);
+      if (isNaN(applicationId)) {
+        return res.status(400).json({ error: "Invalid application ID" });
+      }
+
+      // Get the application to fetch job details
+      const application = await storage.getApplication(applicationId);
+      if (!application) {
+        return res.status(404).json({ error: "Application not found" });
+      }
+
+      // Get the job to get company information
+      const job = await storage.getJob(application.jobId);
+      if (!job) {
+        return res.status(404).json({ error: "Job not found" });
+      }
+
+      const messageData = {
+        ...req.body,
+        applicationId,
+        isFromAdmin: req.user?.isAdmin || false,
+        senderUsername: req.user?.isAdmin ? job.company : req.user?.username
+      };
+
+      const parsed = insertMessageSchema.safeParse(messageData);
+      if (!parsed.success) {
+        return res.status(400).json(parsed.error);
+      }
+
+      const message = await storage.createMessage(parsed.data);
+
+      // Create a notification for the message if it's from admin/company
+      if (req.user?.isAdmin && application.profileId) {
+        await storage.createNotification({
+          userId: application.profileId,
+          type: 'new_company_message',
+          title: 'New Message from Company',
+          content: `You have a new message from ${job.company} regarding your application for ${job.title}`,
+          isRead: false,
+          relatedId: message.id,
+          relatedType: 'message',
+          metadata: {
+            jobId: job.id,
+            applicationId: applicationId,
+            messageId: message.id,
+            company: job.company,
+            jobTitle: job.title
+          }
+        });
+      }
+
+      res.status(201).json(message);
+    } catch (error) {
+      console.error('Error creating message:', error);
+      res.status(500).json({ error: "Failed to create message" });
+    }
+  });
+
+  app.patch("/api/messages/:id/read", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ error: "Authentication required" });
+      }
+
+      const messageId = parseInt(req.params.id);
+      if (isNaN(messageId)) {
+        return res.status(400).json({ error: "Invalid message ID" });
+      }
+
+      const message = await storage.markMessageAsRead(messageId);
+      res.json(message);
+    } catch (error) {
+      console.error('Error marking message as read:', error);
+      res.status(500).json({ error: "Failed to mark message as read" });
+    }
+  });
+
+  // Feedback routes
+  app.post("/api/feedback", async (req: any, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ error: "Authentication required" });
+      }
+
+      const parsed = insertFeedbackSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ 
+          error: "Invalid feedback data", 
+          details: parsed.error 
+        });
+      }
+
+      const feedback = await storage.createFeedback({
+        ...parsed.data,
+        userId: req.user?.id,
+        status: "received"
+      });
+
+      res.status(201).json(feedback);
+    } catch (error) {
+      console.error('Error creating feedback:', error);
+      res.status(500).json({ 
+        error: "Failed to create feedback",
+        message: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  // Admin feedback routes
+  app.get("/api/feedback", isAdmin, async (_req, res) => {
+    try {
+      const feedbackList = await storage.getFeedback();
+      res.json(feedbackList);
+    } catch (error) {
+      console.error('Error fetching feedback:', error);
+      res.status(500).json({ error: "Failed to fetch feedback" });
+    }
+  });
+
+  app.patch("/api/admin/feedback/:id", isAdmin, async (req, res) => {
+    try {
+      const feedbackId = parseInt(req.params.id);
+      if (isNaN(feedbackId)) {
+        return res.status(400).json({ error: "Invalid feedback ID" });
+      }
+
+      const feedback = await storage.getFeedbackById(feedbackId);
+      if (!feedback) {
+        return res.status(404).json({ error: "Feedback not found" });
+      }
+
+      const updatedFeedback = await storage.updateFeedback(feedbackId, req.body);
+      res.json(updatedFeedback);
+    } catch (error) {
+      console.error('Error updating feedback:', error);
+      res.status(500).json({ error: "Failed to update feedback" });
+    }
+  });
+
+  // Notifications routes
+  app.get("/api/notifications", async (req: any, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ error: "Authentication required" });
+      }
+
+      const notifications = await storage.getNotifications(req.user.id);
+      res.json(notifications);
+    } catch (error) {
+      console.error('Error fetching notifications:', error);
+      res.status(500).json({ error: "Failed to fetch notifications" });
+    }
+  });
+
+  app.get("/api/notifications/unread-count", async (req: any, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ error: "Authentication required" });
+      }
+
+      const count = await storage.getUnreadNotificationCount(req.user.id);
+      res.json(count);
+    } catch (error) {
+      console.error('Error getting unread notification count:', error);
+      res.status(500).json({ error: "Failed to get unread notification count" });
+    }
+  });
+
+  app.post("/api/notifications/:id/mark-read", async (req: any, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ error: "Authentication required" });
+      }
+
+      const notificationId = parseInt(req.params.id);
+      if (isNaN(notificationId)) {
+        return res.status(400).json({ error: "Invalid notification ID" });
+      }
+
+      const notification = await storage.markNotificationAsRead(notificationId);
+      res.json(notification);
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+      res.status(500).json({ error: "Failed to mark notification as read" });
+    }
+  });
+
+  app.post("/api/notifications/mark-all-read", async (req: any, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ error: "Authentication required" });
+      }
+
+      await storage.markAllNotificationsAsRead(req.user.id);
+      res.json({ message: "All notifications marked as read" });
+    } catch (error) {
+      console.error('Error marking all notifications as read:', error);
+      res.status(500).json({ error: "Failed to mark all notifications as read" });
+    }
+  });
+
+  const httpServer = createServer(app);
+  return httpServer;
 }
