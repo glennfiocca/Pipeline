@@ -61,6 +61,7 @@
     "input-otp": "^1.2.4",
     "lucide-react": "^0.453.0",
     "memorystore": "^1.6.7",
+    "nanoid": "^5.1.0",
     "openai": "^4.85.1",
     "p-queue": "^8.1.0",
     "passport": "^0.7.0",

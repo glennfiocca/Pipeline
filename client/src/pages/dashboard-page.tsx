@@ -13,6 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
 import { WithdrawDialog } from "@/components/WithdrawDialog";
 import { ApplicationCreditsCard } from "@/components/ApplicationCreditsCard";
+import { ReferralLinkCard } from "@/components/ReferralLinkCard";
 import { MessageDialog } from "@/components/MessageDialog";
 import { FeedbackDialog } from "@/components/FeedbackDialog";
 import { useLocation } from "wouter";
@@ -32,7 +33,6 @@ export default function DashboardPage() {
   const { toast } = useToast();
   const [location] = useLocation();
 
-  // Parse query parameters
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const messageId = params.get('messageId');
@@ -58,7 +58,6 @@ export default function DashboardPage() {
 
   const getJob = (jobId: number) => jobs.find((job) => job.id === jobId);
 
-  // Function to check if an application is for an archived job
   const isArchivedJob = (application: Application) => {
     const job = getJob(application.jobId);
     return job && !job.isActive;
@@ -144,6 +143,7 @@ export default function DashboardPage() {
       <div className="flex items-center justify-between mb-8">
         <h1 className="text-3xl font-bold">Application Dashboard</h1>
         <div className="flex items-center gap-4">
+          <ReferralLinkCard />
           <ApplicationCreditsCard />
           {selectedStatus && (
             <Button variant="ghost" onClick={() => setSelectedStatus(null)}>
