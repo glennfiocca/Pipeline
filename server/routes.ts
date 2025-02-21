@@ -11,20 +11,32 @@ export function registerRoutes(app: express.Express): Server {
 
   // User routes
   app.post("/api/users", async (req, res) => {
-    const { name, email, password } = req.body;
+    const { username, email, password, referredBy } = req.body;
     const hashedPassword = await hashPassword(password);
     
     try {
-      const newUser = await db.insert(users).values({
-        name,
+      // Create new user
+      const [newUser] = await db.insert(users).values({
+        username,
         email,
         password: hashedPassword,
         isAdmin: false,
-        credits: 5
+        bankedCredits: 5, // Initial credits
+        referredBy
       }).returning();
+
+      // If referred, award credits to referrer
+      if (referredBy) {
+        await db.update(users)
+          .set({ 
+            bankedCredits: sql`banked_credits + 5` 
+          })
+          .where(eq(users.username, referredBy));
+      }
       
-      res.json(newUser[0]);
+      res.json(newUser);
     } catch (error) {
+      console.error('User creation error:', error);
       res.status(400).json({ error: "User creation failed" });
     }
   });
