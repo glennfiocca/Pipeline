@@ -73,15 +73,19 @@ export default function AdminDashboardPage() {
     mutationFn: async (formInput: NewJobForm) => {
       const formData = {
         ...formInput,
-        jobIdentifier: `PL${Math.floor(100000 + Math.random() * 900000)}`,
-        source: "Pipeline",
-        sourceUrl: window.location.origin,
-        isActive: true,
-        published: true,
+        jobIdentifier: formInput.jobIdentifier || `PL${Math.floor(100000 + Math.random() * 900000)}`,
+        source: formInput.source || "Pipeline",
+        sourceUrl: formInput.sourceUrl || window.location.origin,
+        isActive: formInput.isActive ?? true,
+        published: formInput.published ?? true,
         lastCheckedAt: new Date().toISOString()
       };
 
       const res = await apiRequest("POST", "/api/admin/jobs", formData);
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || "Failed to create job");
+      }
       return res.json();
     },
     onSuccess: () => {
@@ -92,7 +96,7 @@ export default function AdminDashboardPage() {
       });
       setShowNewJobDialog(false);
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast({
         title: "Error",
         description: error.message || "Failed to create job",

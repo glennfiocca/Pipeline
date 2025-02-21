@@ -25,7 +25,8 @@ export function NewJobForm({ onSubmit, onCancel, initialData }: JobFormProps) {
     defaultValues: initialData ? {
       ...initialData,
       isActive: initialData.isActive ?? true,
-      published: initialData.published ?? true
+      published: initialData.published ?? true,
+      jobIdentifier: initialData.jobIdentifier
     } : {
       title: "",
       company: "",
@@ -43,7 +44,16 @@ export function NewJobForm({ onSubmit, onCancel, initialData }: JobFormProps) {
   });
 
   function handleSubmit(data: NewJobForm) {
-    onSubmit(data);
+    // Ensure all required fields are present and properly formatted
+    const formData: NewJobForm = {
+      ...data,
+      source: data.source || "Pipeline",
+      sourceUrl: data.sourceUrl || window.location.origin,
+      isActive: data.isActive ?? true,
+      published: data.published ?? true,
+      jobIdentifier: data.jobIdentifier || `PL${Math.floor(100000 + Math.random() * 900000)}`
+    };
+    onSubmit(formData);
   }
 
   return (
@@ -173,6 +183,24 @@ export function NewJobForm({ onSubmit, onCancel, initialData }: JobFormProps) {
                 </FormControl>
                 <div className="space-y-1 leading-none">
                   <FormLabel>Active</FormLabel>
+                </div>
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="published"
+            render={({ field }) => (
+              <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                <FormControl>
+                  <Checkbox
+                    checked={field.value as boolean}
+                    onCheckedChange={(checked) => field.onChange(checked)}
+                  />
+                </FormControl>
+                <div className="space-y-1 leading-none">
+                  <FormLabel>Published</FormLabel>
                 </div>
               </FormItem>
             )}
