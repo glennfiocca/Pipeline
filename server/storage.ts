@@ -603,22 +603,37 @@ export class DatabaseStorage implements IStorage {
 
   async addBankedCredits(userId: number, amount: number): Promise<User> {
     try {
-      console.log('Adding banked credits:', { userId, amount });
+      console.log('DEBUG: Starting addBankedCredits:', { userId, amount });
 
+      // First get the current user and their credits
       const [user] = await db
         .select()
         .from(users)
         .where(eq(users.id, userId));
 
       if (!user) {
-        console.error('User not found for credit addition:', userId);
+        console.error('DEBUG: User not found for credit addition:', userId);
         throw new Error("User not found");
       }
 
-      console.log('Current user credits:', user.bankedCredits);
-      const newCredits = (user.bankedCredits || 0) + amount;
-      console.log('New credit amount will be:', newCredits);
+      console.log('DEBUG: Current user state:', {
+        userId: user.id,
+        username: user.username,
+        currentCredits: user.bankedCredits
+      });
 
+      // Calculate new credits amount
+      const currentCredits = user.bankedCredits || 0;
+      const newCredits = currentCredits + amount;
+
+      console.log('DEBUG: Updating credits:', {
+        userId,
+        currentCredits,
+        adding: amount,
+        newTotal: newCredits
+      });
+
+      // Update the user's credits
       const [updatedUser] = await db
         .update(users)
         .set({ 
@@ -627,15 +642,19 @@ export class DatabaseStorage implements IStorage {
         .where(eq(users.id, userId))
         .returning();
 
-      console.log('Credits updated successfully:', {
+      if (!updatedUser) {
+        throw new Error('Failed to update user credits');
+      }
+
+      console.log('DEBUG: Credits updated successfully:', {
         userId,
-        oldCredits: user.bankedCredits,
+        oldCredits: currentCredits,
         newCredits: updatedUser.bankedCredits
       });
 
       return updatedUser;
     } catch (error) {
-      console.error('Error adding banked credits:', error);
+      console.error('DEBUG: Error in addBankedCredits:', error);
       throw error;
     }
   }
