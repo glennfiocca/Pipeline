@@ -71,22 +71,37 @@ export default function AdminDashboardPage() {
   // Create mutations
   const createJobMutation = useMutation({
     mutationFn: async (formInput: NewJobForm) => {
-      const formData = {
-        ...formInput,
-        jobIdentifier: formInput.jobIdentifier || `PL${Math.floor(100000 + Math.random() * 900000)}`,
-        source: formInput.source || "Pipeline",
-        sourceUrl: formInput.sourceUrl || window.location.origin,
-        isActive: formInput.isActive ?? true,
-        published: formInput.published ?? true,
-        lastCheckedAt: new Date().toISOString()
-      };
+      try {
+        const formData = {
+          ...formInput,
+          jobIdentifier: formInput.jobIdentifier || `PL${Math.floor(100000 + Math.random() * 900000)}`,
+          source: formInput.source || "Pipeline",
+          sourceUrl: formInput.sourceUrl || window.location.origin,
+          isActive: formInput.isActive ?? true,
+          published: formInput.published ?? true,
+          lastCheckedAt: new Date().toISOString()
+        };
 
-      const res = await apiRequest("POST", "/api/admin/jobs", formData);
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.message || "Failed to create job");
+        console.log('Submitting job data:', JSON.stringify(formData, null, 2));
+
+        const res = await apiRequest("POST", "/api/admin/jobs", formData);
+        if (!res.ok) {
+          const error = await res.text();
+          console.error('Job creation failed:', error);
+          try {
+            const errorJson = JSON.parse(error);
+            throw new Error(errorJson.message || "Failed to create job");
+          } catch (e) {
+            throw new Error(`Failed to create job: ${error}`);
+          }
+        }
+        const data = await res.json();
+        return data;
+      } catch (error: unknown) {
+        const err = error as Error;
+        console.error('Job creation error:', err);
+        throw err;
       }
-      return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
