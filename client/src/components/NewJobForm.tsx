@@ -152,12 +152,12 @@ export function NewJobForm({ onSubmit, onCancel, initialData }: JobFormProps) {
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="STEM">STEM</SelectItem>
-                    <SelectItem value="Finance">Finance</SelectItem>
-                    <SelectItem value="Healthcare">Healthcare</SelectItem>
-                    <SelectItem value="Consulting">Consulting</SelectItem>
-                    <SelectItem value="Legal Tech">Legal Tech</SelectItem>
-                    <SelectItem value="Clean Tech">Clean Tech</SelectItem>
+                    <SelectItem value="Full-time">Full-time</SelectItem>
+                    <SelectItem value="Part-time">Part-time</SelectItem>
+                    <SelectItem value="Contract">Contract</SelectItem>
+                    <SelectItem value="Internship">Internship</SelectItem>
+                    <SelectItem value="Remote">Remote</SelectItem>
+                    <SelectItem value="Temporary">Temporary</SelectItem>
                   </SelectContent>
                 </Select>
                 <FormMessage />

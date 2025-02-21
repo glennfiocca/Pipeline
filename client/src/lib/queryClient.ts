@@ -2,12 +2,24 @@ import { QueryClient, QueryFunction } from "@tanstack/react-query";
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
-    const text = (await res.text()) || res.statusText;
+    let errorMessage;
+    try {
+      const contentType = res.headers.get("content-type");
+      if (contentType?.includes("application/json")) {
+        const error = await res.json();
+        errorMessage = error.message || error.error || res.statusText;
+      } else {
+        errorMessage = await res.text();
+      }
+    } catch (e) {
+      errorMessage = res.statusText;
+    }
+
     // Don't throw on 401 during logout
     if (res.status === 401 && window.location.pathname === "/auth/login") {
       return;
     }
-    throw new Error(`${res.status}: ${text}`);
+    throw new Error(`${res.status}: ${errorMessage}`);
   }
 }
 
@@ -16,9 +28,17 @@ export async function apiRequest(
   url: string,
   data?: unknown | undefined,
 ): Promise<Response> {
+  const headers: Record<string, string> = {
+    'Accept': 'application/json',
+  };
+
+  if (data) {
+    headers['Content-Type'] = 'application/json';
+  }
+
   const res = await fetch(url, {
     method,
-    headers: data ? { "Content-Type": "application/json" } : {},
+    headers,
     body: data ? JSON.stringify(data) : undefined,
     credentials: "include",
   });
@@ -34,6 +54,9 @@ export const getQueryFn: <T>(options: {
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
     const res = await fetch(queryKey[0] as string, {
+      headers: {
+        'Accept': 'application/json'
+      },
       credentials: "include",
     });
 
