@@ -76,9 +76,7 @@ export default function AdminDashboardPage() {
         source: "Pipeline",
         sourceUrl: window.location.origin,
         isActive: true,
-        published: true,
-        lastCheckedAt: new Date().toISOString(),
-        jobIdentifier: `PL${String(Date.now()).slice(-6)}`
+        published: true
       };
 
       const response = await apiRequest("POST", "/api/jobs", formData);
