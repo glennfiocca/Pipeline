@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -20,7 +20,9 @@ export default function AuthPage() {
 
   const searchParams = new URLSearchParams(search);
   const referredBy = searchParams.get('ref');
-  const defaultTab = searchParams.get('tab') || (referredBy ? 'register' : 'login');
+
+  // Always show register tab when there's a referral
+  const [activeTab, setActiveTab] = useState(referredBy ? 'register' : 'login');
 
   const loginForm = useForm({
     defaultValues: {
@@ -40,6 +42,13 @@ export default function AuthPage() {
       referredBy: referredBy || undefined
     }
   });
+
+  // If accessed via referral link, ensure we're on register tab
+  useEffect(() => {
+    if (referredBy) {
+      setActiveTab('register');
+    }
+  }, [referredBy]);
 
   const resetPasswordForm = useForm({
     defaultValues: {
@@ -138,7 +147,7 @@ export default function AuthPage() {
         </div>
 
         <Card>
-          <Tabs defaultValue={defaultTab} className="w-full">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <CardHeader>
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="login">Login</TabsTrigger>
