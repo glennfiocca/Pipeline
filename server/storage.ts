@@ -208,15 +208,31 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createJob(insertJob: InsertJob): Promise<Job> {
-    const jobIdentifier = await this.generateUniqueJobIdentifier();
-    const [job] = await db.insert(jobs).values({
-      ...insertJob,
-      jobIdentifier,
-      lastCheckedAt: new Date().toISOString(),
-      published: true,
-      isActive: true
-    }).returning();
-    return job;
+    try {
+      console.log('DEBUG: Creating new job:', insertJob);
+
+      const jobIdentifier = await this.generateUniqueJobIdentifier();
+      console.log('DEBUG: Generated job identifier:', jobIdentifier);
+
+      const [job] = await db.insert(jobs).values({
+        ...insertJob,
+        jobIdentifier,
+        lastCheckedAt: new Date().toISOString(),
+        published: true,
+        isActive: true
+      }).returning();
+
+      console.log('DEBUG: Job created successfully:', {
+        jobId: job.id,
+        identifier: job.jobIdentifier,
+        title: job.title
+      });
+
+      return job;
+    } catch (error) {
+      console.error('DEBUG: Error in createJob:', error);
+      throw error;
+    }
   }
 
   async getProfiles(): Promise<Profile[]> {

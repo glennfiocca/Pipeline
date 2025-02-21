@@ -77,9 +77,24 @@ async function handleReferralCredits(referredBy: string, newUserId: number) {
 
 export function registerRoutes(app: Express): Server {
   // Add POST endpoint for job creation
-  app.post("/api/jobs", async (req, res) => {
+  app.post("/api/jobs", async (req: any, res) => {
     try {
-      console.log('DEBUG: Job creation request received:', req.body);
+      // Check authentication
+      if (!req.isAuthenticated()) {
+        console.error('DEBUG: Job creation failed - user not authenticated');
+        return res.status(401).json({ error: "Authentication required" });
+      }
+
+      // Check admin status
+      if (!req.user?.isAdmin) {
+        console.error('DEBUG: Job creation failed - user not admin:', req.user?.username);
+        return res.status(403).json({ error: "Only administrators can create jobs" });
+      }
+
+      console.log('DEBUG: Job creation request received:', {
+        user: req.user?.username,
+        body: req.body
+      });
 
       const parsed = insertJobSchema.safeParse(req.body);
       if (!parsed.success) {
@@ -91,7 +106,12 @@ export function registerRoutes(app: Express): Server {
       }
 
       const job = await storage.createJob(parsed.data);
-      console.log('DEBUG: Job created successfully:', job);
+      console.log('DEBUG: Job created successfully:', {
+        jobId: job.id,
+        title: job.title,
+        company: job.company
+      });
+
       res.status(201).json(job);
     } catch (error) {
       console.error('DEBUG: Error creating job:', error);
