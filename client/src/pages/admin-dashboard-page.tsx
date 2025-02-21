@@ -71,6 +71,7 @@ export default function AdminDashboardPage() {
   // Create mutations
   const createJobMutation = useMutation({
     mutationFn: async (data: NewJobForm) => {
+      console.log("Creating job with data:", data);
       const formData = {
         ...data,
         jobIdentifier: `PL${Math.floor(100000 + Math.random() * 900000)}`,
@@ -99,6 +100,7 @@ export default function AdminDashboardPage() {
       setShowNewJobDialog(false);
     },
     onError: (error: Error) => {
+      console.error("Job creation error:", error);
       toast({
         title: "Error",
         description: error.message,
@@ -552,11 +554,12 @@ export default function AdminDashboardPage() {
           </DialogHeader>
           <div className="py-4">
             <NewJobForm
-              onSubmit={(data) => {
+              onSubmit={async (data) => {
+                console.log("Form submitted with data:", data);
                 try {
-                  createJobMutation.mutate(data);
+                  await createJobMutation.mutateAsync(data);
                 } catch (error) {
-                  console.error("Error submitting form:", error);
+                  console.error("Error in form submission:", error);
                 }
               }}
               onCancel={() => setShowNewJobDialog(false)}

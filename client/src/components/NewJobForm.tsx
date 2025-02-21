@@ -35,13 +35,19 @@ export function NewJobForm({ onSubmit, onCancel, initialData }: JobFormProps) {
       requirements: "",
       type: "Full-time",
       source: "Pipeline",
-      sourceUrl: window.location.origin
+      sourceUrl: window.location.origin,
+      isActive: true,
+      published: true
     }
   });
 
   const handleSubmit = async (data: NewJobForm) => {
+    console.log("Form submission started", data);
+    console.log("Form errors:", form.formState.errors);
+
     try {
       await onSubmit(data);
+      console.log("Form submission successful");
       form.reset();
     } catch (error) {
       console.error("Error submitting form:", error);
