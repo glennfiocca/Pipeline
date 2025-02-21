@@ -78,6 +78,49 @@ export function registerRoutes(app: express.Express): Server {
     }
   });
 
+  // Admin CRUD endpoints
+  app.delete("/api/admin/users/:id", async (req, res) => {
+    try {
+      await db.delete(users).where(eq(users.id, parseInt(req.params.id)));
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete user" });
+    }
+  });
+
+  app.patch("/api/admin/users/:id", async (req, res) => {
+    try {
+      const [updatedUser] = await db.update(users)
+        .set(req.body)
+        .where(eq(users.id, parseInt(req.params.id)))
+        .returning();
+      res.json(updatedUser);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update user" });
+    }
+  });
+
+  app.delete("/api/admin/jobs/:id", async (req, res) => {
+    try {
+      await db.delete(jobs).where(eq(jobs.id, parseInt(req.params.id)));
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete job" });
+    }
+  });
+
+  app.patch("/api/admin/jobs/:id", async (req, res) => {
+    try {
+      const [updatedJob] = await db.update(jobs)
+        .set(req.body)
+        .where(eq(jobs.id, parseInt(req.params.id)))
+        .returning();
+      res.json(updatedJob);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update job" });
+    }
+  });
+
   // Basic health check
   app.get("/api/health", (_req, res) => {
     res.json({ status: "healthy" });
