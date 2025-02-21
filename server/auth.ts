@@ -88,7 +88,6 @@ export function setupAuth(app: Express) {
     }
   });
 
-  // Update registration endpoint with simplified referral handling
   app.post("/api/register", async (req, res) => {
     try {
       const validatedData = insertUserSchema.parse(req.body);
@@ -106,16 +105,20 @@ export function setupAuth(app: Express) {
       }
 
       // Handle referral if provided
-      let referredBy: string | undefined = undefined;
+      let referredBy: string | null = null;
+      let initialCredits = 0;
+
       if (validatedData.referredBy) {
         const referrer = await storage.getUserByUsername(validatedData.referredBy);
         if (!referrer) {
-          return res.status(400).json({ error: "Invalid referral" });
+          return res.status(400).json({ error: "Invalid referral code" });
         }
         referredBy = validatedData.referredBy;
+        initialCredits = 5; // Give 5 credits to new users who were referred
 
         // Award credits to referrer (5 credits for each successful referral)
         await storage.addBankedCredits(referrer.id, 5);
+        console.log(`Awarded 5 credits to referrer ${referrer.username}`);
       }
 
       // Create new user with hashed password and referral info
@@ -127,8 +130,10 @@ export function setupAuth(app: Express) {
         password: hashedPassword,
         createdAt: new Date().toISOString(),
         referredBy,
-        bankedCredits: referredBy ? 5 : 0 // Give 5 credits to new users who were referred
+        bankedCredits: initialCredits
       });
+
+      console.log(`Created new user ${user.username} with ${initialCredits} initial credits`);
 
       // Log in the user after registration
       req.login(user, (err) => {

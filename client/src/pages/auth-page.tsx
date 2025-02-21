@@ -63,7 +63,7 @@ export default function AuthPage() {
         title: "Account created",
         description: "You can now log in with your credentials.",
       });
-      setLocation("/auth/login");
+      setLocation("/");
     } catch (error) {
       console.error("Registration error:", error);
       toast({
@@ -121,21 +121,25 @@ export default function AuthPage() {
   return (
     <div className="container flex items-center justify-center min-h-screen">
       <div className="grid lg:grid-cols-2 gap-8 w-full max-w-4xl">
+        {/* Left column with welcome message */}
         <div className="flex flex-col justify-center space-y-6">
           {referredBy ? (
-            <>
-              <h1 className="text-3xl font-bold tracking-tighter text-blue-600">
+            <div className="space-y-4">
+              <h1 className="text-3xl font-bold tracking-tighter text-primary">
                 Welcome to Pipeline!
               </h1>
-              <p className="text-xl text-muted-foreground">
-                You were referred by {referredBy}! They think we can help make your job search easier.
+              <p className="text-xl">
+                <span className="font-semibold text-primary">{referredBy}</span> thinks we can help make your job search easier!
               </p>
-              <p className="text-muted-foreground">
-                Create an account to get started and receive 5 bonus credits.
-              </p>
-            </>
+              <div className="bg-primary/10 rounded-lg p-4 space-y-2">
+                <p className="font-medium">Special Referral Offer:</p>
+                <p className="text-muted-foreground">
+                  Create your account now and receive 5 bonus application credits to get started!
+                </p>
+              </div>
+            </div>
           ) : (
-            <div>
+            <div className="space-y-4">
               <h1 className="text-3xl font-bold tracking-tighter">
                 Welcome to Pipeline
               </h1>
@@ -146,6 +150,7 @@ export default function AuthPage() {
           )}
         </div>
 
+        {/* Right column with auth form */}
         <Card>
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <CardHeader>
