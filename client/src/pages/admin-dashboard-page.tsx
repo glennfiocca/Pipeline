@@ -78,9 +78,10 @@ export default function AdminDashboardPage() {
         isActive: true,
         published: true,
         lastCheckedAt: new Date().toISOString(),
+        jobIdentifier: `PL${String(Date.now()).slice(-6)}`
       };
 
-      const response = await apiRequest("POST", "/api/admin/jobs", formData);
+      const response = await apiRequest("POST", "/api/jobs", formData);
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: "Failed to create job" }));
