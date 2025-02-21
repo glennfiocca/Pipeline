@@ -73,11 +73,12 @@ export default function AdminDashboardPage() {
     mutationFn: async (data: NewJobForm) => {
       const formData = {
         ...data,
+        jobIdentifier: `PL${Math.floor(100000 + Math.random() * 900000)}`,
         source: "Pipeline",
         sourceUrl: window.location.origin,
         isActive: true,
         published: true,
-        lastCheckedAt: new Date().toISOString(),
+        lastCheckedAt: new Date().toISOString()
       };
 
       const response = await apiRequest("POST", "/api/jobs", formData);

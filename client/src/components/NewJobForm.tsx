@@ -35,9 +35,7 @@ export function NewJobForm({ onSubmit, onCancel, initialData }: JobFormProps) {
       requirements: "",
       type: "Full-time",
       source: "Pipeline",
-      sourceUrl: window.location.origin,
-      isActive: true,
-      published: true
+      sourceUrl: window.location.origin
     }
   });
 
