@@ -17,7 +17,7 @@ export default function AuthPage() {
   const [search] = useSearch();
   const { loginMutation, registerMutation } = useAuth();
   const [isResettingPassword, setIsResettingPassword] = useState(false);
-  const referralCode = new URLSearchParams(search).get('ref');
+  const referredBy = new URLSearchParams(search).get('ref');
 
   const loginForm = useForm({
     defaultValues: {
@@ -34,7 +34,7 @@ export default function AuthPage() {
       password: "",
       confirmPassword: "",
       isAdmin: false,
-      referralCode: referralCode || undefined 
+      referredBy: referredBy || undefined
     }
   });
 
@@ -118,17 +118,17 @@ export default function AuthPage() {
               Your career journey starts here. Access the best jobs in tech and finance with one-click applications.
             </p>
           </div>
-          {referralCode && (
+          {referredBy && (
             <div className="rounded-lg border p-4 bg-muted">
               <p className="text-sm text-muted-foreground">
-                You've been referred by a friend! Create an account to get started.
+                You've been referred by {referredBy}! Create an account to receive 5 bonus credits.
               </p>
             </div>
           )}
         </div>
 
         <Card>
-          <Tabs defaultValue={referralCode ? "register" : "login"} className="w-full">
+          <Tabs defaultValue={referredBy ? "register" : "login"} className="w-full">
             <CardHeader>
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="login">Login</TabsTrigger>
