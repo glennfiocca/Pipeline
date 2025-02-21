@@ -82,10 +82,24 @@ export default function AdminDashboardPage() {
       };
 
       try {
-        const res = await apiRequest("POST", "/api/admin/jobs", formData);
-        return await res.json();
+        const response = await fetch('/api/admin/jobs', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          },
+          body: JSON.stringify(formData),
+          credentials: 'include'
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Failed to create job');
+        }
+
+        return await response.json();
       } catch (error: any) {
-        console.error("Job creation error details:", error);
+        console.error("Job creation error:", error);
         throw new Error(error.message || "Failed to create job");
       }
     },
