@@ -87,9 +87,6 @@ export interface IStorage {
   markAllNotificationsAsRead(userId: number): Promise<void>;
 
   addBankedCredits(userId: number, amount: number): Promise<User>;
-    // Add referral-related methods
-  getUserByReferralCode(code: string): Promise<User | undefined>;
-  generateReferralCode(userId: number): Promise<string>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -618,40 +615,6 @@ export class DatabaseStorage implements IStorage {
       .returning();
 
     return updatedUser;
-  }
-
-  async getUserByReferralCode(code: string): Promise<User | undefined> {
-    const [user] = await db
-      .select()
-      .from(users)
-      .where(eq(users.referralCode, code));
-    return user;
-  }
-
-  async generateReferralCode(userId: number): Promise<string> {
-    let isUnique = false;
-    let referralCode = '';
-
-    while (!isUnique) {
-      const randomNum = Math.floor(Math.random() * 900000) + 100000;
-      referralCode = `PL${randomNum}`;
-
-      const [existingUser] = await db
-        .select()
-        .from(users)
-        .where(eq(users.referralCode, referralCode));
-
-      if (!existingUser) {
-        // Update the user with the new referral code
-        await db
-          .update(users)
-          .set({ referralCode })
-          .where(eq(users.id, userId));
-        isUnique = true;
-      }
-    }
-
-    return referralCode;
   }
 }
 

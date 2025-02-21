@@ -6,22 +6,14 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { insertUserSchema, type InsertUser } from "@shared/schema";
 import { useAuth } from "@/hooks/use-auth";
-import { useLocation, useParams, useSearch } from "wouter";
-import { Gift } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
-
-interface ReferralInfo {
-  username: string;
-}
+import { useLocation, useSearch } from "wouter";
 
 export default function AuthPage() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
-  const params = useParams();
   const [search] = useSearch();
   const { loginMutation, registerMutation } = useAuth();
   const [isResettingPassword, setIsResettingPassword] = useState(false);
@@ -30,15 +22,7 @@ export default function AuthPage() {
   const referredBy = searchParams.get('ref');
 
   // Always show register tab when there's a referral
-  const [activeTab, setActiveTab] = useState<'login' | 'register'>(
-    params.tab as 'login' | 'register' || (referredBy ? 'register' : 'login')
-  );
-
-  // Fetch referral info if code is present
-  const { data: referralInfo } = useQuery<ReferralInfo>({
-    queryKey: [`/api/referral/${referredBy}`],
-    enabled: !!referredBy
-  });
+  const [activeTab, setActiveTab] = useState<'login' | 'register'>(referredBy ? 'register' : 'login');
 
   // Effect to switch to register tab when referral code is present
   useEffect(() => {
@@ -76,10 +60,8 @@ export default function AuthPage() {
     try {
       await registerMutation.mutateAsync(values);
       toast({
-        title: referredBy ? "Welcome to Pipeline!" : "Account created",
-        description: referredBy 
-          ? "Your account has been created and you've received 5 bonus credits!" 
-          : "You can now log in with your credentials.",
+        title: "Account created",
+        description: "You can now log in with your credentials.",
       });
       setLocation("/");
     } catch (error) {
@@ -141,21 +123,20 @@ export default function AuthPage() {
       <div className="grid lg:grid-cols-2 gap-8 w-full max-w-4xl">
         {/* Left column with welcome message */}
         <div className="flex flex-col justify-center space-y-6">
-          {referredBy && referralInfo ? (
+          {referredBy ? (
             <div className="space-y-4">
               <h1 className="text-3xl font-bold tracking-tighter text-primary">
                 Welcome to Pipeline!
               </h1>
               <p className="text-xl">
-                <span className="font-semibold text-primary">{referralInfo.username}</span> thinks Pipeline can help make your job search easier!
+                <span className="font-semibold text-primary">{referredBy}</span> thinks we can help make your job search easier!
               </p>
-              <Alert className="bg-primary/10 border-primary">
-                <Gift className="h-5 w-5 text-primary" />
-                <AlertDescription className="ml-2">
-                  <p className="font-medium text-primary">Special Referral Bonus:</p>
-                  <p>Create your account now and receive 5 bonus application credits!</p>
-                </AlertDescription>
-              </Alert>
+              <div className="bg-primary/10 rounded-lg p-4 space-y-2">
+                <p className="font-medium">Special Referral Offer:</p>
+                <p className="text-muted-foreground">
+                  Create your account now and receive 5 bonus application credits to get started!
+                </p>
+              </div>
             </div>
           ) : (
             <div className="space-y-4">
@@ -171,7 +152,7 @@ export default function AuthPage() {
 
         {/* Right column with auth form */}
         <Card>
-          <Tabs value={activeTab} onValueChange={(value: string) => setActiveTab(value as 'login' | 'register')} className="w-full">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <CardHeader>
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="login">Login</TabsTrigger>
@@ -328,7 +309,7 @@ export default function AuthPage() {
                       className="w-full"
                       disabled={registerMutation.isPending}
                     >
-                      {registerMutation.isPending ? "Creating account..." : (referredBy ? "Create Account & Get 5 Credits" : "Create Account")}
+                      {registerMutation.isPending ? "Creating account..." : "Create Account"}
                     </Button>
                   </form>
                 </Form>

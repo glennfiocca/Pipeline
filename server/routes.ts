@@ -6,7 +6,6 @@ import { ScraperManager } from './services/scraper/manager';
 import { db } from './db';
 import { users } from '@shared/schema';
 import { hashPassword } from './utils/password'; // Assuming this function exists
-import { eq } from 'drizzle-orm';
 
 // Enhanced admin middleware with specific user check
 const isAdmin = (req: any, res: any, next: any) => {
@@ -342,29 +341,6 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-
-  // Add referral endpoint
-  app.get("/api/referral/:code", async (req, res) => {
-    try {
-      const code = req.params.code;
-      if (!code) {
-        return res.status(400).json({ error: "Referral code is required" });
-      }
-
-      const referrer = await storage.getUserByReferralCode(code);
-      if (!referrer) {
-        return res.status(404).json({ error: "Invalid referral code" });
-      }
-
-      // Only send back safe user info
-      res.json({
-        username: referrer.username
-      });
-    } catch (error) {
-      console.error('Error looking up referral:', error);
-      res.status(500).json({ error: "Failed to lookup referral code" });
-    }
-  });
 
   // Regular routes continue...
   app.post("/api/jobs/scrape", async (_req, res) => {

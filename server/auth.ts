@@ -58,81 +58,17 @@ export function setupAuth(app: Express) {
   app.use(passport.initialize());
   app.use(passport.session());
 
-  // Add referral handling to registration
-  app.post("/api/register", async (req, res) => {
-    try {
-      const userData = insertUserSchema.parse(req.body);
-
-      // Check for existing user
-      const existingUser = await storage.getUserByUsername(userData.username);
-      if (existingUser) {
-        return res.status(400).json({ error: "Username already exists" });
-      }
-
-      // Get referral info from session
-      const referralInfo = req.session.referralInfo as { code: string, username: string } | undefined;
-      let referringUser = null;
-
-      if (referralInfo) {
-        referringUser = await storage.getUserByReferralCode(referralInfo.code);
-        if (referringUser) {
-          // Add referral data to user
-          userData.referredBy = referralInfo.code;
-          userData.bankedCredits = 5; // Give 5 credits to new user
-
-          // Update referring user's credits
-          referringUser.bankedCredits = (referringUser.bankedCredits || 0) + 5;
-          await storage.updateUser(referringUser.id, referringUser);
-        }
-      }
-
-      // Create the new user
-      const hashedPassword = await hashPassword(userData.password);
-      const user = await storage.createUser({
-        ...userData,
-        password: hashedPassword,
-        referralCode: `PL${Math.floor(100000 + Math.random() * 900000)}` // Generate unique referral code
+  // Add JSON response middleware for authentication errors
+  app.use((err: any, req: any, res: any, next: any) => {
+    if (err) {
+      return res.status(500).json({
+        error: "Authentication error",
+        message: err.message
       });
-
-      // Clear referral info from session
-      delete req.session.referralInfo;
-
-      // Log the user in
-      req.login(user, (err) => {
-        if (err) {
-          console.error("Login error after registration:", err);
-          return res.status(500).json({ error: "Error logging in after registration" });
-        }
-        res.status(201).json(user);
-      });
-    } catch (error) {
-      if (error instanceof ZodError) {
-        return res.status(400).json({ error: fromZodError(error).message });
-      }
-      console.error("Registration error:", error);
-      res.status(500).json({ error: "Error creating account" });
     }
+    next();
   });
 
-  // Handle GET requests to check and store referral info
-  app.get("/api/referral/:code", async (req, res) => {
-    const { code } = req.params;
-    const referringUser = await storage.getUserByReferralCode(code);
-
-    if (!referringUser) {
-      return res.status(404).json({ error: "Invalid referral code" });
-    }
-
-    // Store referral info in session
-    req.session.referralInfo = {
-      code,
-      username: referringUser.username
-    };
-
-    res.json({ username: referringUser.username });
-  });
-
-  // Rest of auth setup remains the same
   passport.use(
     new LocalStrategy(async (username, password, done) => {
       try {
@@ -163,7 +99,7 @@ export function setupAuth(app: Express) {
     }
   });
 
-  // Existing login, logout, and user endpoints remain the same
+  // Login endpoint with JSON responses
   app.post("/api/login", (req, res, next) => {
     passport.authenticate("local", (err: Error | null, user: Express.User | false, info: { message: string } | undefined) => {
       if (err) {
@@ -183,6 +119,7 @@ export function setupAuth(app: Express) {
     })(req, res, next);
   });
 
+  // Logout endpoint
   app.post("/api/logout", (req, res) => {
     if (!req.isAuthenticated()) {
       return res.status(401).json({ error: "Not authenticated" });
@@ -196,6 +133,7 @@ export function setupAuth(app: Express) {
     });
   });
 
+  // User info endpoint
   app.get("/api/user", (req, res) => {
     if (!req.isAuthenticated()) {
       return res.status(401).json({ error: "Not authenticated" });
