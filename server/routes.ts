@@ -23,20 +23,28 @@ const isAdmin = (req: any, res: any, next: any) => {
 
 async function handleReferralCredits(referredBy: string, newUserId: number) {
   try {
+    console.log('Handling referral credits for:', { referredBy, newUserId });
+
     // Get the referring user
     const referrer = await storage.getUserByUsername(referredBy);
-    if (!referrer) return;
+    if (!referrer) {
+      console.log('Referrer not found:', referredBy);
+      return;
+    }
+    console.log('Found referrer:', referrer.username);
 
     // Add credits to the referring user
+    console.log('Adding credits to referrer:', referrer.id);
     await storage.addBankedCredits(referrer.id, 5);
 
     // Add credits to the new user
+    console.log('Adding credits to new user:', newUserId);
     await storage.addBankedCredits(newUserId, 5);
 
     // Create notifications for both users
     await storage.createNotification({
       userId: referrer.id,
-      type: "application_confirmation",
+      type: "referral_bonus",
       title: "Referral Bonus Received!",
       content: "You received 5 banked credits for referring a new user!",
       isRead: false,
@@ -49,7 +57,7 @@ async function handleReferralCredits(referredBy: string, newUserId: number) {
 
     await storage.createNotification({
       userId: newUserId,
-      type: "application_confirmation",
+      type: "referral_bonus",
       title: "Welcome Bonus!",
       content: "You received 5 banked credits for joining through a referral!",
       isRead: false,
@@ -59,6 +67,7 @@ async function handleReferralCredits(referredBy: string, newUserId: number) {
         creditsAwarded: 5
       }
     });
+    console.log('Referral process completed successfully');
   } catch (error) {
     console.error('Error handling referral credits:', error);
   }
@@ -378,6 +387,7 @@ export function registerRoutes(app: Express): Server {
   // Update the user registration route to handle referrals
   app.post("/api/auth/register", async (req, res) => {
     try {
+      console.log('Registration request received:', req.body);
       const parsed = insertUserSchema.safeParse(req.body);
       if (!parsed.success) {
         return res.status(400).json({ 
@@ -387,6 +397,7 @@ export function registerRoutes(app: Express): Server {
       }
 
       const { username, password, email, referredBy } = parsed.data;
+      console.log('Parsed registration data:', { username, email, hasReferral: !!referredBy });
 
       // Check if username already exists
       const existingUser = await storage.getUserByUsername(username);
@@ -410,8 +421,11 @@ export function registerRoutes(app: Express): Server {
         referredBy
       });
 
+      console.log('New user created:', { userId: user.id, username: user.username });
+
       // If user was referred, handle the referral credits
       if (referredBy) {
+        console.log('Processing referral for new user:', { referredBy, newUserId: user.id });
         await handleReferralCredits(referredBy, user.id);
       }
 

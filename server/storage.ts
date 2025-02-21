@@ -602,22 +602,42 @@ export class DatabaseStorage implements IStorage {
 
 
   async addBankedCredits(userId: number, amount: number): Promise<User> {
-    const [user] = await db
-      .select()
-      .from(users)
-      .where(eq(users.id, userId));
+    try {
+      console.log('Adding banked credits:', { userId, amount });
 
-    if (!user) throw new Error("User not found");
+      const [user] = await db
+        .select()
+        .from(users)
+        .where(eq(users.id, userId));
 
-    const [updatedUser] = await db
-      .update(users)
-      .set({ 
-        bankedCredits: (user.bankedCredits || 0) + amount,
-      })
-      .where(eq(users.id, userId))
-      .returning();
+      if (!user) {
+        console.error('User not found for credit addition:', userId);
+        throw new Error("User not found");
+      }
 
-    return updatedUser;
+      console.log('Current user credits:', user.bankedCredits);
+      const newCredits = (user.bankedCredits || 0) + amount;
+      console.log('New credit amount will be:', newCredits);
+
+      const [updatedUser] = await db
+        .update(users)
+        .set({ 
+          bankedCredits: newCredits
+        })
+        .where(eq(users.id, userId))
+        .returning();
+
+      console.log('Credits updated successfully:', {
+        userId,
+        oldCredits: user.bankedCredits,
+        newCredits: updatedUser.bankedCredits
+      });
+
+      return updatedUser;
+    } catch (error) {
+      console.error('Error adding banked credits:', error);
+      throw error;
+    }
   }
 
   async generateReferralCode(userId: number): Promise<string> {
