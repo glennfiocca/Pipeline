@@ -41,18 +41,14 @@ export function NewJobForm({ onSubmit, onCancel, initialData }: JobFormProps) {
     }
   });
 
-  const handleSubmit = async (data: NewJobForm) => {
-    console.log("Form submission started", data);
-    console.log("Form errors:", form.formState.errors);
-
+  async function handleSubmit(data: NewJobForm) {
     try {
       await onSubmit(data);
-      console.log("Form submission successful");
       form.reset();
     } catch (error) {
-      console.error("Error submitting form:", error);
+      console.error("Error in form submission:", error);
     }
-  };
+  }
 
   return (
     <Form {...form}>
@@ -71,6 +67,7 @@ export function NewJobForm({ onSubmit, onCancel, initialData }: JobFormProps) {
               </FormItem>
             )}
           />
+
           <FormField
             control={form.control}
             name="company"
@@ -84,6 +81,7 @@ export function NewJobForm({ onSubmit, onCancel, initialData }: JobFormProps) {
               </FormItem>
             )}
           />
+
           <FormField
             control={form.control}
             name="description"
@@ -97,6 +95,7 @@ export function NewJobForm({ onSubmit, onCancel, initialData }: JobFormProps) {
               </FormItem>
             )}
           />
+
           <FormField
             control={form.control}
             name="salary"
@@ -110,6 +109,7 @@ export function NewJobForm({ onSubmit, onCancel, initialData }: JobFormProps) {
               </FormItem>
             )}
           />
+
           <FormField
             control={form.control}
             name="location"
@@ -123,6 +123,7 @@ export function NewJobForm({ onSubmit, onCancel, initialData }: JobFormProps) {
               </FormItem>
             )}
           />
+
           <FormField
             control={form.control}
             name="requirements"
@@ -136,6 +137,7 @@ export function NewJobForm({ onSubmit, onCancel, initialData }: JobFormProps) {
               </FormItem>
             )}
           />
+
           <FormField
             control={form.control}
             name="type"
@@ -159,6 +161,7 @@ export function NewJobForm({ onSubmit, onCancel, initialData }: JobFormProps) {
               </FormItem>
             )}
           />
+
           <FormField
             control={form.control}
             name="isActive"
@@ -167,7 +170,7 @@ export function NewJobForm({ onSubmit, onCancel, initialData }: JobFormProps) {
                 <FormControl>
                   <Checkbox
                     checked={field.value}
-                    onCheckedChange={(checked) => field.onChange(checked)}
+                    onCheckedChange={field.onChange}
                   />
                 </FormControl>
                 <div className="space-y-1 leading-none">
@@ -177,11 +180,12 @@ export function NewJobForm({ onSubmit, onCancel, initialData }: JobFormProps) {
             )}
           />
         </div>
+
         <DialogFooter className="flex justify-between gap-2">
           <Button type="button" variant="outline" onClick={onCancel}>
             Cancel
           </Button>
-          <Button type="submit" disabled={form.formState.isSubmitting}>
+          <Button type="submit">
             {initialData ? "Update Job" : "Create Job"}
           </Button>
         </DialogFooter>

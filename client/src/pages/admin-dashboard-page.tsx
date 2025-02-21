@@ -555,11 +555,15 @@ export default function AdminDashboardPage() {
           <div className="py-4">
             <NewJobForm
               onSubmit={async (data) => {
-                console.log("Form submitted with data:", data);
                 try {
                   await createJobMutation.mutateAsync(data);
                 } catch (error) {
                   console.error("Error in form submission:", error);
+                  toast({
+                    title: "Error",
+                    description: "Failed to create job. Please try again.",
+                    variant: "destructive",
+                  });
                 }
               }}
               onCancel={() => setShowNewJobDialog(false)}
