@@ -86,11 +86,7 @@ export interface IStorage {
   markNotificationAsRead(id: number): Promise<Notification>;
   markAllNotificationsAsRead(userId: number): Promise<void>;
 
-  // New methods for referral system
-  generateReferralCode(userId: number): Promise<string>;
-  getUserByReferralCode(code: string): Promise<User | undefined>;
   addBankedCredits(userId: number, amount: number): Promise<User>;
-  updateReferredBy(userId: number, referrerCode: string): Promise<User>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -604,48 +600,6 @@ export class DatabaseStorage implements IStorage {
   }
 
 
-  private async generateUniqueReferralCode(): Promise<string> {
-    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-    let isUnique = false;
-    let referralCode = '';
-
-    while (!isUnique) {
-      referralCode = 'PL';
-      for (let i = 0; i < 6; i++) {
-        referralCode += characters.charAt(Math.floor(Math.random() * characters.length));
-      }
-
-      const [existingUser] = await db
-        .select()
-        .from(users)
-        .where(eq(users.referralCode, referralCode));
-
-      if (!existingUser) {
-        isUnique = true;
-      }
-    }
-
-    return referralCode;
-  }
-
-  async generateReferralCode(userId: number): Promise<string> {
-    const referralCode = await this.generateUniqueReferralCode();
-    const [user] = await db
-      .update(users)
-      .set({ referralCode })
-      .where(eq(users.id, userId))
-      .returning();
-    return user.referralCode!;
-  }
-
-  async getUserByReferralCode(code: string): Promise<User | undefined> {
-    const [user] = await db
-      .select()
-      .from(users)
-      .where(eq(users.referralCode, code));
-    return user;
-  }
-
   async addBankedCredits(userId: number, amount: number): Promise<User> {
     const [user] = await db
       .select()
@@ -660,15 +614,6 @@ export class DatabaseStorage implements IStorage {
       .where(eq(users.id, userId))
       .returning();
 
-    return updatedUser;
-  }
-
-  async updateReferredBy(userId: number, referrerCode: string): Promise<User> {
-    const [updatedUser] = await db
-      .update(users)
-      .set({ referredBy: referrerCode })
-      .where(eq(users.id, userId))
-      .returning();
     return updatedUser;
   }
 }

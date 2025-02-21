@@ -88,7 +88,7 @@ export function setupAuth(app: Express) {
     }
   });
 
-  // Updated registration endpoint with referral handling
+  // Update registration endpoint with simplified referral handling
   app.post("/api/register", async (req, res) => {
     try {
       const validatedData = insertUserSchema.parse(req.body);
@@ -105,20 +105,17 @@ export function setupAuth(app: Express) {
         return res.status(400).json({ error: "Email already registered" });
       }
 
-      // Generate a unique referral code for the new user
-      const referralCode = `PL${randomBytes(3).toString('hex').toUpperCase()}`;
-
       // Handle referral if provided
       let referredBy: string | undefined = undefined;
-      if (validatedData.referralCode) {
-        const referrer = await storage.getUserByReferralCode(validatedData.referralCode);
+      if (validatedData.referredBy) {
+        const referrer = await storage.getUserByUsername(validatedData.referredBy);
         if (!referrer) {
-          return res.status(400).json({ error: "Invalid referral code" });
+          return res.status(400).json({ error: "Invalid referral" });
         }
-        referredBy = validatedData.referralCode;
+        referredBy = validatedData.referredBy;
 
-        // Award credits to referrer (50 credits for each successful referral)
-        await storage.addBankedCredits(referrer.id, 50);
+        // Award credits to referrer (5 credits for each successful referral)
+        await storage.addBankedCredits(referrer.id, 5);
       }
 
       // Create new user with hashed password and referral info
@@ -129,9 +126,8 @@ export function setupAuth(app: Express) {
         ...userDataWithoutConfirm,
         password: hashedPassword,
         createdAt: new Date().toISOString(),
-        referralCode,
         referredBy,
-        bankedCredits: referredBy ? 25 : 0 // Give 25 credits to new users who used a referral code
+        bankedCredits: referredBy ? 5 : 0 // Give 5 credits to new users who were referred
       });
 
       // Log in the user after registration

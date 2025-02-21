@@ -2,7 +2,7 @@ import { pgTable, text, serial, boolean, integer, jsonb } from "drizzle-orm/pg-c
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-// Update user schema to simplify referral fields
+// Simplified user schema with basic referral tracking
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   username: text("username").notNull().unique(),
@@ -13,29 +13,31 @@ export const users = pgTable("users", {
   resetTokenExpiry: text("reset_token_expiry"),
   createdAt: text("created_at").notNull().default(new Date().toISOString()),
   bankedCredits: integer("banked_credits").notNull().default(0),
-  referralCode: text("referral_code").unique(),
   referredBy: text("referred_by")
 });
 
-// Update the insertUserSchema to include referral code
+// Simplified user schema for registration
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
   resetToken: true,
   resetTokenExpiry: true,
   createdAt: true,
   bankedCredits: true,
-  referralCode: true,
   referredBy: true
 }).extend({
   confirmPassword: z.string(),
   username: z.string().min(3, "Username must be at least 3 characters"),
   email: z.string().email("Invalid email format"),
   password: z.string().min(6, "Password must be at least 6 characters"),
-  referralCode: z.string().optional()
+  referredBy: z.string().optional()
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords don't match",
   path: ["confirmPassword"]
 });
+
+// Types
+export type User = typeof users.$inferSelect;
+export type InsertUser = z.infer<typeof insertUserSchema>;
 
 // Base schema for database operations
 const baseUserSchema = createInsertSchema(users).omit({ 
@@ -44,13 +46,8 @@ const baseUserSchema = createInsertSchema(users).omit({
   resetTokenExpiry: true,
   createdAt: true,
   bankedCredits: true,
-  referralCode: true,
   referredBy: true
 });
-
-// Types
-export type User = typeof users.$inferSelect;
-export type InsertUser = z.infer<typeof insertUserSchema>;
 
 // Jobs table schema update
 export const jobs = pgTable("jobs", {
