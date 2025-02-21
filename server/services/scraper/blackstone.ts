@@ -7,6 +7,10 @@ export class BlackstoneScraper extends BaseScraper {
     super('https://blackstone.wd1.myworkdayjobs.com/en-US/Blackstone_Careers', 1);
   }
 
+  private generateJobIdentifier(): string {
+    return `PL${Math.floor(100000 + Math.random() * 900000)}`;
+  }
+
   private async fetchJobs(): Promise<any> {
     console.log('Fetching jobs using Workday API...');
 
@@ -16,7 +20,6 @@ export class BlackstoneScraper extends BaseScraper {
       'User-Agent': 'Mozilla/5.0 (compatible; PipelineBot/1.0)'
     };
 
-    // Workday's actual jobs API endpoint
     const url = 'https://blackstone.wd1.myworkdayjobs.com/wday/cxs/blackstone/Blackstone_Careers/jobs';
 
     const payload = {
@@ -53,7 +56,6 @@ export class BlackstoneScraper extends BaseScraper {
     const jobs: InsertJob[] = [];
 
     try {
-      // First try to get jobs from the API
       console.log('Starting Blackstone jobs scraper...');
       const jobsData = await this.fetchJobs();
 
@@ -74,23 +76,25 @@ export class BlackstoneScraper extends BaseScraper {
               source: "Blackstone Careers",
               sourceUrl: this.baseUrl + '/details/' + posting.externalPath,
               type: "Full-time",
-              published: true
+              published: true,
+              jobIdentifier: this.generateJobIdentifier(),
+              isActive: true
             };
 
             if (this.validateJob(job)) {
               console.log('Valid job found:', {
                 title: job.title,
-                location: job.location
+                location: job.location,
+                jobIdentifier: job.jobIdentifier
               });
               jobs.push(job);
             }
-          } catch (error) {
-            console.error('Error processing individual job:', error);
+          } catch (error: any) {
+            console.error('Error processing individual job:', error?.message || 'Unknown error');
           }
         }
       }
 
-      // If API fails or returns no jobs, use our sample job as fallback
       if (jobs.length === 0) {
         console.log('No jobs found from API, using sample job as fallback');
         const sampleJob: InsertJob = {
@@ -103,7 +107,9 @@ export class BlackstoneScraper extends BaseScraper {
           source: "Blackstone Careers",
           sourceUrl: this.baseUrl,
           type: "Full-time",
-          published: true
+          published: true,
+          jobIdentifier: this.generateJobIdentifier(),
+          isActive: true
         };
 
         if (this.validateJob(sampleJob)) {
@@ -111,10 +117,11 @@ export class BlackstoneScraper extends BaseScraper {
         }
       }
 
-    } catch (error) {
+    } catch (error: unknown) {
+      const err = error as Error;
       console.error('Scraper error:', {
-        message: error.message,
-        stack: error.stack
+        message: err?.message || 'Unknown error',
+        stack: err?.stack
       });
     }
 
