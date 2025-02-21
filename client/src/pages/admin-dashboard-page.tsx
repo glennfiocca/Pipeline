@@ -22,26 +22,20 @@ import { insertJobSchema, insertUserSchema } from "@shared/schema";
 import { ApplicationsManagement } from "@/components/ApplicationsManagement";
 import { FeedbackManagement } from "@/components/FeedbackManagement";
 import { ManageCreditsDialog } from "@/components/ManageCreditsDialog";
-
 type NewJobForm = z.infer<typeof insertJobSchema>;
 type NewUserForm = z.infer<typeof insertUserSchema>;
-
 type SelectedUserCredits = {
   user: User;
   action: 'manage_credits';
 } | null;
-
 export default function AdminDashboardPage() {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-
-  // Auth check before any other hooks
   if (!user?.isAdmin) {
     setLocation("/");
     return null;
   }
-
   const [showNewJobDialog, setShowNewJobDialog] = useState(false);
   const [showNewUserDialog, setShowNewUserDialog] = useState(false);
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
@@ -49,26 +43,20 @@ export default function AdminDashboardPage() {
   const [showEditJobDialog, setShowEditJobDialog] = useState(false);
   const [showEditUserDialog, setShowEditUserDialog] = useState(false);
   const [selectedUserCredits, setSelectedUserCredits] = useState<SelectedUserCredits>(null);
-
-  // Queries
   const { data: jobs = [], isLoading: isLoadingJobs } = useQuery<Job[]>({
     queryKey: ["/api/jobs"],
     enabled: true,
     select: (data) => data.sort((a, b) => {
-      // Sort by active status first, then by creation date
       if (a.isActive === b.isActive) {
         return new Date(b.lastCheckedAt).getTime() - new Date(a.lastCheckedAt).getTime();
       }
       return a.isActive ? -1 : 1;
     })
   });
-
   const { data: users = [], isLoading: isLoadingUsers } = useQuery<User[]>({
     queryKey: ["/api/admin/users"],
     enabled: true
   });
-
-  // Create mutations
   const createJobMutation = useMutation({
     mutationFn: async (formInput: NewJobForm) => {
       try {
@@ -78,12 +66,9 @@ export default function AdminDashboardPage() {
           source: formInput.source || "Pipeline",
           sourceUrl: formInput.sourceUrl || window.location.origin,
           isActive: formInput.isActive ?? true,
-          published: formInput.published ?? true,
           lastCheckedAt: new Date().toISOString()
         };
-
         console.log('Submitting job data:', JSON.stringify(formData, null, 2));
-
         const res = await apiRequest("POST", "/api/jobs", formData);
         if (!res.ok) {
           const error = await res.text();
@@ -119,7 +104,6 @@ export default function AdminDashboardPage() {
       });
     },
   });
-
   const createUserMutation = useMutation({
     mutationFn: async (data: NewUserForm) => {
       const res = await apiRequest("POST", "/api/admin/users", data);
@@ -145,19 +129,14 @@ export default function AdminDashboardPage() {
       });
     },
   });
-
-  // Edit mutations
   const editJobMutation = useMutation({
     mutationFn: async (data: Partial<Job>) => {
       if (!selectedJob && !data.id) throw new Error("No job selected");
       const jobId = data.id || selectedJob?.id;
-
-      // Add deactivatedAt when archiving, remove it when restoring
       const updateData = {
         ...data,
         deactivatedAt: data.isActive === false ? new Date().toISOString() : null
       };
-
       const res = await apiRequest("PATCH", `/api/admin/jobs/${jobId}`, updateData);
       if (!res.ok) {
         const error = await res.json();
@@ -182,7 +161,6 @@ export default function AdminDashboardPage() {
       });
     },
   });
-
   const editUserMutation = useMutation({
     mutationFn: async (data: Partial<User>) => {
       if (!selectedUser) throw new Error("No user selected");
@@ -210,8 +188,6 @@ export default function AdminDashboardPage() {
       });
     },
   });
-
-  // Delete mutations
   const deleteJobMutation = useMutation({
     mutationFn: async (id: number) => {
       const res = await apiRequest("DELETE", `/api/admin/jobs/${id}`);
@@ -227,7 +203,6 @@ export default function AdminDashboardPage() {
       });
     },
   });
-
   const deleteUserMutation = useMutation({
     mutationFn: async (id: number) => {
       const res = await apiRequest("DELETE", `/api/admin/users/${id}`);
@@ -243,18 +218,14 @@ export default function AdminDashboardPage() {
       });
     },
   });
-
   const handleEditUser = (user: User) => {
     setSelectedUser(user);
     setShowEditUserDialog(true);
   };
-
   const handleEditJob = (job: Job) => {
     setSelectedJob(job);
     setShowEditJobDialog(true);
   };
-
-  // Add mutation for managing credits
   const manageUserCreditsMutation = useMutation({
     mutationFn: async ({ userId, amount }: { userId: number; amount: number }) => {
       const res = await apiRequest(
@@ -284,8 +255,6 @@ export default function AdminDashboardPage() {
       });
     },
   });
-
-
   if (isLoadingJobs || isLoadingUsers) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -293,13 +262,11 @@ export default function AdminDashboardPage() {
       </div>
     );
   }
-
   return (
     <div className="container py-10">
       <div className="flex items-center justify-between mb-8">
         <h1 className="text-3xl font-bold">Admin Dashboard</h1>
       </div>
-
       <Tabs defaultValue="active-jobs" className="space-y-4">
         <TabsList>
           <TabsTrigger value="active-jobs">Active Jobs</TabsTrigger>
@@ -308,7 +275,6 @@ export default function AdminDashboardPage() {
           <TabsTrigger value="applications">Applications</TabsTrigger>
           <TabsTrigger value="feedback">Feedback</TabsTrigger>
         </TabsList>
-
         <TabsContent value="active-jobs">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0">
@@ -384,7 +350,6 @@ export default function AdminDashboardPage() {
             </CardContent>
           </Card>
         </TabsContent>
-
         <TabsContent value="archived-jobs">
           <Card>
             <CardHeader>
@@ -461,7 +426,6 @@ export default function AdminDashboardPage() {
             </CardContent>
           </Card>
         </TabsContent>
-
         <TabsContent value="users">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0">
@@ -544,17 +508,13 @@ export default function AdminDashboardPage() {
             </CardContent>
           </Card>
         </TabsContent>
-
         <TabsContent value="applications">
           <ApplicationsManagement />
         </TabsContent>
-
         <TabsContent value="feedback">
           <FeedbackManagement />
         </TabsContent>
       </Tabs>
-
-      {/* Dialogs */}
       <Dialog open={showNewJobDialog} onOpenChange={setShowNewJobDialog}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
@@ -573,7 +533,6 @@ export default function AdminDashboardPage() {
           </div>
         </DialogContent>
       </Dialog>
-
       <Dialog open={showNewUserDialog} onOpenChange={setShowNewUserDialog}>
         <DialogContent>
           <DialogHeader>
@@ -590,8 +549,6 @@ export default function AdminDashboardPage() {
           />
         </DialogContent>
       </Dialog>
-
-      {/* Edit Dialogs */}
       <Dialog open={showEditJobDialog} onOpenChange={setShowEditJobDialog}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
@@ -614,7 +571,6 @@ export default function AdminDashboardPage() {
           </div>
         </DialogContent>
       </Dialog>
-
       <Dialog open={showEditUserDialog} onOpenChange={setShowEditUserDialog}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
@@ -635,7 +591,6 @@ export default function AdminDashboardPage() {
           />
         </DialogContent>
       </Dialog>
-
       {selectedUserCredits && (
         <ManageCreditsDialog
           isOpen={true}
