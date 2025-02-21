@@ -37,7 +37,8 @@ export function NewJobForm({ onSubmit, onCancel, initialData }: JobFormProps) {
       source: "Pipeline",
       sourceUrl: window.location.origin,
       isActive: true,
-      published: true
+      published: true,
+      jobIdentifier: `PL${Math.floor(100000 + Math.random() * 900000)}`
     }
   });
 
@@ -151,10 +152,12 @@ export function NewJobForm({ onSubmit, onCancel, initialData }: JobFormProps) {
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="Full-time">Full-time</SelectItem>
-                    <SelectItem value="Part-time">Part-time</SelectItem>
-                    <SelectItem value="Contract">Contract</SelectItem>
-                    <SelectItem value="Internship">Internship</SelectItem>
+                    <SelectItem value="STEM">STEM</SelectItem>
+                    <SelectItem value="Finance">Finance</SelectItem>
+                    <SelectItem value="Healthcare">Healthcare</SelectItem>
+                    <SelectItem value="Consulting">Consulting</SelectItem>
+                    <SelectItem value="Legal Tech">Legal Tech</SelectItem>
+                    <SelectItem value="Clean Tech">Clean Tech</SelectItem>
                   </SelectContent>
                 </Select>
                 <FormMessage />
@@ -169,7 +172,7 @@ export function NewJobForm({ onSubmit, onCancel, initialData }: JobFormProps) {
               <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
                 <FormControl>
                   <Checkbox
-                    checked={field.value}
+                    checked={field.value || false}
                     onCheckedChange={field.onChange}
                   />
                 </FormControl>

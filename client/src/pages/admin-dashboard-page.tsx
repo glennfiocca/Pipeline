@@ -551,9 +551,9 @@ export default function AdminDashboardPage() {
           </DialogHeader>
           <div className="py-4">
             <NewJobForm
-              onSubmit={(data) => {
+              onSubmit={async (data) => {
                 try {
-                  createJobMutation.mutate(data);
+                  await createJobMutation.mutateAsync(data);
                 } catch (error) {
                   console.error("Error submitting form:", error);
                 }
