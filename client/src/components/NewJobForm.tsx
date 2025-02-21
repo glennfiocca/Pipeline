@@ -24,8 +24,8 @@ export function NewJobForm({ onSubmit, onCancel, initialData }: JobFormProps) {
     resolver: zodResolver(insertJobSchema),
     defaultValues: initialData ? {
       ...initialData,
-      isActive: Boolean(initialData.isActive),
-      published: Boolean(initialData.published)
+      isActive: initialData.isActive ?? true,
+      published: initialData.published ?? true
     } : {
       title: "",
       company: "",
@@ -37,8 +37,7 @@ export function NewJobForm({ onSubmit, onCancel, initialData }: JobFormProps) {
       source: "Pipeline",
       sourceUrl: window.location.origin,
       isActive: true,
-      published: true,
-      lastCheckedAt: new Date().toISOString(),
+      published: true
     }
   });
 
@@ -164,7 +163,7 @@ export function NewJobForm({ onSubmit, onCancel, initialData }: JobFormProps) {
                 <FormControl>
                   <Checkbox
                     checked={field.value}
-                    onCheckedChange={field.onChange}
+                    onCheckedChange={(checked) => field.onChange(checked)}
                   />
                 </FormControl>
                 <div className="space-y-1 leading-none">
