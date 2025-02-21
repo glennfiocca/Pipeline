@@ -71,6 +71,8 @@ export default function AdminDashboardPage() {
   // Create mutations
   const createJobMutation = useMutation({
     mutationFn: async (formInput: NewJobForm) => {
+      console.log("Submitting job data:", formInput); // Debug log
+
       const formData = {
         ...formInput,
         jobIdentifier: `PL${Math.floor(100000 + Math.random() * 900000)}`,
@@ -81,8 +83,18 @@ export default function AdminDashboardPage() {
         lastCheckedAt: new Date().toISOString()
       };
 
-      const res = await apiRequest("POST", "/api/admin/jobs", formData);
-      return res.json();
+      try {
+        // Use absolute path to ensure correct routing
+        const res = await apiRequest("POST", "/api/admin/jobs", formData);
+        if (!res.ok) {
+          const error = await res.json();
+          throw new Error(error.message || "Failed to create job");
+        }
+        return res.json();
+      } catch (error: any) {
+        console.error("Job creation error details:", error);
+        throw error;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
@@ -96,7 +108,7 @@ export default function AdminDashboardPage() {
       console.error("Job creation error:", error);
       toast({
         title: "Error",
-        description: error.message,
+        description: error.message || "Failed to create job",
         variant: "destructive",
       });
     },
