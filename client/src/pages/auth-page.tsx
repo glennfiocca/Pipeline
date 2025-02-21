@@ -4,12 +4,14 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { insertUserSchema, type InsertUser } from "@shared/schema";
 import { useAuth } from "@/hooks/use-auth";
 import { useLocation, useSearch } from "wouter";
+import { Gift } from "lucide-react";
 
 export default function AuthPage() {
   const { toast } = useToast();
@@ -60,8 +62,10 @@ export default function AuthPage() {
     try {
       await registerMutation.mutateAsync(values);
       toast({
-        title: "Account created",
-        description: "You can now log in with your credentials.",
+        title: referredBy ? "Welcome to Pipeline!" : "Account created",
+        description: referredBy 
+          ? "Your account has been created and you've received 5 bonus credits!" 
+          : "You can now log in with your credentials.",
       });
       setLocation("/");
     } catch (error) {
@@ -129,14 +133,15 @@ export default function AuthPage() {
                 Welcome to Pipeline!
               </h1>
               <p className="text-xl">
-                <span className="font-semibold text-primary">{referredBy}</span> thinks we can help make your job search easier!
+                <span className="font-semibold text-primary">{referredBy}</span> thinks Pipeline can help make your job search easier!
               </p>
-              <div className="bg-primary/10 rounded-lg p-4 space-y-2">
-                <p className="font-medium">Special Referral Offer:</p>
-                <p className="text-muted-foreground">
-                  Create your account now and receive 5 bonus application credits to get started!
-                </p>
-              </div>
+              <Alert className="bg-primary/10 border-primary">
+                <Gift className="h-5 w-5 text-primary" />
+                <AlertDescription className="ml-2">
+                  <p className="font-medium text-primary">Special Referral Bonus:</p>
+                  <p>Create your account now and receive 5 bonus application credits!</p>
+                </AlertDescription>
+              </Alert>
             </div>
           ) : (
             <div className="space-y-4">
@@ -152,7 +157,7 @@ export default function AuthPage() {
 
         {/* Right column with auth form */}
         <Card>
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <Tabs value={activeTab} onValueChange={(value: string) => setActiveTab(value as 'login' | 'register')} className="w-full">
             <CardHeader>
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="login">Login</TabsTrigger>
@@ -309,7 +314,7 @@ export default function AuthPage() {
                       className="w-full"
                       disabled={registerMutation.isPending}
                     >
-                      {registerMutation.isPending ? "Creating account..." : "Create Account"}
+                      {registerMutation.isPending ? "Creating account..." : (referredBy ? "Create Account & Get 5 Credits" : "Create Account")}
                     </Button>
                   </form>
                 </Form>
