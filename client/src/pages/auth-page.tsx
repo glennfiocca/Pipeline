@@ -4,18 +4,24 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { insertUserSchema, type InsertUser } from "@shared/schema";
 import { useAuth } from "@/hooks/use-auth";
-import { useLocation, useSearch } from "wouter";
+import { useLocation, useParams, useSearch } from "wouter";
 import { Gift } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+
+interface ReferralInfo {
+  username: string;
+}
 
 export default function AuthPage() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
+  const params = useParams();
   const [search] = useSearch();
   const { loginMutation, registerMutation } = useAuth();
   const [isResettingPassword, setIsResettingPassword] = useState(false);
@@ -24,7 +30,15 @@ export default function AuthPage() {
   const referredBy = searchParams.get('ref');
 
   // Always show register tab when there's a referral
-  const [activeTab, setActiveTab] = useState<'login' | 'register'>(referredBy ? 'register' : 'login');
+  const [activeTab, setActiveTab] = useState<'login' | 'register'>(
+    params.tab as 'login' | 'register' || (referredBy ? 'register' : 'login')
+  );
+
+  // Fetch referral info if code is present
+  const { data: referralInfo } = useQuery<ReferralInfo>({
+    queryKey: [`/api/referral/${referredBy}`],
+    enabled: !!referredBy
+  });
 
   // Effect to switch to register tab when referral code is present
   useEffect(() => {
@@ -127,13 +141,13 @@ export default function AuthPage() {
       <div className="grid lg:grid-cols-2 gap-8 w-full max-w-4xl">
         {/* Left column with welcome message */}
         <div className="flex flex-col justify-center space-y-6">
-          {referredBy ? (
+          {referredBy && referralInfo ? (
             <div className="space-y-4">
               <h1 className="text-3xl font-bold tracking-tighter text-primary">
                 Welcome to Pipeline!
               </h1>
               <p className="text-xl">
-                <span className="font-semibold text-primary">{referredBy}</span> thinks Pipeline can help make your job search easier!
+                <span className="font-semibold text-primary">{referralInfo.username}</span> thinks Pipeline can help make your job search easier!
               </p>
               <Alert className="bg-primary/10 border-primary">
                 <Gift className="h-5 w-5 text-primary" />
