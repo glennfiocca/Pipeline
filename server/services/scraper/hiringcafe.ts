@@ -77,7 +77,10 @@ export class HiringCafeScraper extends BaseScraper {
                   const $el = $(element);
                   console.log('\nFound job listing:', $el.text().substring(0, 100));
 
+                  const jobId = $el.attr('data-job-id') || `HC${Math.floor(100000 + Math.random() * 900000)}`;
+
                   const job: InsertJob = {
+                    jobIdentifier: jobId,
                     title: $el.find('.title, h2, h3').first().text().trim(),
                     company: $el.find('.company, .employer').first().text().trim(),
                     location: $el.find('.location').first().text().trim() || 'Remote',
@@ -95,7 +98,8 @@ export class HiringCafeScraper extends BaseScraper {
                   if (this.validateJob(job)) {
                     console.log('Valid job found:', {
                       title: job.title,
-                      company: job.company
+                      company: job.company,
+                      jobIdentifier: job.jobIdentifier
                     });
                     jobs.push(job);
                   }
