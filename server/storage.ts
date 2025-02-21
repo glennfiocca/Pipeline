@@ -87,6 +87,7 @@ export interface IStorage {
   markAllNotificationsAsRead(userId: number): Promise<void>;
 
   addBankedCredits(userId: number, amount: number): Promise<User>;
+  generateReferralCode(userId: number): Promise<string>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -610,11 +611,34 @@ export class DatabaseStorage implements IStorage {
 
     const [updatedUser] = await db
       .update(users)
-      .set({ bankedCredits: (user.bankedCredits || 0) + amount })
+      .set({ 
+        bankedCredits: (user.bankedCredits || 0) + amount,
+      })
       .where(eq(users.id, userId))
       .returning();
 
     return updatedUser;
+  }
+
+  async generateReferralCode(userId: number): Promise<string> {
+    try {
+      const user = await this.getUser(userId);
+      if (!user) throw new Error("User not found");
+
+      const randomStr = Math.random().toString(36).substring(2, 8).toUpperCase();
+      const referralCode = `${user.username.substring(0, 4).toUpperCase()}-${randomStr}`;
+
+      const [updatedUser] = await db
+        .update(users)
+        .set({ referralCode })
+        .where(eq(users.id, userId))
+        .returning();
+
+      return referralCode;
+    } catch (error) {
+      console.error('Error generating referral code:', error);
+      throw error;
+    }
   }
 }
 

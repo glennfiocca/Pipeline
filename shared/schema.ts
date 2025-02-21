@@ -2,7 +2,7 @@ import { pgTable, text, serial, boolean, integer, jsonb } from "drizzle-orm/pg-c
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-// Simplified user schema with basic referral tracking
+// Update users table to include referralCode
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   username: text("username").notNull().unique(),
@@ -13,7 +13,8 @@ export const users = pgTable("users", {
   resetTokenExpiry: text("reset_token_expiry"),
   createdAt: text("created_at").notNull().default(new Date().toISOString()),
   bankedCredits: integer("banked_credits").notNull().default(0),
-  referredBy: text("referred_by")
+  referredBy: text("referred_by"),
+  referralCode: text("referral_code").unique()
 });
 
 // Simplified user schema for registration
@@ -23,7 +24,8 @@ export const insertUserSchema = createInsertSchema(users).omit({
   resetTokenExpiry: true,
   createdAt: true,
   bankedCredits: true,
-  referredBy: true
+  referredBy: true,
+  referralCode: true
 }).extend({
   confirmPassword: z.string(),
   username: z.string().min(3, "Username must be at least 3 characters"),
@@ -46,7 +48,8 @@ const baseUserSchema = createInsertSchema(users).omit({
   resetTokenExpiry: true,
   createdAt: true,
   bankedCredits: true,
-  referredBy: true
+  referredBy: true,
+  referralCode: true
 });
 
 // Jobs table schema update
@@ -306,16 +309,16 @@ export const insertFeedbackSchema = createInsertSchema(feedback).omit({
 export type Feedback = typeof feedback.$inferSelect;
 export type InsertFeedback = z.infer<typeof insertFeedbackSchema>;
 
-// Add notifications table schema
+// Update notification related schemas
 export const notifications = pgTable("notifications", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull(),
-  type: text("type").notNull(), // 'application_status', 'feedback_response', 'application_confirmation'
+  type: text("type").notNull(),
   title: text("title").notNull(),
   content: text("content").notNull(),
   isRead: boolean("is_read").notNull().default(false),
-  relatedId: integer("related_id"), // ID of related entity (application/feedback)
-  relatedType: text("related_type"), // Type of related entity ('application', 'feedback')
+  relatedId: integer("related_id"),
+  relatedType: text("related_type"),
   metadata: jsonb("metadata").default({}),
   createdAt: text("created_at").notNull().default(new Date().toISOString())
 });
@@ -328,15 +331,20 @@ export const insertNotificationSchema = createInsertSchema(notifications).omit({
     'application_status',
     'feedback_response',
     'application_confirmation',
-    'message_received'
+    'message_received',
+    'referral_bonus'
   ]),
-  relatedType: z.enum(['application', 'feedback', 'message']).optional(),
+  relatedType: z.enum(['message', 'application', 'feedback', 'user']).optional(),
   metadata: z.object({
     oldStatus: z.string().optional(),
     newStatus: z.string().optional(),
     applicationId: z.number().optional(),
     feedbackId: z.number().optional(),
-    messageId: z.number().optional()
+    messageId: z.number().optional(),
+    creditsAwarded: z.number().optional(),
+    jobId: z.number().optional(),
+    jobTitle: z.string().optional(),
+    company: z.string().optional()
   }).optional()
 });
 
