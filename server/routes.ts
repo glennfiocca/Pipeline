@@ -23,13 +23,23 @@ const isAdmin = (req: any, res: any, next: any) => {
 
 export function registerRoutes(app: Express): Server {
   // Add POST endpoint for job creation
-  app.post("/api/jobs", async (req, res) => {
+  app.post("/api/jobs", async (req: any, res) => {
     try {
+      // Check authentication
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ error: "Authentication required" });
+      }
+
+      // Check admin status
+      if (!req.user?.isAdmin) {
+        return res.status(403).json({ error: "Unauthorized. Admin access required." });
+      }
+
       const parsed = insertJobSchema.safeParse(req.body);
       if (!parsed.success) {
         return res.status(400).json({ 
           error: "Invalid job data", 
-          details: parsed.error 
+          details: parsed.error.format() 
         });
       }
 

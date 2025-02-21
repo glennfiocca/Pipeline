@@ -12,7 +12,7 @@ import { ZodError } from "zod";
 // Correctly extend Express.User interface
 declare global {
   namespace Express {
-    interface User extends Omit<User, 'id'> {
+    interface User extends User {
       id: number;
     }
   }
@@ -39,7 +39,7 @@ async function comparePasswords(supplied: string, stored: string) {
 }
 
 export function setupAuth(app: Express) {
-  // Session configuration remains unchanged
+  // Session configuration
   const sessionSettings: session.SessionOptions = {
     secret: process.env.REPLIT_ID || 'development-secret',
     resave: false,
@@ -57,6 +57,17 @@ export function setupAuth(app: Express) {
   app.use(session(sessionSettings));
   app.use(passport.initialize());
   app.use(passport.session());
+
+  // Add JSON response middleware for authentication errors
+  app.use((err: any, req: any, res: any, next: any) => {
+    if (err) {
+      return res.status(500).json({
+        error: "Authentication error",
+        message: err.message
+      });
+    }
+    next();
+  });
 
   passport.use(
     new LocalStrategy(async (username, password, done) => {
@@ -88,77 +99,7 @@ export function setupAuth(app: Express) {
     }
   });
 
-  app.post("/api/register", async (req, res) => {
-    try {
-      const validatedData = insertUserSchema.parse(req.body);
-
-      // Check for existing user
-      const existingUser = await storage.getUserByUsername(validatedData.username);
-      if (existingUser) {
-        return res.status(400).json({ error: "Username already exists" });
-      }
-
-      // Check for existing email
-      const existingEmail = await storage.getUserByEmail(validatedData.email);
-      if (existingEmail) {
-        return res.status(400).json({ error: "Email already registered" });
-      }
-
-      // Handle referral and credits
-      let referredBy: string | null = null;
-      let initialCredits = 0;
-      const REFERRAL_BONUS = 5;
-
-      if (validatedData.referredBy) {
-        const referrer = await storage.getUserByUsername(validatedData.referredBy);
-        if (!referrer) {
-          return res.status(400).json({ error: "Invalid referral code" });
-        }
-
-        // Set referral data
-        referredBy = validatedData.referredBy;
-        initialCredits = REFERRAL_BONUS;
-
-        // Add credits to referrer
-        await storage.addBankedCredits(referrer.id, REFERRAL_BONUS);
-        console.log(`Added ${REFERRAL_BONUS} credits to referrer ${referrer.username}`);
-      }
-
-      // Create new user
-      const { confirmPassword, ...userDataWithoutConfirm } = validatedData;
-      const hashedPassword = await hashPassword(validatedData.password);
-
-      const user = await storage.createUser({
-        ...userDataWithoutConfirm,
-        password: hashedPassword,
-        createdAt: new Date().toISOString(),
-        referredBy,
-        bankedCredits: initialCredits
-      });
-
-      console.log(`Created new user ${user.username} with ${initialCredits} initial credits`);
-
-      // Log in the user after registration
-      req.login(user, (err) => {
-        if (err) {
-          console.error("Login error after registration:", err);
-          return res.status(500).json({ error: "Error logging in after registration" });
-        }
-        return res.status(201).json(user);
-      });
-    } catch (error) {
-      console.error("Registration error:", error);
-      if (error instanceof ZodError) {
-        return res.status(400).json({
-          error: "Validation error",
-          details: fromZodError(error).message
-        });
-      }
-      return res.status(500).json({ error: "Error creating user" });
-    }
-  });
-
-  // Login endpoint
+  // Login endpoint with JSON responses
   app.post("/api/login", (req, res, next) => {
     passport.authenticate("local", (err: Error | null, user: Express.User | false, info: { message: string } | undefined) => {
       if (err) {
@@ -179,14 +120,14 @@ export function setupAuth(app: Express) {
   });
 
   // Logout endpoint
-  app.post("/api/logout", (req, res, next) => {
+  app.post("/api/logout", (req, res) => {
     if (!req.isAuthenticated()) {
       return res.status(401).json({ error: "Not authenticated" });
     }
     req.logout((err) => {
       if (err) {
         console.error("Logout error:", err);
-        return next(err);
+        return res.status(500).json({ error: "Error during logout" });
       }
       res.json({ message: "Logged out successfully" });
     });
