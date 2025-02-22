@@ -66,12 +66,21 @@ export function NewUserForm({ onSubmit, onCancel, initialData }: UserFormProps) 
         // If editing and no password provided, remove password fields
         const { password, confirmPassword, ...restData } = data;
         if (!password) {
-          await onSubmit(restData as NewUserForm);
+          await onSubmit({
+            ...restData,
+            isAdmin: !!restData.isAdmin // Ensure boolean value
+          } as NewUserForm);
         } else {
-          await onSubmit(data);
+          await onSubmit({
+            ...data,
+            isAdmin: !!data.isAdmin // Ensure boolean value
+          });
         }
       } else {
-        await onSubmit(data);
+        await onSubmit({
+          ...data,
+          isAdmin: !!data.isAdmin // Ensure boolean value
+        });
       }
       form.reset();
     } catch (error) {
