@@ -12,9 +12,7 @@ import { ZodError } from "zod";
 // Correctly extend Express.User interface
 declare global {
   namespace Express {
-    interface User extends User {
-      id: number;
-    }
+    interface User extends User {}
   }
 }
 
@@ -58,17 +56,6 @@ export function setupAuth(app: Express) {
   app.use(passport.initialize());
   app.use(passport.session());
 
-  // Add JSON response middleware for authentication errors
-  app.use((err: any, req: any, res: any, next: any) => {
-    if (err) {
-      return res.status(500).json({
-        error: "Authentication error",
-        message: err.message
-      });
-    }
-    next();
-  });
-
   passport.use(
     new LocalStrategy(async (username, password, done) => {
       try {
@@ -96,6 +83,54 @@ export function setupAuth(app: Express) {
       done(null, user);
     } catch (err) {
       done(err);
+    }
+  });
+
+  // Register endpoint with proper error handling
+  app.post("/api/register", async (req, res) => {
+    try {
+      // Validate request body against schema
+      const validatedData = insertUserSchema.parse(req.body);
+
+      // Check if username already exists
+      const existingUser = await storage.getUserByUsername(validatedData.username);
+      if (existingUser) {
+        return res.status(400).json({
+          error: "Registration failed",
+          details: "Username already exists"
+        });
+      }
+
+      // Hash password and create user
+      const hashedPassword = await hashPassword(validatedData.password);
+      const user = await storage.createUser({
+        ...validatedData,
+        password: hashedPassword
+      });
+
+      // Login the user after successful registration
+      req.login(user, (err) => {
+        if (err) {
+          console.error("Login error after registration:", err);
+          return res.status(500).json({
+            error: "Registration successful but login failed",
+            details: err.message
+          });
+        }
+        return res.status(201).json(user);
+      });
+    } catch (error) {
+      console.error("Registration error:", error);
+      if (error instanceof ZodError) {
+        return res.status(400).json({
+          error: "Validation failed",
+          details: fromZodError(error).message
+        });
+      }
+      return res.status(500).json({
+        error: "Registration failed",
+        details: error instanceof Error ? error.message : "Unknown error occurred"
+      });
     }
   });
 
