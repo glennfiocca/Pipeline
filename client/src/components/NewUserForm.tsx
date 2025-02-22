@@ -18,14 +18,28 @@ interface UserFormProps {
 }
 
 export function NewUserForm({ onSubmit, onCancel, initialData }: UserFormProps) {
-  // Create separate schemas for create and edit modes
-  const editModeSchema = z.object({
+  // Base schema for both create and edit modes
+  const baseSchema = z.object({
     username: z.string().min(3, "Username must be at least 3 characters"),
     email: z.string().email("Invalid email format"),
-    password: z.string().min(6, "Password must be at least 6 characters").optional(),
-    confirmPassword: z.string().optional(),
     isAdmin: z.boolean().default(false),
+  });
+
+  // Schema for creating new users (requires password)
+  const createSchema = baseSchema.extend({
+    password: z.string().min(6, "Password must be at least 6 characters"),
+    confirmPassword: z.string()
+  }).refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords don't match",
+    path: ["confirmPassword"],
+  });
+
+  // Schema for editing users (password is optional)
+  const editSchema = baseSchema.extend({
+    password: z.string().min(6, "Password must be at least 6 characters").optional(),
+    confirmPassword: z.string().optional()
   }).refine((data) => {
+    // Only validate passwords match if either field is provided
     if (data.password || data.confirmPassword) {
       return data.password === data.confirmPassword;
     }
@@ -36,7 +50,7 @@ export function NewUserForm({ onSubmit, onCancel, initialData }: UserFormProps) 
   });
 
   const form = useForm<NewUserForm>({
-    resolver: zodResolver(initialData ? editModeSchema : insertUserSchema),
+    resolver: zodResolver(initialData ? editSchema : createSchema),
     defaultValues: {
       username: initialData?.username || "",
       email: initialData?.email || "",
@@ -48,8 +62,8 @@ export function NewUserForm({ onSubmit, onCancel, initialData }: UserFormProps) 
 
   const handleSubmit = async (data: NewUserForm) => {
     try {
-      // If editing and no password provided, remove password fields before submission
       if (initialData) {
+        // If editing and no password provided, remove password fields
         const { password, confirmPassword, ...restData } = data;
         if (!password) {
           await onSubmit(restData as NewUserForm);
@@ -68,7 +82,7 @@ export function NewUserForm({ onSubmit, onCancel, initialData }: UserFormProps) 
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
-        <FormField 
+        <FormField
           control={form.control}
           name="username"
           render={({ field }) => (
