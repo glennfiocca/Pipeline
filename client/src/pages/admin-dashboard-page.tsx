@@ -170,12 +170,10 @@ export default function AdminDashboardPage() {
         isAdmin: typeof data.isAdmin === 'boolean' ? data.isAdmin : selectedUser.isAdmin
       };
 
-      console.log('Updating user with data:', updateData); // Debug log
-
       const res = await apiRequest("PATCH", `/api/admin/users/${selectedUser.id}`, updateData);
       if (!res.ok) {
         const error = await res.json();
-        console.error('Server error response:', error); // Debug log
+        console.error('Server error response:', error);
         throw new Error(error.message || "Failed to update user");
       }
       return res.json();
