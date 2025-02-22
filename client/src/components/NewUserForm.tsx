@@ -8,6 +8,7 @@ import { DialogFooter } from "@/components/ui/dialog";
 import { insertUserSchema } from "@shared/schema";
 import { z } from "zod";
 import type { User } from "@shared/schema";
+import { Loader2 } from "lucide-react";
 
 type NewUserForm = z.infer<typeof insertUserSchema>;
 
@@ -53,18 +54,23 @@ export function NewUserForm({ onSubmit, onCancel, initialData }: UserFormProps) 
     defaultValues: {
       username: initialData?.username || "",
       email: initialData?.email || "",
-      isAdmin: initialData?.isAdmin || false,
+      isAdmin: Boolean(initialData?.isAdmin) || false,
       password: "",
       confirmPassword: "",
     },
   });
 
+  console.log("Form values:", form.watch()); // Debug log
+
   const handleSubmit = async (data: NewUserForm) => {
     try {
+      console.log("Form submitted with data:", data); // Debug log
+
       const formData = {
         ...data,
-        isAdmin: Boolean(data.isAdmin), // Ensure boolean type
+        isAdmin: Boolean(data.isAdmin),
       };
+      console.log("Processed form data:", formData); // Debug log
 
       if (initialData) {
         // When editing, always include isAdmin in the update
@@ -78,8 +84,10 @@ export function NewUserForm({ onSubmit, onCancel, initialData }: UserFormProps) 
           updateData.password = password;
         }
 
+        console.log("Update data being sent:", updateData); // Debug log
         await onSubmit(updateData as NewUserForm);
       } else {
+        console.log("Create data being sent:", formData); // Debug log
         await onSubmit(formData);
       }
     } catch (error) {
@@ -174,8 +182,18 @@ export function NewUserForm({ onSubmit, onCancel, initialData }: UserFormProps) 
           <Button variant="outline" type="button" onClick={onCancel}>
             Cancel
           </Button>
-          <Button type="submit">
-            {initialData ? "Update User" : "Create User"}
+          <Button 
+            type="submit" 
+            disabled={form.formState.isSubmitting}
+          >
+            {form.formState.isSubmitting ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                {initialData ? "Updating..." : "Creating..."}
+              </>
+            ) : (
+              initialData ? "Update User" : "Create User"
+            )}
           </Button>
         </DialogFooter>
       </form>

@@ -165,20 +165,32 @@ export default function AdminDashboardPage() {
     mutationFn: async (data: Partial<User>) => {
       if (!selectedUser) throw new Error("No user selected");
 
+      console.log('Starting user update with data:', data); // Debug log
+
       const updateData = {
         ...data,
         isAdmin: typeof data.isAdmin === 'boolean' ? data.isAdmin : selectedUser.isAdmin
       };
 
+      console.log('Processed update data:', updateData); // Debug log
+
       const res = await apiRequest("PATCH", `/api/admin/users/${selectedUser.id}`, updateData);
+
       if (!res.ok) {
         const error = await res.json();
         console.error('Server error response:', error);
         throw new Error(error.message || "Failed to update user");
       }
-      return res.json();
+
+      const updatedUser = await res.json();
+      console.log('Successfully updated user:', updatedUser); // Debug log
+      return updatedUser;
     },
-    onSuccess: () => {
+    onMutate: (variables) => {
+      console.log('Mutation starting with variables:', variables); // Debug log
+    },
+    onSuccess: (data) => {
+      console.log('Mutation succeeded with data:', data); // Debug log
       queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
       toast({
         title: "Success",
