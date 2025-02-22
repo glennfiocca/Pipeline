@@ -27,7 +27,6 @@ export function JobList() {
   const applyMutation = useMutation({
     mutationFn: async (jobId: number) => {
       const now = new Date().toISOString();
-      // First create the application
       const appRes = await apiRequest(
         "POST",
         "/api/applications",
@@ -58,9 +57,7 @@ export function JobList() {
 
       const appData = await appRes.json();
 
-      // Create notifications for the application
       const notifications = [
-        // Application confirmation notification
         {
           userId: user!.id,
           type: "application_submitted",
@@ -76,7 +73,6 @@ export function JobList() {
         }
       ];
 
-      // Create all notifications
       for (const notification of notifications) {
         const notifRes = await apiRequest(
           "POST",
@@ -164,8 +160,8 @@ export function JobList() {
 
   return (
     <>
-      <ScrollArea className="h-[calc(100vh-4rem)] w-full px-4">
-        <div className="grid gap-4 pb-4 md:grid-cols-2 lg:grid-cols-3">
+      <ScrollArea className="h-[calc(100vh-6rem)] w-full px-4 2xl:px-8">
+        <div className="grid gap-4 pb-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
           {jobs.map((job) => {
             const { isApplied, previouslyApplied } = getApplicationStatus(job.id);
 
