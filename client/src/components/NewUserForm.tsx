@@ -19,14 +19,11 @@ interface UserFormProps {
 
 export function NewUserForm({ onSubmit, onCancel, initialData }: UserFormProps) {
   // Create an edit mode schema that makes password fields optional
-  const editModeSchema = z.object({
-    username: z.string().min(3, "Username must be at least 3 characters"),
-    email: z.string().email("Invalid email format"),
+  const editModeSchema = insertUserSchema.extend({
     password: z.string().min(6, "Password must be at least 6 characters").optional(),
-    confirmPassword: z.string().optional(),
-    isAdmin: z.boolean(),
+    confirmPassword: z.string().optional()
   }).refine(data => {
-    // Only validate passwords match if password is provided
+    // Only validate passwords match if at least one password field is provided
     if (data.password || data.confirmPassword) {
       return data.password === data.confirmPassword;
     }
@@ -38,29 +35,25 @@ export function NewUserForm({ onSubmit, onCancel, initialData }: UserFormProps) 
 
   const form = useForm<NewUserForm>({
     resolver: zodResolver(initialData ? editModeSchema : insertUserSchema),
-    defaultValues: initialData
-      ? {
-          username: initialData.username,
-          email: initialData.email,
-          isAdmin: initialData.isAdmin,
-          password: "",
-          confirmPassword: "",
-        }
-      : {
-          username: "",
-          email: "",
-          password: "",
-          confirmPassword: "",
-          isAdmin: false,
-        },
+    defaultValues: {
+      username: initialData?.username || "",
+      email: initialData?.email || "",
+      isAdmin: initialData?.isAdmin || false,
+      password: "",
+      confirmPassword: "",
+    },
   });
 
   const handleSubmit = async (data: NewUserForm) => {
     try {
-      // If editing and no password provided, remove password fields
-      if (initialData && !data.password) {
+      // If editing and no password provided, remove password fields before submission
+      if (initialData) {
         const { password, confirmPassword, ...restData } = data;
-        await onSubmit(restData as NewUserForm);
+        if (!password) {
+          await onSubmit(restData as NewUserForm);
+        } else {
+          await onSubmit(data);
+        }
       } else {
         await onSubmit(data);
       }
@@ -73,7 +66,7 @@ export function NewUserForm({ onSubmit, onCancel, initialData }: UserFormProps) 
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
-        <FormField
+        <FormField 
           control={form.control}
           name="username"
           render={({ field }) => (
@@ -99,32 +92,39 @@ export function NewUserForm({ onSubmit, onCancel, initialData }: UserFormProps) 
             </FormItem>
           )}
         />
-        <FormField
-          control={form.control}
-          name="password"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>{initialData ? "New Password (optional)" : "Password"}</FormLabel>
-              <FormControl>
-                <Input type="password" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="confirmPassword"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>{initialData ? "Confirm New Password" : "Confirm Password"}</FormLabel>
-              <FormControl>
-                <Input type="password" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+
+        {/* Only show password fields if creating new user or explicitly editing password */}
+        {(!initialData || form.watch('password')) && (
+          <>
+            <FormField
+              control={form.control}
+              name="password"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{initialData ? "New Password (optional)" : "Password"}</FormLabel>
+                  <FormControl>
+                    <Input type="password" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="confirmPassword"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{initialData ? "Confirm New Password" : "Confirm Password"}</FormLabel>
+                  <FormControl>
+                    <Input type="password" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </>
+        )}
+
         <FormField
           control={form.control}
           name="isAdmin"
