@@ -165,15 +165,17 @@ export default function AdminDashboardPage() {
     mutationFn: async (data: Partial<User>) => {
       if (!selectedUser) throw new Error("No user selected");
 
-      // Ensure isAdmin is explicitly handled as a boolean
       const updateData = {
         ...data,
         isAdmin: typeof data.isAdmin === 'boolean' ? data.isAdmin : selectedUser.isAdmin
       };
 
+      console.log('Updating user with data:', updateData); // Debug log
+
       const res = await apiRequest("PATCH", `/api/admin/users/${selectedUser.id}`, updateData);
       if (!res.ok) {
         const error = await res.json();
+        console.error('Server error response:', error); // Debug log
         throw new Error(error.message || "Failed to update user");
       }
       return res.json();
@@ -191,7 +193,7 @@ export default function AdminDashboardPage() {
       console.error('User update error:', error);
       toast({
         title: "Error",
-        description: error.message,
+        description: error.message || "Failed to update user",
         variant: "destructive",
       });
     },

@@ -22,7 +22,7 @@ export function NewUserForm({ onSubmit, onCancel, initialData }: UserFormProps) 
   const baseSchema = z.object({
     username: z.string().min(3, "Username must be at least 3 characters"),
     email: z.string().email("Invalid email format"),
-    isAdmin: z.boolean().default(false),
+    isAdmin: z.boolean(),
   });
 
   // Schema for creating new users (requires password)
@@ -39,7 +39,6 @@ export function NewUserForm({ onSubmit, onCancel, initialData }: UserFormProps) 
     password: z.string().min(6, "Password must be at least 6 characters").optional(),
     confirmPassword: z.string().optional()
   }).refine((data) => {
-    // Only validate passwords match if either field is provided
     if (data.password || data.confirmPassword) {
       return data.password === data.confirmPassword;
     }
@@ -62,27 +61,22 @@ export function NewUserForm({ onSubmit, onCancel, initialData }: UserFormProps) 
 
   const handleSubmit = async (data: NewUserForm) => {
     try {
+      const formData = {
+        ...data,
+        isAdmin: Boolean(data.isAdmin), // Ensure boolean type
+      };
+
       if (initialData) {
         // If editing and no password provided, remove password fields
-        const { password, confirmPassword, ...restData } = data;
-        if (!password) {
-          await onSubmit({
-            ...restData,
-            isAdmin: !!restData.isAdmin // Ensure boolean value
-          } as NewUserForm);
+        if (!formData.password) {
+          const { password, confirmPassword, ...rest } = formData;
+          await onSubmit(rest as NewUserForm);
         } else {
-          await onSubmit({
-            ...data,
-            isAdmin: !!data.isAdmin // Ensure boolean value
-          });
+          await onSubmit(formData);
         }
       } else {
-        await onSubmit({
-          ...data,
-          isAdmin: !!data.isAdmin // Ensure boolean value
-        });
+        await onSubmit(formData);
       }
-      form.reset();
     } catch (error) {
       console.error('Form submission error:', error);
     }
@@ -155,15 +149,19 @@ export function NewUserForm({ onSubmit, onCancel, initialData }: UserFormProps) 
           control={form.control}
           name="isAdmin"
           render={({ field }) => (
-            <FormItem className="flex items-center gap-2">
+            <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
               <FormControl>
                 <Checkbox
                   checked={field.value}
                   onCheckedChange={field.onChange}
                 />
               </FormControl>
-              <FormLabel>Administrator Access</FormLabel>
-              <FormMessage />
+              <div className="space-y-1 leading-none">
+                <FormLabel>Administrator Access</FormLabel>
+                <p className="text-sm text-muted-foreground">
+                  Grant administrative privileges to this user
+                </p>
+              </div>
             </FormItem>
           )}
         />
@@ -172,7 +170,7 @@ export function NewUserForm({ onSubmit, onCancel, initialData }: UserFormProps) 
           <Button variant="outline" type="button" onClick={onCancel}>
             Cancel
           </Button>
-          <Button type="submit" disabled={form.formState.isSubmitting}>
+          <Button type="submit">
             {initialData ? "Update User" : "Create User"}
           </Button>
         </DialogFooter>
