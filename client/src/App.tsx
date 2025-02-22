@@ -35,9 +35,9 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <NotificationsProvider>
-          <div className="min-h-screen bg-background font-sans antialiased flex flex-col max-w-screen-3xl mx-auto">
+          <div className="min-h-screen bg-background font-sans antialiased flex flex-col">
             <NavBar />
-            <main className="flex-1 container">
+            <main className="flex-1">
               <Router />
             </main>
             <Footer />

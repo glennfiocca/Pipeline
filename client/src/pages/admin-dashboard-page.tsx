@@ -267,16 +267,14 @@ export default function AdminDashboardPage() {
       <div className="flex items-center justify-between mb-8">
         <h1 className="text-3xl font-bold">Admin Dashboard</h1>
       </div>
-
       <Tabs defaultValue="active-jobs" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-2 lg:grid-cols-5 gap-4">
+        <TabsList>
           <TabsTrigger value="active-jobs">Active Jobs</TabsTrigger>
           <TabsTrigger value="archived-jobs">Archived Jobs</TabsTrigger>
           <TabsTrigger value="users">Users</TabsTrigger>
           <TabsTrigger value="applications">Applications</TabsTrigger>
           <TabsTrigger value="feedback">Feedback</TabsTrigger>
         </TabsList>
-
         <TabsContent value="active-jobs">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0">
@@ -290,67 +288,65 @@ export default function AdminDashboardPage() {
               </Button>
             </CardHeader>
             <CardContent>
-              <ScrollArea className="h-[calc(100vh-16rem)]">
-                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
-                  {jobs.filter(job => job.isActive).map((job) => (
-                    <div
-                      key={job.id}
-                      className="flex flex-col justify-between p-4 rounded-lg border"
-                    >
-                      <div>
-                        <h3 className="font-medium">
-                          {job.title}
-                          <span className="ml-2 text-sm text-muted-foreground">
-                            (ID: {job.jobIdentifier})
-                          </span>
-                        </h3>
-                        <p className="text-sm text-muted-foreground">
-                          {job.company} - {job.location}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2 mt-4">
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          onClick={() => editJobMutation.mutate({ id: job.id, isActive: false })}
-                        >
-                          Archive
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          onClick={() => handleEditJob(job)}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button variant="destructive" size="icon">
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Delete Job</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                Are you sure you want to delete this job? This action cannot be undone.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancel</AlertDialogCancel>
-                              <AlertDialogAction
-                                onClick={() => deleteJobMutation.mutate(job.id)}
-                              >
-                                Delete
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      </div>
+              <div className="space-y-4">
+                {jobs.filter(job => job.isActive).map((job) => (
+                  <div
+                    key={job.id}
+                    className="flex items-center justify-between p-4 rounded-lg border"
+                  >
+                    <div>
+                      <h3 className="font-medium">
+                        {job.title}
+                        <span className="ml-2 text-sm text-muted-foreground">
+                          (ID: {job.jobIdentifier})
+                        </span>
+                      </h3>
+                      <p className="text-sm text-muted-foreground">
+                        {job.company} - {job.location}
+                      </p>
                     </div>
-                  ))}
-                </div>
-              </ScrollArea>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => editJobMutation.mutate({ id: job.id, isActive: false })}
+                      >
+                        Archive
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => handleEditJob(job)}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="destructive" size="icon">
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Delete Job</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Are you sure you want to delete this job? This action cannot be undone.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => deleteJobMutation.mutate(job.id)}
+                            >
+                              Delete
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -443,74 +439,72 @@ export default function AdminDashboardPage() {
               </Button>
             </CardHeader>
             <CardContent>
-              <ScrollArea className="h-[calc(100vh-16rem)]">
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
-                  {users.map((user) => (
-                    <div key={user.id} className="p-4 rounded-lg border space-y-2">
-                      <div className="flex items-start justify-between">
-                        <div className="space-y-1">
-                          <div className="font-medium flex items-center gap-2">
-                            <UserIcon className="h-4 w-4 text-muted-foreground" />
-                            {user.username}
-                            {user.isAdmin && (
-                              <Badge variant="secondary" className="ml-2">
-                                Admin
-                              </Badge>
-                            )}
-                          </div>
-                          <div className="text-sm text-muted-foreground flex items-center gap-2">
-                            <Mail className="h-4 w-4" />
-                            {user.email}
-                          </div>
-                          <div className="text-sm text-muted-foreground flex items-center gap-2">
-                            <CreditCard className="h-4 w-4" />
-                            {user.bankedCredits || 0} banked credits
-                          </div>
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {users.map((user) => (
+                  <div key={user.id} className="p-4 rounded-lg border space-y-2">
+                    <div className="flex items-start justify-between">
+                      <div className="space-y-1">
+                        <div className="font-medium flex items-center gap-2">
+                          <UserIcon className="h-4 w-4 text-muted-foreground" />
+                          {user.username}
+                          {user.isAdmin && (
+                            <Badge variant="secondary" className="ml-2">
+                              Admin
+                            </Badge>
+                          )}
                         </div>
-                        <div className="flex items-center gap-2 pt-2">
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            onClick={() => setSelectedUserCredits({ user, action: 'manage_credits' })}
-                          >
-                            <CreditCard className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            onClick={() => handleEditUser(user)}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button variant="destructive" size="icon">
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>Delete User</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  Are you sure you want to delete this user? This action cannot be undone.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction
-                                  onClick={() => deleteUserMutation.mutate(user.id)}
-                                >
-                                  Delete
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
+                        <div className="text-sm text-muted-foreground flex items-center gap-2">
+                          <Mail className="h-4 w-4" />
+                          {user.email}
+                        </div>
+                        <div className="text-sm text-muted-foreground flex items-center gap-2">
+                          <CreditCard className="h-4 w-4" />
+                          {user.bankedCredits || 0} banked credits
                         </div>
                       </div>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() => setSelectedUserCredits({ user, action: 'manage_credits' })}
+                        >
+                          <CreditCard className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() => handleEditUser(user)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="destructive" size="icon">
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Delete User</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Are you sure you want to delete this user? This action cannot be undone.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() => deleteUserMutation.mutate(user.id)}
+                              >
+                                Delete
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
                     </div>
-                  ))}
-                </div>
-              </ScrollArea>
+                  </div>
+                ))}
+              </div>
             </CardContent>
           </Card>
         </TabsContent>

@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Application, Job } from "@shared/schema";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
+import { Loader2, AlertCircle } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -16,7 +17,6 @@ import { MessageDialog } from "@/components/MessageDialog";
 import { FeedbackDialog } from "@/components/FeedbackDialog";
 import { useLocation } from "wouter";
 import { JobModal } from "@/components/JobModal";
-import { Loader2, AlertCircle } from "lucide-react";
 
 interface StatusHistoryItem {
   status: string;
@@ -187,10 +187,10 @@ export default function DashboardPage() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <ScrollArea className="h-[calc(100vh-20rem)] pr-4">
-            <div className="grid gap-4 xl:grid-cols-2 2xl:grid-cols-3">
+          <ScrollArea className="h-[600px] pr-4">
+            <div className="space-y-4">
               {filteredApplications.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground col-span-full">
+                <div className="text-center py-8 text-muted-foreground">
                   No applications {selectedStatus && `with status "${selectedStatus}"`} yet.
                   {!selectedStatus && " Start applying to jobs to track your progress here!"}
                 </div>
@@ -239,18 +239,16 @@ export default function DashboardPage() {
                       {statusHistory && statusHistory.length > 0 && (
                         <div className="mt-2 text-sm">
                           <div className="font-medium mb-1">Status History:</div>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                            {statusHistory.map((history, index) => (
-                              <div key={index} className="flex items-center text-muted-foreground">
-                                <span className="mr-2">
-                                  {format(new Date(history.date), "MMM d, yyyy")}:
-                                </span>
-                                <Badge variant="outline" className={getStatusColor(!job.isActive && index === statusHistory.length - 1 ? "archived" : history.status)}>
-                                  {!job.isActive && index === statusHistory.length - 1 ? "Archived" : history.status}
-                                </Badge>
-                              </div>
-                            ))}
-                          </div>
+                          {statusHistory.map((history, index) => (
+                            <div key={index} className="flex items-center text-muted-foreground">
+                              <span className="mr-2">
+                                {format(new Date(history.date), "MMM d, yyyy")}:
+                              </span>
+                              <Badge variant="outline" className={getStatusColor(!job.isActive && index === statusHistory.length - 1 ? "archived" : history.status)}>
+                                {!job.isActive && index === statusHistory.length - 1 ? "Archived" : history.status}
+                              </Badge>
+                            </div>
+                          ))}
                         </div>
                       )}
 
