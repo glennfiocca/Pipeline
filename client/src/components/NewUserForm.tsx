@@ -67,13 +67,18 @@ export function NewUserForm({ onSubmit, onCancel, initialData }: UserFormProps) 
       };
 
       if (initialData) {
-        // If editing and no password provided, remove password fields
-        if (!formData.password) {
-          const { password, confirmPassword, ...rest } = formData;
-          await onSubmit(rest as NewUserForm);
-        } else {
-          await onSubmit(formData);
+        // When editing, always include isAdmin in the update
+        const { password, confirmPassword, ...rest } = formData;
+        const updateData = {
+          ...rest,
+          isAdmin: formData.isAdmin
+        };
+
+        if (password) {
+          updateData.password = password;
         }
+
+        await onSubmit(updateData as NewUserForm);
       } else {
         await onSubmit(formData);
       }
@@ -113,7 +118,6 @@ export function NewUserForm({ onSubmit, onCancel, initialData }: UserFormProps) 
           )}
         />
 
-        {/* Only show password fields if creating new user or explicitly editing password */}
         {(!initialData || form.watch('password')) && (
           <>
             <FormField
