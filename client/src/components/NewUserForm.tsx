@@ -18,12 +18,14 @@ interface UserFormProps {
 }
 
 export function NewUserForm({ onSubmit, onCancel, initialData }: UserFormProps) {
-  // Create an edit mode schema that makes password fields optional
-  const editModeSchema = insertUserSchema.extend({
+  // Create separate schemas for create and edit modes
+  const editModeSchema = z.object({
+    username: z.string().min(3, "Username must be at least 3 characters"),
+    email: z.string().email("Invalid email format"),
     password: z.string().min(6, "Password must be at least 6 characters").optional(),
-    confirmPassword: z.string().optional()
-  }).refine(data => {
-    // Only validate passwords match if at least one password field is provided
+    confirmPassword: z.string().optional(),
+    isAdmin: z.boolean().default(false),
+  }).refine((data) => {
     if (data.password || data.confirmPassword) {
       return data.password === data.confirmPassword;
     }
@@ -79,6 +81,7 @@ export function NewUserForm({ onSubmit, onCancel, initialData }: UserFormProps) 
             </FormItem>
           )}
         />
+
         <FormField
           control={form.control}
           name="email"
@@ -141,6 +144,7 @@ export function NewUserForm({ onSubmit, onCancel, initialData }: UserFormProps) 
             </FormItem>
           )}
         />
+
         <DialogFooter>
           <Button variant="outline" type="button" onClick={onCancel}>
             Cancel
