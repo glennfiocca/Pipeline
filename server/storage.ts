@@ -64,7 +64,7 @@ export interface IStorage {
   markMessageAsRead(id: number): Promise<Message>;
   getUnreadMessageCount(applicationId: number): Promise<number>;
 
-  // Add new methods for job management
+  // Job management
   updateJob(id: number, updates: Partial<InsertJob>): Promise<Job>;
   deactivateJob(id: number): Promise<Job>;
   updateUser(id: number, updates: Partial<User>): Promise<User>;
@@ -80,16 +80,12 @@ export interface IStorage {
   getUnresolvedFeedback(): Promise<Feedback[]>;
   updateFeedback(id: number, updates: Partial<Feedback>): Promise<Feedback>;
 
-  // Add notification methods
+  // Notification methods
   getNotifications(userId: number): Promise<Notification[]>;
   getUnreadNotificationCount(userId: number): Promise<number>;
   createNotification(notification: InsertNotification): Promise<Notification>;
   markNotificationAsRead(id: number): Promise<Notification>;
   markAllNotificationsAsRead(userId: number): Promise<void>;
-
-  addBankedCredits(userId: number, amount: number): Promise<User>;
-
-  generateReferralCode(userId: number): Promise<string>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -613,41 +609,6 @@ export class DatabaseStorage implements IStorage {
       .update(notifications)
       .set({ isRead: true })
       .where(eq(notifications.userId, userId));
-  }
-
-
-  async addBankedCredits(userId: number, amount: number): Promise<User> {
-    const [user] = await db
-      .select()
-      .from(users)
-      .where(eq(users.id, userId));
-
-    if (!user) throw new Error("User not found");
-
-    const [updatedUser] = await db
-      .update(users)
-      .set({ bankedCredits: (user.bankedCredits || 0) + amount })
-      .where(eq(users.id, userId))
-      .returning();
-
-    return updatedUser;
-  }
-
-  async generateReferralCode(userId: number): Promise<string> {
-    const user = await this.getUser(userId);
-    if (!user) throw new Error("User not found");
-
-    // Generate a unique code using nanoid
-    const referralCode = nanoid(8);
-    
-    // Update user with new referral code
-    const [updatedUser] = await db
-      .update(users)
-      .set({ referralCode })
-      .where(eq(users.id, userId))
-      .returning();
-
-    return referralCode;
   }
 }
 

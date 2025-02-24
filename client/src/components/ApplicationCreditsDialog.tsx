@@ -34,22 +34,16 @@ export function ApplicationCreditsDialog({
     enabled: !!user && isOpen,
   });
 
-  const { data: userData } = useQuery<User>({
-    queryKey: ["/api/users", user?.id],
-    enabled: !!user && isOpen,
-  });
-
   const today = new Date().toISOString().split('T')[0];
   const applicationsToday = applications?.filter(app =>
     app.appliedAt.startsWith(today)
   )?.length ?? 0;
 
   const remainingDailyCredits = 10 - applicationsToday;
-  const bankedCredits = userData?.bankedCredits ?? 0;
   const resetTime = format(new Date().setHours(24, 0, 0, 0), "h:mm a");
 
   const handleConfirm = () => {
-    if (remainingDailyCredits > 0 || bankedCredits > 0) {
+    if (remainingDailyCredits > 0) {
       onConfirm();
     }
   };
@@ -75,24 +69,15 @@ export function ApplicationCreditsDialog({
                 <p className="font-semibold text-primary mb-2">Application Credits:</p>
                 <ul className="list-disc list-inside space-y-1">
                   <li>Daily credits remaining: {remainingDailyCredits}</li>
-                  <li>Banked credits available: {bankedCredits}</li>
                   <li>Daily credits reset at {resetTime}</li>
                   <li>Daily credits do not roll over</li>
                 </ul>
               </div>
 
-              <div className="text-sm text-muted-foreground space-y-2">
+              <div className="text-sm text-muted-foreground">
                 <p>
-                  Each user gets 10 free applications per 24-hour period. Additional credits
-                  can be earned by referring friends to Pipeline.
+                  Each user gets 10 free applications per 24-hour period.
                 </p>
-                {user.referralCode && (
-                  <p>
-                    Your referral code: <strong>{user.referralCode}</strong>
-                    <br />
-                    Share this code with friends to earn 5 banked credits for each signup!
-                  </p>
-                )}
               </div>
             </div>
           </AlertDialogDescription>
@@ -101,9 +86,9 @@ export function ApplicationCreditsDialog({
           <AlertDialogCancel onClick={onClose}>Cancel</AlertDialogCancel>
           <AlertDialogAction
             onClick={handleConfirm}
-            disabled={remainingDailyCredits <= 0 && bankedCredits <= 0}
+            disabled={remainingDailyCredits <= 0}
           >
-            {remainingDailyCredits > 0 || bankedCredits > 0
+            {remainingDailyCredits > 0
               ? "Use Credit & Apply"
               : "No Credits Available"}
           </AlertDialogAction>

@@ -2,7 +2,7 @@ import { pgTable, text, serial, boolean, integer, jsonb } from "drizzle-orm/pg-c
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-// Simplified user schema with basic referral tracking
+// Remove referral-related fields from user schema
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   username: text("username").notNull().unique(),
@@ -11,26 +11,20 @@ export const users = pgTable("users", {
   isAdmin: boolean("is_admin").notNull().default(false),
   resetToken: text("reset_token"),
   resetTokenExpiry: text("reset_token_expiry"),
-  createdAt: text("created_at").notNull().default(new Date().toISOString()),
-  bankedCredits: integer("banked_credits").notNull().default(5),
-  referredBy: text("referred_by"),
-  referralCode: text("referral_code").unique()
+  createdAt: text("created_at").notNull().default(new Date().toISOString())
 });
 
-// Simplified user schema for registration
+// Update user schema for registration
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
   resetToken: true,
   resetTokenExpiry: true,
-  createdAt: true,
-  bankedCredits: true,
-  referredBy: true
+  createdAt: true
 }).extend({
   confirmPassword: z.string(),
   username: z.string().min(3, "Username must be at least 3 characters"),
   email: z.string().email("Invalid email format"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
-  referredBy: z.string().optional()
+  password: z.string().min(6, "Password must be at least 6 characters")
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords don't match",
   path: ["confirmPassword"]
@@ -45,9 +39,7 @@ const baseUserSchema = createInsertSchema(users).omit({
   id: true,
   resetToken: true,
   resetTokenExpiry: true,
-  createdAt: true,
-  bankedCredits: true,
-  referredBy: true
+  createdAt: true
 });
 
 // Jobs table schema update
