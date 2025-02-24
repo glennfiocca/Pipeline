@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useFieldArray, useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
@@ -23,6 +23,65 @@ export default function ProfilePage() {
   const { data: profile, isLoading } = useQuery<Profile>({
     queryKey: ["/api/profiles", user?.id],
     enabled: !!user?.id
+  });
+
+  const saveProfileMutation = useMutation({
+    mutationFn: async (values: InsertProfile) => {
+      try {
+        const formData = new FormData();
+
+        // Handle file uploads
+        if (values.resumeUrl instanceof File) {
+          formData.append('resume', values.resumeUrl);
+        }
+        if (values.transcriptUrl instanceof File) {
+          formData.append('transcript', values.transcriptUrl);
+        }
+
+        // Prepare the data
+        const data = {
+          ...values,
+          education: values.education?.filter(Boolean) || [],
+          experience: values.experience?.filter(Boolean) || [],
+          skills: values.skills?.filter(Boolean) || [],
+          certifications: values.certifications?.filter(Boolean) || [],
+          languages: values.languages?.filter(Boolean) || [],
+          publications: values.publications?.filter(Boolean) || [],
+          projects: values.projects?.filter(Boolean) || [],
+          referenceList: values.referenceList?.filter(Boolean) || [],
+          preferredLocations: values.preferredLocations?.filter(Boolean) || [],
+          visaSponsorship: Boolean(values.visaSponsorship),
+          willingToRelocate: Boolean(values.willingToRelocate)
+        };
+
+        const method = profile?.id ? "PATCH" : "POST";
+        const endpoint = profile?.id ? `/api/profiles/${profile.id}` : "/api/profiles";
+
+        const res = await apiRequest(method, endpoint, data);
+        if (!res.ok) {
+          const errorData = await res.json();
+          throw new Error(errorData.message || 'Failed to save profile');
+        }
+        return res.json();
+      } catch (error) {
+        console.error("Profile save error:", error);
+        throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/profiles", user?.id] });
+      toast({
+        title: "Success!",
+        description: `Your profile has been ${profile?.id ? 'updated' : 'created'} successfully.`,
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error saving profile",
+        description: error.message || "Failed to save profile",
+        variant: "destructive",
+      });
+    }
   });
 
   const form = useForm<InsertProfile>({
@@ -65,6 +124,21 @@ export default function ProfilePage() {
     },
   });
 
+  // Reset form when profile data is loaded
+  useEffect(() => {
+    if (profile) {
+      form.reset(profile as InsertProfile);
+    }
+  }, [profile, form]);
+
+  async function onSubmit(values: InsertProfile) {
+    try {
+      await saveProfileMutation.mutateAsync(values);
+    } catch (error) {
+      console.error("Form submission error:", error);
+    }
+  }
+
   const { fields: educationFields, append: appendEducation, remove: removeEducation } =
     useFieldArray({
       control: form.control,
@@ -76,58 +150,6 @@ export default function ProfilePage() {
       control: form.control,
       name: "experience"
     });
-
-  async function onSubmit(values: InsertProfile) {
-    try {
-      const formData = {
-        ...values,
-        education: values.education?.filter(Boolean) || [],
-        experience: values.experience?.filter(Boolean) || [],
-        skills: values.skills?.filter(Boolean) || [],
-        certifications: values.certifications?.filter(Boolean) || [],
-        languages: values.languages?.filter(Boolean) || [],
-        publications: values.publications?.filter(Boolean) || [],
-        projects: values.projects?.filter(Boolean) || [],
-        referenceList: values.referenceList?.filter(Boolean) || [],
-        preferredLocations: values.preferredLocations?.filter(Boolean) || [],
-        visaSponsorship: Boolean(values.visaSponsorship),
-        willingToRelocate: Boolean(values.willingToRelocate)
-      } as InsertProfile;
-
-      const method = profile?.id ? "PATCH" : "POST";
-      const endpoint = profile?.id ? `/api/profiles/${profile.id}` : "/api/profiles";
-
-      const response = await apiRequest(method, endpoint, formData);
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to save profile');
-      }
-
-      const responseData = await response.json();
-
-      await queryClient.invalidateQueries({ queryKey: ["/api/profiles", user?.id] });
-
-      toast({
-        title: "Success!",
-        description: `Your profile has been ${profile?.id ? 'updated' : 'created'} successfully.`,
-      });
-    } catch (error) {
-      console.error("Form submission error:", error);
-      toast({
-        title: "Error saving profile",
-        description: error instanceof Error ? error.message : "Failed to save profile",
-        variant: "destructive",
-      });
-    }
-  }
-
-  // Reset form when profile data is loaded
-  useEffect(() => {
-    if (profile) {
-      form.reset(profile as InsertProfile);
-    }
-  }, [profile, form]);
 
   if (isLoading) {
     return (
@@ -575,12 +597,7 @@ export default function ProfilePage() {
                               <Input
                                 type="file"
                                 accept=".pdf,.doc,.docx"
-                                onChange={(e) => {
-                                  const file = e.target.files?.[0];
-                                  if (file) {
-                                    field.onChange(URL.createObjectURL(file));
-                                  }
-                                }}
+                                {...field}
                               />
                               {field.value && (
                                 <a
@@ -613,12 +630,7 @@ export default function ProfilePage() {
                               <Input
                                 type="file"
                                 accept=".pdf"
-                                onChange={(e) => {
-                                  const file = e.target.files?.[0];
-                                  if (file) {
-                                    field.onChange(URL.createObjectURL(file));
-                                  }
-                                }}
+                                {...field}
                               />
                               {field.value && (
                                 <a
@@ -708,8 +720,16 @@ export default function ProfilePage() {
             <Button
               type="submit"
               className="min-w-[120px]"
+              disabled={saveProfileMutation.isPending}
             >
-              Save Profile
+              {saveProfileMutation.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                'Save Profile'
+              )}
             </Button>
           </div>
         </form>
