@@ -140,8 +140,8 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="container py-6">
-      <div className="flex items-center justify-between mb-4">
+    <div className="container py-4">
+      <div className="flex items-center justify-between mb-2">
         <h1 className="text-3xl font-bold">Application Dashboard</h1>
         <div className="flex items-center gap-2">
           <ApplicationCreditsCard />
@@ -153,24 +153,24 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-6 gap-2">
+      <div className="grid grid-cols-6 gap-1">
         {Object.entries(stats).map(([status, count]) => (
           <Card
             key={status}
             className={cn(
-              "cursor-pointer transition-all hover:shadow-md h-[120px]",
+              "cursor-pointer transition-all hover:shadow-md h-[140px]",
               selectedStatus === status && "ring-2 ring-primary"
             )}
             onClick={() => setSelectedStatus(status === "total" ? null : status)}
           >
-            <CardHeader className="pb-0">
+            <CardHeader className="pb-1">
               <CardTitle className="text-sm font-medium">
                 {status === "total" ? "Total Applications" : status}
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className={cn(
-                "text-3xl font-bold text-center",
+                "text-4xl font-bold text-center pt-2",
                 status !== "total" && getStatusColor(status)
               )}>
                 {count}
@@ -180,14 +180,14 @@ export default function DashboardPage() {
         ))}
       </div>
 
-      <Card className="mt-4">
+      <Card className="mt-2">
         <CardHeader>
           <CardTitle>
             {selectedStatus ? `${selectedStatus} Applications` : "Your Applications"}
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <ScrollArea className="h-[calc(100vh-350px)] pr-4">
+          <ScrollArea className="h-[calc(100vh-300px)] pr-4">
             <div className="space-y-2">
               {filteredApplications.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
