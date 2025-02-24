@@ -3,7 +3,6 @@ import { Button } from "@/components/ui/button";
 import { BriefcaseIcon, HomeIcon, UserCircleIcon, BarChartIcon, LogOutIcon, ShieldIcon } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { NotificationsDialog } from "@/components/NotificationsDialog";
-import { Logo } from "@/components/ui/logo";
 
 export function NavBar() {
   const { user, logoutMutation } = useAuth();
@@ -15,8 +14,7 @@ export function NavBar() {
         <div className="mr-4 hidden md:flex">
           <Link href="/">
             <Button variant="ghost" className="mr-2 px-2">
-              <Logo className="h-8 w-8 mr-2" />
-              <span className="hidden text-3xl font-bold sm:inline-block">Pipeline</span>
+              <span className="text-3xl font-bold">Pipeline</span>
             </Button>
           </Link>
         </div>
