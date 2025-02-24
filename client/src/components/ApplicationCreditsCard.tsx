@@ -56,29 +56,25 @@ export function ApplicationCreditsCard() {
   if (!user) return null;
 
   return (
-    <Card className="w-full bg-primary/5 border-none shadow-none">
-      <CardContent className="flex items-center justify-between px-4 py-2">
-        <div className="flex items-center gap-3">
-          <CreditCard className="h-5 w-5 text-primary" />
-          <span className="text-base">
-            <span className="font-medium">{remainingDailyCredits}</span> daily credits remaining
-          </span>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="text-muted-foreground">Resets {timeToReset}</span>
-          <TooltipProvider delayDuration={0}>
-            <Tooltip>
-              <TooltipTrigger>
-                <HelpCircle className="h-4 w-4 text-muted-foreground" />
-              </TooltipTrigger>
-              <TooltipContent>
-                <p className="max-w-xs">
-                  You get 10 free application credits every day at midnight in your timezone. Use them wisely!
-                </p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        </div>
+    <Card className="w-auto inline-flex items-center p-2 bg-primary/5 border-none shadow-none">
+      <CardContent className="p-2 flex items-center gap-2">
+        <CreditCard className="h-4 w-4 text-primary" />
+        <span className="text-sm">
+          <span className="font-medium">{remainingDailyCredits}</span> daily credits remaining
+          <span className="text-muted-foreground"> · Resets {timeToReset}</span>
+        </span>
+        <TooltipProvider delayDuration={0}>
+          <Tooltip>
+            <TooltipTrigger>
+              <HelpCircle className="h-4 w-4 text-muted-foreground" />
+            </TooltipTrigger>
+            <TooltipContent>
+              <p className="max-w-xs">
+                You get 10 free application credits every day at midnight in your timezone. Use them wisely!
+              </p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       </CardContent>
     </Card>
   );
