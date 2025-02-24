@@ -21,7 +21,7 @@ import { WithdrawDialog } from "@/components/WithdrawDialog";
 import { apiRequest } from "@/lib/queryClient";
 
 export function NotificationsDialog() {
-  const { notifications, unreadCount, markAsRead, markAllAsRead, isLoading } = useNotifications();
+  const { notifications = [], unreadCount = 0, markAsRead, markAllAsRead, isLoading } = useNotifications();
   const [, setLocation] = useLocation();
   const [isOpen, setIsOpen] = useState(false);
   const [selectedJobId, setSelectedJobId] = useState<number | null>(null);
@@ -39,6 +39,8 @@ export function NotificationsDialog() {
 
   // Handle notification click based on type
   const handleNotificationClick = async (notification: any) => {
+    if (!notification) return;
+
     // Mark as read if not already read
     if (!notification.isRead) {
       await markAsRead(notification.id);
@@ -52,10 +54,10 @@ export function NotificationsDialog() {
     // Navigate based on notification type
     switch (notification.type) {
       case 'message_received':
-        setLocation(`/dashboard?messageId=${notification.metadata.applicationId}`);
+        setLocation(`/dashboard?messageId=${notification.metadata?.applicationId}`);
         break;
       case 'application_status':
-        setSelectedJobId(notification.metadata.applicationId);
+        setSelectedJobId(notification.metadata?.jobId);
         break;
       case 'application_confirmation':
         setLocation(`/dashboard`);
@@ -67,14 +69,6 @@ export function NotificationsDialog() {
 
   // Find the application for the selected job
   const selectedApplication = applications.find(app => app.jobId === selectedJobId);
-
-  if (isLoading) {
-    return (
-      <Button variant="ghost" size="icon" disabled>
-        <Bell className="h-5 w-5" />
-      </Button>
-    );
-  }
 
   return (
     <>
@@ -97,7 +91,7 @@ export function NotificationsDialog() {
           <DialogHeader>
             <div className="flex items-center justify-between">
               <DialogTitle>Notifications</DialogTitle>
-              {notifications.length > 0 && (
+              {notifications && notifications.length > 0 && (
                 <Button variant="ghost" size="sm" onClick={() => markAllAsRead()}>
                   Mark all as read
                 </Button>
@@ -106,7 +100,11 @@ export function NotificationsDialog() {
           </DialogHeader>
 
           <ScrollArea className="h-[400px] pr-4">
-            {notifications.length === 0 ? (
+            {isLoading ? (
+              <div className="flex items-center justify-center h-full">
+                <Loader2 className="h-6 w-6 animate-spin" />
+              </div>
+            ) : !notifications || notifications.length === 0 ? (
               <div className="flex items-center justify-center h-full text-muted-foreground">
                 No notifications
               </div>
