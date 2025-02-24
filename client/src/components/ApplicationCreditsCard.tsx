@@ -60,8 +60,8 @@ export function ApplicationCreditsCard() {
       <CardContent className="p-2 flex items-center gap-2">
         <CreditCard className="h-4 w-4 text-primary" />
         <span className="text-sm">
-          <span className="font-medium">{remainingDailyCredits}</span> daily credits remaining ·
-          <span className="text-muted-foreground"> Resets {timeToReset}</span>
+          <span className="font-medium">{remainingDailyCredits}</span> daily credits remaining
+          <span className="text-muted-foreground"> · Resets {timeToReset}</span>
         </span>
         <TooltipProvider delayDuration={0}>
           <Tooltip>
