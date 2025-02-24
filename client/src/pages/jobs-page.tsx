@@ -167,7 +167,7 @@ export default function JobsPage() {
   }
 
   return (
-    <div className="container py-10">
+    <div className="container mx-auto px-4 py-10 max-w-7xl">
       <div className="flex flex-col gap-8">
         <div className="flex items-center justify-between">
           <h1 className="text-3xl font-bold">Jobs</h1>
