@@ -1,6 +1,6 @@
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { HomeIcon, UserCircleIcon, BarChartIcon, LogOutIcon, ShieldIcon } from "lucide-react";
+import { BriefcaseIcon, HomeIcon, UserCircleIcon, BarChartIcon, LogOutIcon, ShieldIcon } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { NotificationsDialog } from "@/components/NotificationsDialog";
 
@@ -28,6 +28,7 @@ export function NavBar() {
             </Link>
             <Link href="/jobs">
               <Button variant="ghost" size="sm">
+                <BriefcaseIcon className="h-4 w-4 mr-2" />
                 Jobs
               </Button>
             </Link>
