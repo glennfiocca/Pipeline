@@ -616,31 +616,6 @@ export class DatabaseStorage implements IStorage {
 
     return updatedUser;
   }
-
-  async generateReferralCode(userId: number): Promise<string> {
-    try {
-      // Generate a unique referral code
-      const prefix = 'PL';
-      const randomPart = Math.random().toString(36).substring(2, 8).toUpperCase();
-      const referralCode = `${prefix}${randomPart}`;
-
-      // Update the user with the new referral code
-      const [updatedUser] = await db
-        .update(users)
-        .set({ referralCode })
-        .where(eq(users.id, userId))
-        .returning();
-
-      if (!updatedUser) {
-        throw new Error('Failed to update user with referral code');
-      }
-
-      return referralCode;
-    } catch (error) {
-      console.error('Error generating referral code:', error);
-      throw error;
-    }
-  }
 }
 
 export const storage = new DatabaseStorage();
