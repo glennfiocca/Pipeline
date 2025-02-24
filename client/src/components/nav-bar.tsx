@@ -1,6 +1,6 @@
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { BriefcaseIcon, HomeIcon, UserCircleIcon, BarChartIcon, LogOutIcon, ShieldIcon, WorkflowIcon } from "lucide-react";
+import { BriefcaseIcon, HomeIcon, UserCircleIcon, BarChartIcon, LogOutIcon, ShieldIcon, ActivityIcon } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { NotificationsDialog } from "@/components/NotificationsDialog";
 
@@ -14,7 +14,7 @@ export function NavBar() {
         <div className="mr-4 hidden md:flex">
           <Link href="/">
             <Button variant="ghost" className="mr-2 px-2">
-              <WorkflowIcon className="h-8 w-8 mr-2" />
+              <ActivityIcon className="h-8 w-8 mr-2" />
               <span className="hidden text-3xl font-bold sm:inline-block">Pipeline</span>
             </Button>
           </Link>
