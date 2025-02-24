@@ -22,6 +22,36 @@ export default function ProfilePage() {
 
   const { data: profile, isLoading } = useQuery<Profile>({
     queryKey: ["/api/profiles", user?.id],
+    queryFn: async () => {
+      if (!user?.id) throw new Error("No user ID");
+      
+      // First try to get the existing profile
+      const response = await apiRequest("GET", `/api/profiles/${user.id}`);
+      
+      if (response.status === 404) {
+        // If profile doesn't exist, create a new one
+        const createResponse = await apiRequest("POST", "/api/profiles", {
+          userId: user.id,
+          name: user.name || "",
+          email: user.email || "",
+          // Add other default values as needed
+        });
+        
+        if (!createResponse.ok) {
+          const error = await createResponse.json();
+          throw new Error(error.message || "Failed to create profile");
+        }
+        
+        return createResponse.json();
+      }
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Failed to fetch profile");
+      }
+      
+      return response.json();
+    },
     enabled: !!user?.id
   });
 
@@ -79,8 +109,13 @@ export default function ProfilePage() {
 
   async function onSubmit(values: InsertProfile) {
     try {
+      if (!user?.id) {
+        throw new Error("You must be logged in to save your profile");
+      }
+
       const formData = {
         ...values,
+        userId: user.id, // Ensure userId is included
         education: values.education?.filter(Boolean) || [],
         experience: values.experience?.filter(Boolean) || [],
         skills: values.skills?.filter(Boolean) || [],
@@ -104,13 +139,12 @@ export default function ProfilePage() {
         throw new Error(errorData.message || 'Failed to save profile');
       }
 
-      const responseData = await response.json();
-
-      await queryClient.invalidateQueries({ queryKey: ["/api/profiles", user?.id] });
+      const savedProfile = await response.json();
+      queryClient.setQueryData(["/api/profiles", user.id], savedProfile);
 
       toast({
         title: "Success!",
-        description: `Your profile has been ${profile?.id ? 'updated' : 'created'} successfully.`,
+        description: "Your profile has been saved successfully.",
       });
     } catch (error) {
       console.error("Form submission error:", error);
