@@ -153,7 +153,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4"> {/* Improved grid layout */}
         {Object.entries(stats).map(([status, count]) => (
           <Card
             key={status}
@@ -170,7 +170,7 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent>
               <div className={cn(
-                "text-2xl font-bold",
+                "text-2xl font-bold text-center", // Centered text
                 status !== "total" && getStatusColor(status)
               )}>
                 {count}
