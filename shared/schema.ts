@@ -11,6 +11,9 @@ export const users = pgTable("users", {
   isAdmin: boolean("is_admin").notNull().default(false),
   resetToken: text("reset_token"),
   resetTokenExpiry: text("reset_token_expiry"),
+  timezone: text("timezone").notNull().default("UTC"),
+  bankedCredits: integer("banked_credits").notNull().default(0),
+  lastCreditReset: text("last_credit_reset").notNull().default(new Date().toISOString()),
   createdAt: text("created_at").notNull().default(new Date().toISOString())
 });
 
@@ -19,7 +22,10 @@ export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
   resetToken: true,
   resetTokenExpiry: true,
-  createdAt: true
+  createdAt: true,
+  timezone: true,
+  bankedCredits: true,
+  lastCreditReset: true
 }).extend({
   confirmPassword: z.string(),
   username: z.string().min(3, "Username must be at least 3 characters"),
