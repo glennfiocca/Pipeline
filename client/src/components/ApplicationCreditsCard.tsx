@@ -56,7 +56,7 @@ export function ApplicationCreditsCard() {
   if (!user) return null;
 
   return (
-    <Card className="w-full border-none shadow-none">
+    <Card className="w-full bg-primary/5 border-none shadow-none">
       <CardContent className="flex items-center justify-between px-4 py-2">
         <div className="flex items-center gap-3">
           <CreditCard className="h-5 w-5 text-primary" />
