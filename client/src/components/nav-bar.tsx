@@ -15,9 +15,9 @@ export function NavBar() {
           <Link href="/">
             <Button variant="ghost" className="mr-2 px-2">
               <img 
-                src="/pipe-icon.png" 
-                alt="Pipeline"
-                className="h-8 w-auto object-contain mr-2"
+                src="/Pipeline Temp Logo.png" 
+                alt="Pipeline Logo"
+                className="h-10 w-10 mr-2"
               />
               <span className="hidden text-3xl font-bold sm:inline-block">Pipeline</span>
             </Button>
