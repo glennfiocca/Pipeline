@@ -153,10 +153,11 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4"> {/* Improved grid layout */}
+      <div className="flex gap-2 overflow-x-auto"> {/* Improved grid layout */}
         {Object.entries(stats).map(([status, count]) => (
           <Card
             key={status}
+            className="flex-1 min-w-[200px]"
             className={cn(
               "cursor-pointer transition-all hover:shadow-md",
               selectedStatus === status && "ring-2 ring-primary"
@@ -170,7 +171,7 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent>
               <div className={cn(
-                "text-2xl font-bold text-center", // Centered text
+                "text-4xl font-bold text-center py-4", // Centered text
                 status !== "total" && getStatusColor(status)
               )}>
                 {count}
