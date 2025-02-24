@@ -126,14 +126,14 @@ export function NotificationsDialog() {
                     }}
                   >
                     <div className="flex items-start justify-between">
-                      <div>
-                        <h4 className="text-sm font-medium">{notification.title}</h4>
-                        <p className="mt-1 text-sm text-muted-foreground">
+                      <div className="space-y-1">
+                        <div className="text-sm font-medium">{notification.title}</div>
+                        <div className="text-sm text-muted-foreground">
                           {notification.content}
-                        </p>
-                        <p className="mt-2 text-xs text-muted-foreground">
+                        </div>
+                        <div className="text-xs text-muted-foreground">
                           {format(new Date(notification.createdAt), "PPp")}
-                        </p>
+                        </div>
                       </div>
                       {!notification.isRead && (
                         <Badge variant="secondary" className="ml-2">New</Badge>
