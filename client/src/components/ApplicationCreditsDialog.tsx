@@ -11,7 +11,7 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { CreditCard } from "lucide-react";
-import type { Application, User } from "@shared/schema";
+import type { Application } from "@shared/schema";
 import { useAuth } from "@/hooks/use-auth";
 
 interface ApplicationCreditsDialogProps {
@@ -58,15 +58,15 @@ export function ApplicationCreditsDialog({
             <CreditCard className="h-5 w-5" />
             Use Application Credit
           </AlertDialogTitle>
-          <AlertDialogDescription>
+          <AlertDialogDescription asChild>
             <div className="space-y-4">
-              <p>
+              <div>
                 You are about to use 1 application credit to apply for{" "}
                 <strong>{jobTitle}</strong>.
-              </p>
+              </div>
 
               <div className="rounded-md bg-primary/10 p-4">
-                <p className="font-semibold text-primary mb-2">Application Credits:</p>
+                <div className="font-semibold text-primary mb-2">Application Credits:</div>
                 <ul className="list-disc list-inside space-y-1">
                   <li>Daily credits remaining: {remainingDailyCredits}</li>
                   <li>Daily credits reset at {resetTime}</li>
@@ -75,9 +75,7 @@ export function ApplicationCreditsDialog({
               </div>
 
               <div className="text-sm text-muted-foreground">
-                <p>
-                  Each user gets 10 free applications per 24-hour period.
-                </p>
+                Each user gets 10 free applications per 24-hour period.
               </div>
             </div>
           </AlertDialogDescription>
