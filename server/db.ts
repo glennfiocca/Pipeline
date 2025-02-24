@@ -17,12 +17,11 @@ if (!process.env.DATABASE_URL) {
 // Configure pool with proper settings for reliability
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  maxConnections: 20,
   connectionTimeoutMillis: 10000,
   idleTimeoutMillis: 30000,
+  max: 20,
   maxUses: 7500, // Close connections after too many uses
-  retryInterval: 100, // Time between connection retries
-  maxLifetimeSeconds: 3600, // Close connections after one hour
+  allowExitOnIdle: true
 });
 
 // Add error handler for the pool
