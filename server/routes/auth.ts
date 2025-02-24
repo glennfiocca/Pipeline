@@ -5,9 +5,17 @@ import { db } from '../db';
 import { users, insertUserSchema } from '@shared/schema';
 import { eq } from 'drizzle-orm';
 
-// Generate a unique referral code
+// Generate a unique referral code using a more readable format
 function generateReferralCode(): string {
-  return `PL${crypto.randomBytes(4).toString('hex').toUpperCase()}`;
+  // Use adjectives and nouns to create memorable codes
+  const adjectives = ['swift', 'bright', 'smart', 'clever', 'quick', 'skilled'];
+  const nouns = ['eagle', 'lion', 'wolf', 'tiger', 'hawk', 'fox'];
+
+  const randomAdjective = adjectives[Math.floor(Math.random() * adjectives.length)];
+  const randomNoun = nouns[Math.floor(Math.random() * nouns.length)];
+  const uniqueNumber = Math.floor(1000 + Math.random() * 9000); // 4-digit number
+
+  return `${randomAdjective}-${randomNoun}-${uniqueNumber}`;
 }
 
 // Hash password function

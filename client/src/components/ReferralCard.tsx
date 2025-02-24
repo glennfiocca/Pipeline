@@ -13,7 +13,7 @@ export function ReferralCard() {
   const copyReferralLink = async () => {
     if (!user?.referralCode) return;
 
-    const referralLink = `${window.location.origin}/auth/register?ref=${user.referralCode}`;
+    const referralLink = `https://atpipeline.com/auth/register?ref=${user.referralCode}`;
 
     await navigator.clipboard.writeText(referralLink);
     setCopied(true);
