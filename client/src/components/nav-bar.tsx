@@ -17,7 +17,7 @@ export function NavBar() {
               <img 
                 src="/pipe-icon.png" 
                 alt="Pipeline"
-                className="h-8 w-8 mr-2"
+                className="h-8 w-auto object-contain mr-2"
               />
               <span className="hidden text-3xl font-bold sm:inline-block">Pipeline</span>
             </Button>
