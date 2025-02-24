@@ -11,12 +11,10 @@ export function ReferralCard() {
   const [copied, setCopied] = useState(false);
 
   const copyReferralLink = async () => {
-    if (!user?.username) return;
+    if (!user?.referralCode) return;
 
-    // Use username as the referral code for backwards compatibility
-    const referralCode = user.referralCode || user.username;
-    const referralLink = `${window.location.origin}/auth/register?ref=${referralCode}`;
-    
+    const referralLink = `${window.location.origin}/auth/register?ref=${user.referralCode}`;
+
     await navigator.clipboard.writeText(referralLink);
     setCopied(true);
     toast({
@@ -44,6 +42,7 @@ export function ReferralCard() {
           variant="outline"
           onClick={copyReferralLink}
           className="w-full"
+          disabled={!user.referralCode}
         >
           <Copy className="h-4 w-4 mr-2" />
           {copied ? "Copied!" : "Copy Referral Link"}
