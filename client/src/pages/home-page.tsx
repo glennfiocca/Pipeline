@@ -19,7 +19,7 @@ export default function HomePage() {
               </h2>
             </div>
 
-            <div className="flex flex-col sm:flex-row justify-center gap-8 sm:gap-16 lg:gap-24 xl:gap-32 w-full">
+            <div className="flex flex-col sm:flex-row justify-center items-center gap-8 sm:gap-16 lg:gap-24 xl:gap-32 w-full max-w-7xl mx-auto px-4">
               <div className="flex flex-col items-center">
                 <div className="w-12 h-12 md:w-16 md:h-16 lg:w-20 lg:h-20 rounded-full border-2 border-primary flex items-center justify-center mb-2 md:mb-4 transition-transform hover:scale-110 hover:border-4 hover:shadow-lg">
                   <span className="text-xl md:text-2xl lg:text-3xl font-bold">1</span>
