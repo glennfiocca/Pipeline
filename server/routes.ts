@@ -728,6 +728,51 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  app.post("/api/auth/register", async (req, res) => {
+    try {
+      const parsed = insertUserSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: "Invalid user data" });
+      }
+
+      const { username, email, password, referredBy } = parsed.data;
+
+      // Check if username exists
+      const existingUser = await storage.getUserByUsername(username);
+      if (existingUser) {
+        return res.status(400).json({ error: "Username already exists" });
+      }
+
+      // Hash password
+      const hashedPassword = await hashPassword(password);
+
+      // Create new user with default 5 credits
+      const user = await storage.createUser({
+        username,
+        email,
+        password: hashedPassword,
+        referredBy,
+        bankedCredits: 5 // Default credits for new users
+      });
+
+      // If user was referred, add bonus credits to referrer
+      if (referredBy) {
+        const referrer = await storage.getUserByUsername(referredBy);
+        if (referrer) {
+          await storage.addBankedCredits(referrer.id, 5);
+        }
+      }
+
+      // Generate referral code for new user
+      await storage.generateReferralCode(user.id);
+
+      res.status(201).json(user);
+    } catch (error) {
+      console.error('Error creating user:', error);
+      res.status(500).json({ error: "Failed to create user" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

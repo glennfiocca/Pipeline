@@ -12,6 +12,7 @@ import {
   type Notification, type InsertNotification
 } from "@shared/schema";
 import { db } from "./db";
+import { nanoid } from 'nanoid';
 
 const PostgresSessionStore = connectPg(session);
 
@@ -87,6 +88,8 @@ export interface IStorage {
   markAllNotificationsAsRead(userId: number): Promise<void>;
 
   addBankedCredits(userId: number, amount: number): Promise<User>;
+
+  generateReferralCode(userId: number): Promise<string>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -615,6 +618,23 @@ export class DatabaseStorage implements IStorage {
       .returning();
 
     return updatedUser;
+  }
+
+  async generateReferralCode(userId: number): Promise<string> {
+    const user = await this.getUser(userId);
+    if (!user) throw new Error("User not found");
+
+    // Generate a unique code using nanoid
+    const referralCode = nanoid(8);
+    
+    // Update user with new referral code
+    const [updatedUser] = await db
+      .update(users)
+      .set({ referralCode })
+      .where(eq(users.id, userId))
+      .returning();
+
+    return referralCode;
   }
 }
 

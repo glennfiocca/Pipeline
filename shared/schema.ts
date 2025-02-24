@@ -12,8 +12,9 @@ export const users = pgTable("users", {
   resetToken: text("reset_token"),
   resetTokenExpiry: text("reset_token_expiry"),
   createdAt: text("created_at").notNull().default(new Date().toISOString()),
-  bankedCredits: integer("banked_credits").notNull().default(0),
-  referredBy: text("referred_by")
+  bankedCredits: integer("banked_credits").notNull().default(5),
+  referredBy: text("referred_by"),
+  referralCode: text("referral_code").unique()
 });
 
 // Simplified user schema for registration

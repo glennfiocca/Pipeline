@@ -13,8 +13,10 @@ export function ReferralCard() {
   const copyReferralLink = async () => {
     if (!user?.username) return;
 
-    // Direct link to registration page with referral
-    const referralLink = `${window.location.origin}/auth/register?ref=${user.username}`;
+    // Use username as the referral code for backwards compatibility
+    const referralCode = user.referralCode || user.username;
+    const referralLink = `${window.location.origin}/auth/register?ref=${referralCode}`;
+    
     await navigator.clipboard.writeText(referralLink);
     setCopied(true);
     toast({
