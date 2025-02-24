@@ -140,10 +140,10 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="container py-10">
-      <div className="flex items-center justify-between mb-8">
+    <div className="container py-6">
+      <div className="flex items-center justify-between mb-4">
         <h1 className="text-3xl font-bold">Application Dashboard</h1>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2">
           <ApplicationCreditsCard />
           {selectedStatus && (
             <Button variant="ghost" onClick={() => setSelectedStatus(null)}>
@@ -153,24 +153,24 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-6 gap-1"> {/* Fixed grid with equal sizes */}
+      <div className="grid grid-cols-6 gap-2">
         {Object.entries(stats).map(([status, count]) => (
           <Card
             key={status}
             className={cn(
-              "cursor-pointer transition-all hover:shadow-md",
+              "cursor-pointer transition-all hover:shadow-md h-[120px]",
               selectedStatus === status && "ring-2 ring-primary"
             )}
             onClick={() => setSelectedStatus(status === "total" ? null : status)}
           >
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardHeader className="pb-0">
               <CardTitle className="text-sm font-medium">
                 {status === "total" ? "Total Applications" : status}
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className={cn(
-                "text-4xl font-bold text-center py-4", // Centered text
+                "text-3xl font-bold text-center",
                 status !== "total" && getStatusColor(status)
               )}>
                 {count}
@@ -180,15 +180,15 @@ export default function DashboardPage() {
         ))}
       </div>
 
-      <Card className="mt-8">
+      <Card className="mt-4">
         <CardHeader>
           <CardTitle>
             {selectedStatus ? `${selectedStatus} Applications` : "Your Applications"}
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <ScrollArea className="h-[600px] pr-4">
-            <div className="space-y-4">
+          <ScrollArea className="h-[calc(100vh-350px)] pr-4">
+            <div className="space-y-2">
               {filteredApplications.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
                   No applications {selectedStatus && `with status "${selectedStatus}"`} yet.
