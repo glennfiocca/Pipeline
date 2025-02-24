@@ -394,17 +394,29 @@ export function registerRoutes(app: Express): Server {
         return res.status(400).json({ error: "Invalid profile ID" });
       }
 
+      // First check if profile exists
+      const existingProfile = await storage.getProfile(profileId);
+      if (!existingProfile) {
+        return res.status(404).json({ error: "Profile not found" });
+      }
+
       const parsed = insertProfileSchema.partial().safeParse(req.body);
       if (!parsed.success) {
         console.error('Profile update validation error:', parsed.error);
-        return res.status(400).json(parsed.error);
+        return res.status(400).json({ 
+          error: "Invalid profile data",
+          details: parsed.error.format()
+        });
       }
 
       const profile = await storage.updateProfile(profileId, parsed.data);
       res.json(profile);
     } catch (error) {
       console.error('Profile update error:', error);
-      res.status(500).json({ message: (error as Error).message });
+      res.status(500).json({ 
+        error: "Failed to update profile",
+        message: error instanceof Error ? error.message : "Unknown error"
+      });
     }
   });
 

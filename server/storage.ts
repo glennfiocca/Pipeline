@@ -224,12 +224,38 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateProfile(id: number, profile: Partial<InsertProfile>): Promise<Profile> {
-    const [updatedProfile] = await db
-      .update(profiles)
-      .set(profile)
-      .where(eq(profiles.id, id))
-      .returning();
-    return updatedProfile;
+    try {
+      const [existingProfile] = await db
+        .select()
+        .from(profiles)
+        .where(eq(profiles.id, id));
+
+      if (!existingProfile) {
+        throw new Error(`Profile with ID ${id} not found`);
+      }
+
+      const [updatedProfile] = await db
+        .update(profiles)
+        .set({
+          ...profile,
+          // Convert arrays to proper format if they exist in the update
+          education: Array.isArray(profile.education) ? profile.education : existingProfile.education,
+          experience: Array.isArray(profile.experience) ? profile.experience : existingProfile.experience,
+          skills: Array.isArray(profile.skills) ? profile.skills : existingProfile.skills,
+          certifications: Array.isArray(profile.certifications) ? profile.certifications : existingProfile.certifications,
+          languages: Array.isArray(profile.languages) ? profile.languages : existingProfile.languages,
+          publications: Array.isArray(profile.publications) ? profile.publications : existingProfile.publications,
+          projects: Array.isArray(profile.projects) ? profile.projects : existingProfile.projects,
+          preferredLocations: Array.isArray(profile.preferredLocations) ? profile.preferredLocations : existingProfile.preferredLocations
+        })
+        .where(eq(profiles.id, id))
+        .returning();
+
+      return updatedProfile;
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      throw error;
+    }
   }
 
   async getApplications(): Promise<Application[]> {
