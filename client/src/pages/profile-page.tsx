@@ -14,11 +14,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2, Plus, X } from "lucide-react";
 import { useEffect } from 'react';
 import { ApplicationCreditsCard } from "@/components/ApplicationCreditsCard";
+import { useAuth } from "@/hooks/use-auth";
 
 export default function ProfilePage() {
   const { toast } = useToast();
+  const { user } = useAuth();
+
   const { data: profile, isLoading } = useQuery<Profile>({
-    queryKey: ["/api/profiles/1"]
+    queryKey: ["/api/profiles", user?.id],
+    enabled: !!user?.id
   });
 
   const form = useForm<InsertProfile>({
@@ -102,7 +106,7 @@ export default function ProfilePage() {
 
       const responseData = await response.json();
 
-      await queryClient.invalidateQueries({ queryKey: ["/api/profiles"] });
+      await queryClient.invalidateQueries({ queryKey: ["/api/profiles", user?.id] });
 
       toast({
         title: "Success!",
@@ -118,22 +122,10 @@ export default function ProfilePage() {
     }
   }
 
+  // Reset form when profile data is loaded
   useEffect(() => {
     if (profile) {
-      const formData = {
-        ...profile,
-        education: profile.education || [],
-        experience: profile.experience || [],
-        skills: profile.skills || [],
-        certifications: profile.certifications || [],
-        languages: profile.languages || [],
-        publications: profile.publications || [],
-        projects: profile.projects || [],
-        referenceList: profile.referenceList || [],
-        workAuthorization: profile.workAuthorization || "US Citizen",
-        availability: profile.availability || "2 Weeks"
-      };
-      form.reset(formData as InsertProfile);
+      form.reset(profile as InsertProfile);
     }
   }, [profile, form]);
 
