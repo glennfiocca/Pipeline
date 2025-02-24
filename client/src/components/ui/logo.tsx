@@ -15,28 +15,26 @@ export const Logo: FC<LogoProps> = ({ className = "", size = 32 }) => {
       xmlns="http://www.w3.org/2000/svg"
       className={className}
     >
-      {/* Main horizontal pipe */}
+      {/* Horizontal pipe */}
       <path
-        d="M4 12h16a4 4 0 0 1 4 4v0a4 4 0 0 1-4 4H4"
+        d="M8 16h16"
         stroke="currentColor"
-        strokeWidth="3"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      {/* Vertical pipe section */}
-      <path
-        d="M4 8v16"
-        stroke="currentColor"
-        strokeWidth="3"
+        strokeWidth="4"
         strokeLinecap="round"
       />
-      {/* Connection joint */}
-      <circle
-        cx="4"
-        cy="20"
-        r="2"
-        fill="currentColor"
+      {/* Vertical pipe */}
+      <path
+        d="M16 8v16"
+        stroke="currentColor"
+        strokeWidth="4"
+        strokeLinecap="round"
       />
+      {/* Connection points */}
+      <circle cx="16" cy="16" r="3" fill="currentColor" />
+      <circle cx="8" cy="16" r="2" fill="currentColor" />
+      <circle cx="24" cy="16" r="2" fill="currentColor" />
+      <circle cx="16" cy="8" r="2" fill="currentColor" />
+      <circle cx="16" cy="24" r="2" fill="currentColor" />
     </svg>
   );
 };
