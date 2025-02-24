@@ -9,10 +9,18 @@ import { insertUserSchema, type User } from "@shared/schema";
 import { fromZodError } from "zod-validation-error";
 import { ZodError } from "zod";
 
-// Correctly extend Express.User interface
+// Fix the Express.User interface extension
 declare global {
   namespace Express {
-    interface User extends User {}
+    interface User {
+      id: number;
+      username: string;
+      email: string;
+      isAdmin: boolean;
+      password: string;
+      createdAt: string;
+      // Add other user fields as needed
+    }
   }
 }
 
@@ -105,7 +113,8 @@ export function setupAuth(app: Express) {
       const hashedPassword = await hashPassword(validatedData.password);
       const user = await storage.createUser({
         ...validatedData,
-        password: hashedPassword
+        password: hashedPassword,
+        createdAt: new Date().toISOString()
       });
 
       // Login the user after successful registration

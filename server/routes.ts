@@ -477,19 +477,16 @@ export function registerRoutes(app: Express): Server {
       if (application.profileId) {
         await storage.createNotification({
           userId: application.profileId,
-          type: 'application_status_change',
+          type: 'application_status',
           title: 'Application Status Updated',
           content: `Your application for ${job.title} at ${job.company} has been moved to ${status}`,
           isRead: false,
           relatedId: applicationId,
           relatedType: 'application',
           metadata: {
-            jobId: job.id,
-            applicationId: applicationId,
+            applicationId,
             oldStatus: application.status,
-            newStatus: status,
-            company: job.company,
-            jobTitle: job.title
+            newStatus: status
           }
         });
       }
@@ -562,18 +559,15 @@ export function registerRoutes(app: Express): Server {
       if (req.user?.isAdmin && application.profileId) {
         await storage.createNotification({
           userId: application.profileId,
-          type: 'new_company_message',
+          type: 'message_received',
           title: 'New Message from Company',
           content: `You have a new message from ${job.company} regarding your application for ${job.title}`,
           isRead: false,
           relatedId: message.id,
           relatedType: 'message',
           metadata: {
-            jobId: job.id,
-            applicationId: applicationId,
-            messageId: message.id,
-            company: job.company,
-            jobTitle: job.title
+            applicationId,
+            messageId: message.id
           }
         });
       }
