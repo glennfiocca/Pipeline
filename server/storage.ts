@@ -96,9 +96,22 @@ export class DatabaseStorage implements IStorage {
   sessionStore: session.Store;
 
   constructor() {
-    this.sessionStore = new PostgresSessionStore({
+    const sessionConfig = {
       pool: db.$client,
-      createTableIfMissing: true
+      tableName: 'session',
+      createTableIfMissing: true,
+      pruneSessionInterval: 60, // Prune invalid sessions every minute
+      // Error handler for session store
+      errorLog: (error: Error) => {
+        console.error('Session store error:', error);
+      }
+    };
+
+    this.sessionStore = new PostgresSessionStore(sessionConfig);
+
+    // Add error handler for the session store
+    this.sessionStore.on('error', (error) => {
+      console.error('Session store error:', error);
     });
   }
 
