@@ -83,15 +83,13 @@ export function NotificationsDialog() {
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogContent>
-          <DialogHeader>
-            <div className="flex items-center justify-between">
-              <DialogTitle>Notifications</DialogTitle>
-              {notifications && notifications.length > 0 && (
-                <Button variant="ghost" size="sm" onClick={() => markAllAsRead()}>
-                  Mark all as read
-                </Button>
-              )}
-            </div>
+          <DialogHeader className="flex flex-row items-center justify-between">
+            <DialogTitle>Notifications</DialogTitle>
+            {notifications?.length > 0 && (
+              <Button variant="ghost" size="sm" onClick={() => markAllAsRead()}>
+                Mark all as read
+              </Button>
+            )}
           </DialogHeader>
 
           <ScrollArea className="h-[400px] pr-4">
@@ -106,30 +104,34 @@ export function NotificationsDialog() {
             ) : (
               <div className="space-y-4">
                 {notifications.map((notification) => (
-                  <button
+                  <div
                     key={notification.id}
-                    className={`w-full text-left p-4 rounded-lg border transition-colors hover:bg-accent ${
+                    className={`w-full p-4 rounded-lg border transition-colors ${
                       !notification.isRead ? "bg-muted/50" : ""
                     }`}
-                    onClick={() => handleNotificationClick(notification)}
                   >
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1">
-                        <span className="block font-medium text-sm">
-                          {notification.title}
-                        </span>
-                        <span className="block text-sm text-muted-foreground mt-1">
-                          {notification.content}
-                        </span>
-                        <span className="block text-xs text-muted-foreground mt-2">
-                          {format(new Date(notification.createdAt), "PPp")}
-                        </span>
+                    <button
+                      onClick={() => handleNotificationClick(notification)}
+                      className="w-full text-left"
+                    >
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1">
+                          <span className="block font-medium text-sm">
+                            {notification.title}
+                          </span>
+                          <span className="block text-sm text-muted-foreground mt-1">
+                            {notification.content}
+                          </span>
+                          <span className="block text-xs text-muted-foreground mt-2">
+                            {format(new Date(notification.createdAt), "PPp")}
+                          </span>
+                        </div>
+                        {!notification.isRead && (
+                          <Badge variant="secondary">New</Badge>
+                        )}
                       </div>
-                      {!notification.isRead && (
-                        <Badge variant="secondary">New</Badge>
-                      )}
-                    </div>
-                  </button>
+                    </button>
+                  </div>
                 ))}
               </div>
             )}
