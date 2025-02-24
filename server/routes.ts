@@ -6,7 +6,6 @@ import { ScraperManager } from './services/scraper/manager';
 import { db } from './db';
 import { users } from '@shared/schema';
 import { hashPassword } from './utils/password'; // Assuming this function exists
-import profileRoutes from './routes/profiles';
 
 // Enhanced admin middleware with specific user check
 const isAdmin = (req: any, res: any, next: any) => {
@@ -23,9 +22,6 @@ const isAdmin = (req: any, res: any, next: any) => {
 };
 
 export function registerRoutes(app: Express): Server {
-  // Add profile routes
-  app.use('/api/profiles', profileRoutes);
-
   // Add POST endpoint for job creation
   app.post("/api/jobs", async (req: any, res) => {
     try {
@@ -770,7 +766,7 @@ export function registerRoutes(app: Express): Server {
       // Generate referral code for new user
       await storage.generateReferralCode(user.id);
 
-      res.json(user);
+      res.status(201).json(user);
     } catch (error) {
       console.error('Error creating user:', error);
       res.status(500).json({ error: "Failed to create user" });
