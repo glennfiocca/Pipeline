@@ -28,16 +28,6 @@ export default function ProfilePage() {
   const saveProfileMutation = useMutation({
     mutationFn: async (values: InsertProfile) => {
       try {
-        const formData = new FormData();
-
-        // Handle file uploads
-        if (values.resumeUrl instanceof File) {
-          formData.append('resume', values.resumeUrl);
-        }
-        if (values.transcriptUrl instanceof File) {
-          formData.append('transcript', values.transcriptUrl);
-        }
-
         // Prepare the data
         const data = {
           ...values,
@@ -127,17 +117,13 @@ export default function ProfilePage() {
   // Reset form when profile data is loaded
   useEffect(() => {
     if (profile) {
-      form.reset(profile as InsertProfile);
+      form.reset(profile);
     }
   }, [profile, form]);
 
-  async function onSubmit(values: InsertProfile) {
-    try {
-      await saveProfileMutation.mutateAsync(values);
-    } catch (error) {
-      console.error("Form submission error:", error);
-    }
-  }
+  const onSubmit = async (values: InsertProfile) => {
+    await saveProfileMutation.mutateAsync(values);
+  };
 
   const { fields: educationFields, append: appendEducation, remove: removeEducation } =
     useFieldArray({
@@ -167,6 +153,7 @@ export default function ProfilePage() {
           <ApplicationCreditsCard />
         </div>
       </div>
+
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
           <Tabs defaultValue="personal" className="w-full">
