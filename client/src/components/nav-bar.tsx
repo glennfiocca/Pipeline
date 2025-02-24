@@ -1,95 +1,107 @@
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { BriefcaseIcon, HomeIcon, UserCircleIcon, BarChartIcon, LogOutIcon, ShieldIcon } from "lucide-react";
+import { BriefcaseIcon, HomeIcon, UserCircleIcon, BarChartIcon, LogOutIcon, ShieldIcon, Menu } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { NotificationsDialog } from "@/components/NotificationsDialog";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 export function NavBar() {
   const { user, logoutMutation } = useAuth();
   const [, setLocation] = useLocation();
+  const isMobile = useIsMobile();
 
-  return (
-    <nav className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container flex h-14 max-w-screen-2xl items-center justify-between mx-auto px-4 md:px-6 lg:px-8">
-        <div className="mr-4 hidden md:flex">
-          <Link href="/">
-            <Button variant="ghost" className="mr-2 px-2">
-              <span className="text-3xl font-bold">Pipeline</span>
+  const NavLinks = () => (
+    <div className="flex flex-col md:flex-row md:items-center space-y-2 md:space-y-0 md:space-x-2">
+      <Link href="/">
+        <Button variant="ghost" size="sm" className="w-full md:w-auto justify-start md:justify-center">
+          <HomeIcon className="h-4 w-4 mr-2" />
+          Home
+        </Button>
+      </Link>
+      <Link href="/jobs">
+        <Button variant="ghost" size="sm" className="w-full md:w-auto justify-start md:justify-center">
+          <BriefcaseIcon className="h-4 w-4 mr-2" />
+          Jobs
+        </Button>
+      </Link>
+      {user && (
+        <>
+          <Link href="/profile">
+            <Button variant="ghost" size="sm" className="w-full md:w-auto justify-start md:justify-center">
+              <UserCircleIcon className="h-4 w-4 mr-2" />
+              Profile
             </Button>
           </Link>
+          <Link href="/dashboard">
+            <Button variant="ghost" size="sm" className="w-full md:w-auto justify-start md:justify-center">
+              <BarChartIcon className="h-4 w-4 mr-2" />
+              Dashboard
+            </Button>
+          </Link>
+          {user.isAdmin && (
+            <Link href="/admin/dashboard">
+              <Button variant="ghost" size="sm" className="w-full md:w-auto justify-start md:justify-center">
+                <ShieldIcon className="h-4 w-4 mr-2" />
+                Admin
+              </Button>
+            </Link>
+          )}
+        </>
+      )}
+    </div>
+  );
+
+  return (
+    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <div className="container flex h-14 items-center px-4 sm:px-6 lg:px-8 max-w-[2000px]">
+        <div className="mr-4 flex">
+          <Link href="/" className="mr-6 flex items-center space-x-2">
+            <span className="font-bold">Pipeline</span>
+          </Link>
         </div>
-        <div className="flex flex-1 items-center justify-between space-x-2 md:justify-end">
-          <div className="w-full flex justify-start space-x-2 md:w-auto">
-            <Link href="/">
-              <Button variant="ghost" size="sm">
-                <HomeIcon className="h-4 w-4 mr-2" />
-                Home
+
+        {isMobile ? (
+          <Sheet>
+            <SheetTrigger asChild>
+              <Button variant="ghost" size="icon" className="md:hidden">
+                <Menu className="h-5 w-5" />
+                <span className="sr-only">Toggle menu</span>
               </Button>
-            </Link>
-            <Link href="/jobs">
-              <Button variant="ghost" size="sm">
-                <BriefcaseIcon className="h-4 w-4 mr-2" />
-                Jobs
-              </Button>
-            </Link>
-            {user && (
-              <>
-                <Link href="/profile">
-                  <Button variant="ghost" size="sm">
-                    <UserCircleIcon className="h-4 w-4 mr-2" />
-                    Profile
-                  </Button>
-                </Link>
-                <Link href="/dashboard">
-                  <Button variant="ghost" size="sm">
-                    <BarChartIcon className="h-4 w-4 mr-2" />
-                    Dashboard
-                  </Button>
-                </Link>
-                {user.isAdmin && (
-                  <Link href="/admin/dashboard">
-                    <Button variant="ghost" size="sm">
-                      <ShieldIcon className="h-4 w-4 mr-2" />
-                      Admin
-                    </Button>
-                  </Link>
-                )}
-              </>
-            )}
-          </div>
-          <div className="flex items-center space-x-2">
-            {user ? (
-              <>
-                <NotificationsDialog />
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={async () => {
-                    await logoutMutation.mutateAsync();
-                    setLocation("/auth/login");
-                  }}
-                >
-                  <LogOutIcon className="h-4 w-4 mr-2" />
-                  Logout
-                </Button>
-              </>
-            ) : (
-              <>
-                <Link href="/auth/login">
-                  <Button variant="ghost" size="sm">
-                    Login
-                  </Button>
-                </Link>
-                <Link href="/auth/register">
-                  <Button size="sm">
-                    Sign Up
-                  </Button>
-                </Link>
-              </>
-            )}
-          </div>
+            </SheetTrigger>
+            <SheetContent side="left" className="w-[240px] sm:w-[300px]">
+              <div className="px-2 py-6">
+                <NavLinks />
+              </div>
+            </SheetContent>
+          </Sheet>
+        ) : (
+          <NavLinks />
+        )}
+
+        <div className="flex-1 flex justify-end">
+          {user ? (
+            <Button 
+              variant="ghost" 
+              size="sm"
+              onClick={() => logoutMutation.mutate()}
+              className="ml-2"
+            >
+              <LogOutIcon className="h-4 w-4 mr-2" />
+              Logout
+            </Button>
+          ) : (
+            <div className="flex items-center space-x-2">
+              <Link href="/auth/login">
+                <Button variant="ghost" size="sm">Login</Button>
+              </Link>
+              <Link href="/auth/register">
+                <Button size="sm">Sign Up</Button>
+              </Link>
+            </div>
+          )}
         </div>
       </div>
-    </nav>
+    </header>
   );
 }

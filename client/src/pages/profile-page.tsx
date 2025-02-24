@@ -12,65 +12,25 @@ import { Profile, insertProfileSchema, type InsertProfile } from "@shared/schema
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2, Plus, X } from "lucide-react";
-import { useEffect } from 'react';
+import { useEffect, useMemo, useCallback } from 'react';
 import { ApplicationCreditsCard } from "@/components/ApplicationCreditsCard";
 import { useAuth } from "@/hooks/use-auth";
 
-export default function ProfilePage() {
-  const { toast } = useToast();
-  const { user } = useAuth();
-
-  const { data: profile, isLoading } = useQuery<Profile>({
-    queryKey: ["/api/profiles", user?.id],
-    queryFn: async () => {
-      if (!user?.id) throw new Error("No user ID");
-      
-      // First try to get the existing profile
-      const response = await apiRequest("GET", `/api/profiles/${user.id}`);
-      
-      if (response.status === 404) {
-        // If profile doesn't exist, create a new one
-        const createResponse = await apiRequest("POST", "/api/profiles", {
-          userId: user.id,
-          name: user.name || "",
-          email: user.email || "",
-          // Add other default values as needed
-        });
-        
-        if (!createResponse.ok) {
-          const error = await createResponse.json();
-          throw new Error(error.message || "Failed to create profile");
-        }
-        
-        return createResponse.json();
-      }
-      
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || "Failed to fetch profile");
-      }
-      
-      return response.json();
-    },
-    enabled: !!user?.id
-  });
-
-  const form = useForm<InsertProfile>({
-    resolver: zodResolver(insertProfileSchema),
-    defaultValues: {
-      name: "",
-      email: "",
+// Optimize the profile query function by extracting it and adding better error handling
+const fetchOrCreateProfile = async (userId: number) => {
+  const response = await apiRequest("GET", `/api/profiles/${userId}`);
+  const isNewProfile = response.status === 404;
+  
+  if (isNewProfile) {
+    const createResponse = await apiRequest("POST", "/api/profiles", {
+      userId,
+      name: user?.name || "",
+      email: user?.email || "",
+      // Set minimal required fields for initial profile
       phone: "",
       title: "",
       bio: "",
       location: "",
-      education: [],
-      experience: [],
-      skills: [],
-      certifications: [],
-      languages: [],
-      publications: [],
-      projects: [],
       address: "",
       city: "",
       state: "",
@@ -78,21 +38,83 @@ export default function ProfilePage() {
       country: "",
       workAuthorization: "US Citizen",
       availability: "2 Weeks",
-      citizenshipStatus: "",
-      resumeUrl: "",
-      transcriptUrl: "",
-      referenceList: [],
-      visaSponsorship: false,
-      willingToRelocate: false,
-      preferredLocations: [],
-      salaryExpectation: "",
-      veteranStatus: "",
-      militaryBranch: "",
-      militaryServiceDates: "",
-      securityClearance: "",
-      clearanceType: "",
-      clearanceExpiry: ""
+      citizenshipStatus: ""
+    });
+    
+    if (!createResponse.ok) {
+      const error = await createResponse.json();
+      throw new Error(error.message || "Failed to create initial profile");
+    }
+    
+    return createResponse.json();
+  }
+  
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || "Failed to fetch profile");
+  }
+  
+  return response.json();
+};
+
+export default function ProfilePage() {
+  const { toast } = useToast();
+  const { user } = useAuth();
+
+  // Optimize the query with better caching and error handling
+  const { data: profile, isLoading } = useQuery<Profile>({
+    queryKey: ["/api/profiles", user?.id],
+    queryFn: () => {
+      if (!user?.id) throw new Error("No user ID");
+      return fetchOrCreateProfile(user.id);
     },
+    enabled: !!user?.id,
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    cacheTime: 30 * 60 * 1000, // Keep in cache for 30 minutes
+    retry: 2 // Retry failed requests twice
+  });
+
+  // Optimize form initialization with memoized default values
+  const defaultValues = useMemo(() => ({
+    name: "",
+    email: "",
+    phone: "",
+    title: "",
+    bio: "",
+    location: "",
+    education: [],
+    experience: [],
+    skills: [],
+    certifications: [],
+    languages: [],
+    publications: [],
+    projects: [],
+    address: "",
+    city: "",
+    state: "",
+    zipCode: "",
+    country: "",
+    workAuthorization: "US Citizen",
+    availability: "2 Weeks",
+    citizenshipStatus: "",
+    resumeUrl: "",
+    transcriptUrl: "",
+    referenceList: [],
+    visaSponsorship: false,
+    willingToRelocate: false,
+    preferredLocations: [],
+    salaryExpectation: "",
+    veteranStatus: "",
+    militaryBranch: "",
+    militaryServiceDates: "",
+    securityClearance: "",
+    clearanceType: "",
+    clearanceExpiry: ""
+  }), []);
+
+  const form = useForm<InsertProfile>({
+    resolver: zodResolver(insertProfileSchema),
+    defaultValues
   });
 
   const { fields: educationFields, append: appendEducation, remove: removeEducation } =
@@ -107,7 +129,8 @@ export default function ProfilePage() {
       name: "experience"
     });
 
-  async function onSubmit(values: InsertProfile) {
+  // Optimize form submission with better error handling and type safety
+  const onSubmit = useCallback(async (values: InsertProfile) => {
     try {
       if (!user?.id) {
         throw new Error("You must be logged in to save your profile");
@@ -115,7 +138,7 @@ export default function ProfilePage() {
 
       const formData = {
         ...values,
-        userId: user.id, // Ensure userId is included
+        userId: user.id,
         education: values.education?.filter(Boolean) || [],
         experience: values.experience?.filter(Boolean) || [],
         skills: values.skills?.filter(Boolean) || [],
@@ -140,6 +163,8 @@ export default function ProfilePage() {
       }
 
       const savedProfile = await response.json();
+      
+      // Update cache atomically
       queryClient.setQueryData(["/api/profiles", user.id], savedProfile);
 
       toast({
@@ -154,12 +179,21 @@ export default function ProfilePage() {
         variant: "destructive",
       });
     }
-  }
+  }, [user?.id, profile?.id, toast]);
 
-  // Reset form when profile data is loaded
+  // Optimize form reset with error boundary
   useEffect(() => {
     if (profile) {
-      form.reset(profile as InsertProfile);
+      try {
+        form.reset(profile as InsertProfile);
+      } catch (error) {
+        console.error("Error resetting form:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load profile data",
+          variant: "destructive",
+        });
+      }
     }
   }, [profile, form]);
 
