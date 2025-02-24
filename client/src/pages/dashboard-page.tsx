@@ -153,11 +153,10 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <div className="flex gap-2 overflow-x-auto"> {/* Improved grid layout */}
+      <div className="grid grid-cols-6 gap-1"> {/* Fixed grid with equal sizes */}
         {Object.entries(stats).map(([status, count]) => (
           <Card
             key={status}
-            className="flex-1 min-w-[200px]"
             className={cn(
               "cursor-pointer transition-all hover:shadow-md",
               selectedStatus === status && "ring-2 ring-primary"
