@@ -110,9 +110,16 @@ export function NotificationsDialog() {
                       !notification.isRead ? "bg-muted/50" : ""
                     }`}
                   >
-                    <button
+                    <div
+                      role="button"
+                      tabIndex={0}
                       onClick={() => handleNotificationClick(notification)}
-                      className="w-full text-left"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          handleNotificationClick(notification);
+                        }
+                      }}
+                      className="w-full text-left focus:outline-none"
                     >
                       <div className="flex items-start justify-between gap-4">
                         <div className="flex-1">
@@ -130,7 +137,7 @@ export function NotificationsDialog() {
                           <Badge variant="secondary">New</Badge>
                         )}
                       </div>
-                    </button>
+                    </div>
                   </div>
                 ))}
               </div>

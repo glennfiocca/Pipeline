@@ -3,7 +3,6 @@ import {
   AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
-  AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
@@ -58,27 +57,27 @@ export function ApplicationCreditsDialog({
             <CreditCard className="h-5 w-5" />
             Use Application Credit
           </AlertDialogTitle>
-          <AlertDialogDescription asChild>
-            <div className="space-y-4">
-              <div>
-                You are about to use 1 application credit to apply for{" "}
-                <strong>{jobTitle}</strong>.
-              </div>
-
-              <div className="rounded-md bg-primary/10 p-4">
-                <div className="font-semibold text-primary mb-2">Application Credits:</div>
-                <ul className="list-disc list-inside space-y-1">
-                  <li>Daily credits remaining: {remainingDailyCredits}</li>
-                  <li>Daily credits reset at {resetTime}</li>
-                  <li>Daily credits do not roll over</li>
-                </ul>
-              </div>
-
-              <div className="text-sm text-muted-foreground">
-                Each user gets 10 free applications per 24-hour period.
-              </div>
+          <div className="space-y-4">
+            <div>
+              You are about to use 1 application credit to apply for{" "}
+              <strong>{jobTitle}</strong>
             </div>
-          </AlertDialogDescription>
+
+            <div className="rounded-md bg-primary/10 p-4">
+              <div className="font-semibold text-primary mb-2">
+                Application Credits:
+              </div>
+              <ul className="list-disc list-inside space-y-1">
+                <li>Daily credits remaining: {remainingDailyCredits}</li>
+                <li>Daily credits reset at {resetTime}</li>
+                <li>Daily credits do not roll over</li>
+              </ul>
+            </div>
+
+            <div className="text-sm text-muted-foreground">
+              Each user gets 10 free applications per 24-hour period.
+            </div>
+          </div>
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel onClick={onClose}>Cancel</AlertDialogCancel>
