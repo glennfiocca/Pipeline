@@ -26,32 +26,26 @@ export function NotificationsDialog() {
   const [isOpen, setIsOpen] = useState(false);
   const [selectedJobId, setSelectedJobId] = useState<number | null>(null);
 
-  // Fetch job data when selectedJobId changes
   const { data: selectedJob } = useQuery<Job>({
     queryKey: [`/api/jobs/${selectedJobId}`],
     enabled: !!selectedJobId,
   });
 
-  // Fetch user's applications
   const { data: applications = [] } = useQuery<Application[]>({
     queryKey: ["/api/applications"],
   });
 
-  // Handle notification click based on type
   const handleNotificationClick = async (notification: any) => {
     if (!notification) return;
 
-    // Mark as read if not already read
     if (!notification.isRead) {
       await markAsRead(notification.id);
     }
 
-    // Close the notifications dialog if not showing job modal
     if (notification.type !== 'application_status') {
       setIsOpen(false);
     }
 
-    // Navigate based on notification type
     switch (notification.type) {
       case 'message_received':
         setLocation(`/dashboard?messageId=${notification.metadata?.applicationId}`);
@@ -67,7 +61,6 @@ export function NotificationsDialog() {
     }
   };
 
-  // Find the application for the selected job
   const selectedApplication = applications.find(app => app.jobId === selectedJobId);
 
   return (
@@ -125,18 +118,18 @@ export function NotificationsDialog() {
                       }
                     }}
                   >
-                    <div className="flex items-start justify-between">
-                      <div className="space-y-1">
-                        <div className="text-sm font-medium">{notification.title}</div>
-                        <div className="text-sm text-muted-foreground">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1">
+                        <div className="font-medium text-sm">{notification.title}</div>
+                        <div className="text-sm text-muted-foreground mt-1">
                           {notification.content}
                         </div>
-                        <div className="text-xs text-muted-foreground">
+                        <div className="text-xs text-muted-foreground mt-2">
                           {format(new Date(notification.createdAt), "PPp")}
                         </div>
                       </div>
                       {!notification.isRead && (
-                        <Badge variant="secondary" className="ml-2">New</Badge>
+                        <Badge variant="secondary">New</Badge>
                       )}
                     </div>
                   </div>
