@@ -1,3 +1,7 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 @layer base {
   :root {
     --app-height: 100%;
@@ -57,4 +61,4 @@
       max-width: 1280px;
     }
   }
-} 
+}
