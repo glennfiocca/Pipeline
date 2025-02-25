@@ -1,6 +1,7 @@
 import { pgTable, text, serial, boolean, integer, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
+import { relations } from 'drizzle-orm';
 
 // Remove referral-related fields from user schema
 export const users = pgTable("users", {
@@ -120,6 +121,14 @@ export const profiles = pgTable("profiles", {
     .references(() => users.id, { onDelete: "cascade" })
 });
 
+// Add explicit relations
+export const profilesRelations = relations(profiles, ({ one }) => ({
+  user: one(users, {
+    fields: [profiles.userId],
+    references: [users.id],
+  }),
+}));
+
 export const applications = pgTable("applications", {
   id: serial("id").primaryKey(),
   jobId: integer("job_id").notNull(),
@@ -224,7 +233,7 @@ export const insertProfileSchema = createInsertSchema(profiles).omit({
   workAuthorization: z.string().optional(),
   availability: z.string().optional(),
   citizenshipStatus: z.string().optional(),
-  
+
   // Arrays can be empty
   education: z.array(educationSchema).optional().default([]),
   experience: z.array(experienceSchema).optional().default([]),
@@ -233,7 +242,7 @@ export const insertProfileSchema = createInsertSchema(profiles).omit({
   languages: z.array(languageSchema).optional().default([]),
   publications: z.array(publicationSchema).optional().default([]),
   projects: z.array(projectSchema).optional().default([]),
-  
+
   // Optional fields
   resumeUrl: z.string().optional().nullable(),
   transcriptUrl: z.string().optional().nullable(),
@@ -251,7 +260,7 @@ export const insertProfileSchema = createInsertSchema(profiles).omit({
   securityClearance: z.string().optional().nullable(),
   clearanceType: z.string().optional().nullable(),
   clearanceExpiry: z.string().optional().nullable(),
-  
+
   // If the client might send userId as a string, coerce it to number
   userId: z.coerce.number()
 });
