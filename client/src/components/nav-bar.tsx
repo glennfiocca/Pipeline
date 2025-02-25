@@ -57,7 +57,7 @@ export function NavBar() {
       <div className="container flex h-14 items-center px-4 sm:px-6 lg:px-8 max-w-[2000px]">
         <div className="mr-4 flex">
           <Link href="/" className="mr-6 flex items-center space-x-2">
-            <span className="text-2xl font-bold md:text-3xl lg:text-4xl">Pipeline</span>
+            <span className="text-2xl font-bold md:text-3xl lg:text-4xl">@Pipeline</span>
           </Link>
         </div>
 
