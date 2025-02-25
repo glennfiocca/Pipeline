@@ -1,7 +1,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Building2, MapPin, DollarSign, Loader2, CheckCircle2 } from "lucide-react";
+import { MapPin, DollarSign, Loader2, CheckCircle2, AtSign } from "lucide-react";
 import { Link } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import type { Job } from "@shared/schema";
@@ -55,7 +55,7 @@ export function JobCard({
           <div className="mb-4">
             <h3 className="text-xl font-semibold mb-2">{job.title}</h3>
             <div className="flex items-center text-muted-foreground">
-              <Building2 className="mr-2 h-4 w-4" />
+              <AtSign className="mr-1 h-4 w-4" />
               <span>{job.company}</span>
             </div>
           </div>

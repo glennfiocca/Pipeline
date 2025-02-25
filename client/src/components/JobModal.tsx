@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Building2, MapPin, DollarSign, CheckCircle2, ExternalLink, Loader2 } from "lucide-react";
+import { Building2, MapPin, DollarSign, CheckCircle2, ExternalLink, Loader2, AtSign } from "lucide-react";
 import { Link } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import type { Job } from "@shared/schema";
@@ -68,7 +68,7 @@ export function JobModal({
         <div className="space-y-4">
           <div className="flex flex-wrap gap-2">
             <Badge variant="secondary" className="flex items-center">
-              <Building2 className="mr-2 h-3 w-3" />
+              <AtSign className="mr-2 h-3 w-3" />
               {job.company}
             </Badge>
             <Badge variant="secondary" className="flex items-center">

@@ -1,3 +1,5 @@
+import { AtSign, MapPin, DollarSign } from "lucide-react";
+
 export function JobDetailsDialog({ job, isOpen, onClose }: JobDetailsDialogProps) {
   if (!job) return null;
 
@@ -13,7 +15,7 @@ export function JobDetailsDialog({ job, isOpen, onClose }: JobDetailsDialogProps
 
         <div className="space-y-4">
           <div className="flex items-center text-muted-foreground">
-            <Building2 className="mr-2 h-4 w-4" />
+            <AtSign className="mr-2 h-4 w-4" />
             <span>{job.company}</span>
           </div>
           
