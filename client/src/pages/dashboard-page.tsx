@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Application, Job } from "@shared/schema";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
-import { Loader2, AlertCircle } from "lucide-react";
+import { Loader2, AlertCircle, ChevronRight } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -17,6 +17,7 @@ import { MessageDialog } from "@/components/MessageDialog";
 import { FeedbackDialog } from "@/components/FeedbackDialog";
 import { useLocation } from "wouter";
 import { JobModal } from "@/components/JobModal";
+import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
 
 interface StatusHistoryItem {
   status: string;
@@ -238,17 +239,34 @@ export default function DashboardPage() {
 
                       {statusHistory && statusHistory.length > 0 && (
                         <div className="mt-2 text-sm">
-                          <div className="font-medium mb-1">Status History:</div>
-                          {statusHistory.map((history, index) => (
-                            <div key={index} className="flex items-center text-muted-foreground">
-                              <span className="mr-2">
-                                {format(new Date(history.date), "MMM d, yyyy")}:
-                              </span>
-                              <Badge variant="outline" className={getStatusColor(!job.isActive && index === statusHistory.length - 1 ? "archived" : history.status)}>
-                                {!job.isActive && index === statusHistory.length - 1 ? "Archived" : history.status}
-                              </Badge>
-                            </div>
-                          ))}
+                          <Collapsible>
+                            <CollapsibleTrigger asChild>
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                className="flex items-center gap-1 mb-1"
+                                onClick={(e) => {
+                                  // Stop event propagation to prevent parent click handler from firing
+                                  e.stopPropagation();
+                                }}
+                              >
+                                <ChevronRight className="h-3 w-3 transition-transform ui-expanded:rotate-90" />
+                                Status Changes
+                              </Button>
+                            </CollapsibleTrigger>
+                            <CollapsibleContent onClick={(e) => e.stopPropagation()}>
+                              {statusHistory.map((history, index) => (
+                                <div key={index} className="flex items-center text-muted-foreground">
+                                  <span className="mr-2">
+                                    {format(new Date(history.date), "MMM d, yyyy")}:
+                                  </span>
+                                  <Badge variant="outline" className={getStatusColor(!job.isActive && index === statusHistory.length - 1 ? "archived" : history.status)}>
+                                    {!job.isActive && index === statusHistory.length - 1 ? "Archived" : history.status}
+                                  </Badge>
+                                </div>
+                              ))}
+                            </CollapsibleContent>
+                          </Collapsible>
                         </div>
                       )}
 
