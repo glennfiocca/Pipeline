@@ -223,7 +223,7 @@ export class DatabaseStorage implements IStorage {
   async createProfile(profile: InsertProfile): Promise<Profile> {
     try {
       console.log("Creating profile with data:", profile);
-      
+
       const [newProfile] = await db
         .insert(profiles)
         .values({
@@ -250,7 +250,7 @@ export class DatabaseStorage implements IStorage {
   async updateProfile(id: number, profile: Partial<InsertProfile>): Promise<Profile> {
     try {
       console.log("Updating profile with data:", { id, profile });
-      
+
       const [updatedProfile] = await db
         .update(profiles)
         .set({
@@ -663,12 +663,18 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteFeedback(id: number): Promise<void> {
-    console.log(`Attempting to delete feedback with ID: ${id}`);
-    const result = await db
-      .delete(feedback)
-      .where(eq(feedback.id, id));
-    
-    console.log(`Delete operation result:`, result);
+    try {
+      console.log(`Attempting to delete feedback with ID: ${id}`);
+      await db
+        .delete(feedback)
+        .where(eq(feedback.id, id))
+        .execute();
+
+      console.log(`Successfully deleted feedback with ID: ${id}`);
+    } catch (error) {
+      console.error(`Error deleting feedback with ID: ${id}:`, error);
+      throw error;
+    }
   }
 }
 
