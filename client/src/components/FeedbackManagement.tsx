@@ -7,7 +7,7 @@ import {
   CardTitle 
 } from "@/components/ui/card";
 import { format } from "date-fns";
-import { Star, Archive, ArchiveX, MessageSquarePlus } from "lucide-react";
+import { Star, Archive, ArchiveX, MessageSquarePlus, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
@@ -24,12 +24,24 @@ import { Textarea } from "@/components/ui/textarea";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger 
+} from "@/components/ui/alert-dialog";
 
 export function FeedbackManagement() {
   const { toast } = useToast();
   const [selectedFeedback, setSelectedFeedback] = useState<Feedback | null>(null);
   const [internalNote, setInternalNote] = useState("");
   const [showNoteDialog, setShowNoteDialog] = useState(false);
+  const [feedbackToDelete, setFeedbackToDelete] = useState<Feedback | null>(null);
 
   const { data: feedbackList = [] } = useQuery<Feedback[]>({
     queryKey: ["/api/feedback"],
@@ -57,6 +69,40 @@ export function FeedbackManagement() {
       toast({
         title: "Error",
         description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteFeedbackMutation = useMutation({
+    mutationFn: async (id: number) => {
+      console.log(`Attempting to delete feedback with ID: ${id}`);
+      const response = await apiRequest("DELETE", `/api/admin/feedback/${id}`);
+      
+      if (!response.ok) {
+        console.error(`Delete request failed with status: ${response.status}`);
+        throw new Error(`Failed to delete feedback: ${response.status}`);
+      }
+      
+      console.log("Delete request successful");
+      return { success: true, message: "Feedback deleted successfully" };
+    },
+    onSuccess: () => {
+      console.log("Delete mutation succeeded, invalidating queries");
+      queryClient.invalidateQueries({ queryKey: ["/api/feedback"] });
+      queryClient.refetchQueries({ queryKey: ["/api/feedback"] });
+      
+      toast({
+        title: "Success",
+        description: "Feedback deleted successfully",
+      });
+      setFeedbackToDelete(null);
+    },
+    onError: (error: Error) => {
+      console.error("Delete feedback error:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete feedback",
         variant: "destructive",
       });
     },
@@ -96,6 +142,16 @@ export function FeedbackManagement() {
       id: feedback.id,
       updates: { archived: !feedback.archived }
     });
+  };
+
+  const handleDelete = (feedback: Feedback) => {
+    setFeedbackToDelete(feedback);
+  };
+
+  const confirmDelete = () => {
+    if (feedbackToDelete) {
+      deleteFeedbackMutation.mutate(feedbackToDelete.id);
+    }
   };
 
   const activeFeedback = feedbackList.filter(f => !f.archived);
@@ -150,6 +206,14 @@ export function FeedbackManagement() {
                             onClick={() => handleToggleArchive(feedback)}
                           >
                             <Archive className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            className="text-red-500 hover:text-red-600"
+                            onClick={() => handleDelete(feedback)}
+                          >
+                            <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
                       </div>
@@ -210,13 +274,23 @@ export function FeedbackManagement() {
                             {feedback.status}
                           </Badge>
                         </div>
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          onClick={() => handleToggleArchive(feedback)}
-                        >
-                          <ArchiveX className="h-4 w-4" />
-                        </Button>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={() => handleToggleArchive(feedback)}
+                          >
+                            <ArchiveX className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            className="text-red-500 hover:text-red-600"
+                            onClick={() => handleDelete(feedback)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
                       <div>
                         <Badge variant="outline" className="mb-2">
@@ -268,6 +342,56 @@ export function FeedbackManagement() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog 
+        open={!!feedbackToDelete} 
+        onOpenChange={(open) => {
+          if (!open) setFeedbackToDelete(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-red-500 flex items-center gap-2">
+              <Trash2 className="h-5 w-5" />
+              Confirm Deletion
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this feedback? This action is irreversible and all data associated with this feedback will be permanently removed.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          
+          {feedbackToDelete && (
+            <div className="mt-4 p-3 border rounded-md bg-muted">
+              <div className="flex gap-1 mb-2">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <Star
+                    key={star}
+                    className={`h-4 w-4 ${
+                      star <= (feedbackToDelete?.rating || 0)
+                        ? "fill-primary text-primary"
+                        : "text-muted-foreground"
+                    }`}
+                  />
+                ))}
+              </div>
+              <Badge variant="outline" className="mb-2">
+                {feedbackToDelete.category}
+              </Badge>
+              <p className="text-sm text-muted-foreground">{feedbackToDelete.comment}</p>
+            </div>
+          )}
+          
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              className="bg-red-500 hover:bg-red-600 text-white"
+            >
+              Delete Permanently
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

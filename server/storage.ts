@@ -80,6 +80,7 @@ export interface IStorage {
   updateFeedbackStatus(id: number, status: string, adminResponse?: string): Promise<Feedback>;
   getUnresolvedFeedback(): Promise<Feedback[]>;
   updateFeedback(id: number, updates: Partial<Feedback>): Promise<Feedback>;
+  deleteFeedback(id: number): Promise<void>;
 
   // Notification methods
   getNotifications(userId: number): Promise<Notification[]>;
@@ -550,11 +551,11 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getFeedbackById(id: number): Promise<Feedback | undefined> {
-    const [result] = await db
+    const [feedbackItem] = await db
       .select()
       .from(feedback)
       .where(eq(feedback.id, id));
-    return result;
+    return feedbackItem;
   }
 
   async createFeedback(insertFeedback: InsertFeedback): Promise<Feedback> {
@@ -659,6 +660,15 @@ export class DatabaseStorage implements IStorage {
       .from(profiles)
       .where(eq(profiles.userId, userId));
     return profile;
+  }
+
+  async deleteFeedback(id: number): Promise<void> {
+    console.log(`Attempting to delete feedback with ID: ${id}`);
+    const result = await db
+      .delete(feedback)
+      .where(eq(feedback.id, id));
+    
+    console.log(`Delete operation result:`, result);
   }
 }
 

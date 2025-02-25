@@ -850,6 +850,32 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Update the delete route for feedback
+  app.delete("/api/admin/feedback/:id", isAdmin, async (req, res) => {
+    try {
+      const feedbackId = parseInt(req.params.id);
+      if (isNaN(feedbackId)) {
+        return res.status(400).json({ error: "Invalid feedback ID" });
+      }
+
+      const feedback = await storage.getFeedbackById(feedbackId);
+      if (!feedback) {
+        return res.status(404).json({ error: "Feedback not found" });
+      }
+
+      // Permanently delete the feedback
+      await storage.deleteFeedback(feedbackId);
+      
+      // Log the deletion for debugging
+      console.log(`Feedback ID ${feedbackId} deleted successfully`);
+      
+      res.json({ message: "Feedback deleted successfully" });
+    } catch (error) {
+      console.error('Error deleting feedback:', error);
+      res.status(500).json({ error: "Failed to delete feedback" });
+    }
+  });
+
   // Notifications routes
   app.get("/api/notifications", async (req: any, res) => {
     try {
