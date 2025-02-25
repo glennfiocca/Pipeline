@@ -79,7 +79,8 @@ export function NavBar() {
           <NavLinks />
         )}
 
-        <div className="flex-1 flex justify-end">
+        <div className="flex-1 flex justify-end items-center space-x-2">
+          {user && <NotificationsDialog />}
           {user ? (
             <Button 
               variant="ghost" 

@@ -576,56 +576,66 @@ export function registerRoutes(app: Express): Server {
         return res.status(400).json({ error: "Invalid application ID" });
       }
 
-      // Get the application to fetch job details
+      // Get the application first
       const application = await storage.getApplication(applicationId);
       if (!application) {
         return res.status(404).json({ error: "Application not found" });
       }
 
-      // Get the job to get company information
+      // Get the job details
       const job = await storage.getJob(application.jobId);
       if (!job) {
         return res.status(404).json({ error: "Job not found" });
       }
 
+      // Prepare message data - only include required fields
       const messageData = {
-        ...req.body,
         applicationId,
+        content: req.body.content,
         isFromAdmin: req.user?.isAdmin || false,
-        senderUsername: req.user?.isAdmin ? job.company : req.user?.username
+        senderUsername: req.user?.isAdmin ? job.company : req.user?.username,
+        isRead: false
       };
 
-      const parsed = insertMessageSchema.safeParse(messageData);
-      if (!parsed.success) {
-        return res.status(400).json(parsed.error);
+      // Create the message first
+      const message = await storage.createMessage(messageData);
+
+      // Create notification for the recipient if message is from admin
+      if (req.user?.isAdmin) {
+        try {
+          await storage.createNotification({
+            userId: application.profileId,
+            type: 'message_received',
+            title: 'New Message from Company',
+            content: `You have a new message regarding your application for ${job.title}`,
+            isRead: false,
+            relatedId: applicationId,
+            relatedType: 'application',
+            metadata: {
+              applicationId,
+              messageId: message.id,
+              jobTitle: job.title,
+              company: job.company
+            }
+          });
+        } catch (notifError) {
+          console.error('Error creating notification:', notifError);
+          // Continue even if notification fails
+        }
       }
 
-      const message = await storage.createMessage(parsed.data);
-
-      // Create a notification for the message if it's from admin/company
-      if (req.user?.isAdmin && application.profileId) {
-        await storage.createNotification({
-          userId: application.profileId,
-          type: 'new_company_message',
-          title: 'New Message from Company',
-          content: `You have a new message from ${job.company} regarding your application for ${job.title}`,
-          isRead: false,
-          relatedId: message.id,
-          relatedType: 'message',
-          metadata: {
-            jobId: job.id,
-            applicationId: applicationId,
-            messageId: message.id,
-            company: job.company,
-            jobTitle: job.title
-          }
-        });
-      }
-
+      // Return the created message
       res.status(201).json(message);
     } catch (error) {
       console.error('Error creating message:', error);
-      res.status(500).json({ error: "Failed to create message" });
+      // Log the actual error details
+      if (error instanceof Error) {
+        console.error('Error details:', error.message, error.stack);
+      }
+      res.status(500).json({ 
+        error: "Failed to create message",
+        details: error instanceof Error ? error.message : "Unknown error"
+      });
     }
   });
 

@@ -1,4 +1,4 @@
-import { Bell, Loader2 } from "lucide-react";
+import { Bell, Loader2, MessageSquare, BriefcaseIcon } from "lucide-react";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import {
@@ -34,33 +34,88 @@ export function NotificationsDialog() {
     queryKey: ["/api/applications"],
   });
 
-  const handleNotificationClick = async (notification: any) => {
-    if (!notification) return;
+  const selectedApplication = applications.find(app => app.jobId === selectedJobId);
 
-    if (!notification.isRead) {
-      await markAsRead(notification.id);
-    }
-
-    if (notification.type !== 'application_status') {
-      setIsOpen(false);
-    }
-
+  const getNotificationTitle = (notification: any) => {
+    const company = notification.metadata?.company || '';
+    const jobTitle = notification.metadata?.jobTitle || '';
+    
     switch (notification.type) {
       case 'message_received':
-        setLocation(`/dashboard?messageId=${notification.metadata?.applicationId}`);
-        break;
+        return `New Message - ${jobTitle} at ${company}`;
+      case 'status_change':
       case 'application_status':
-        setSelectedJobId(notification.metadata?.jobId);
-        break;
-      case 'application_confirmation':
-        setLocation(`/dashboard`);
-        break;
+        return `Status Update - ${jobTitle} at ${company}`;
       default:
-        console.warn('Unknown notification type:', notification.type);
+        return notification.title;
     }
   };
 
-  const selectedApplication = applications.find(app => app.jobId === selectedJobId);
+  const getNotificationActions = (notification: any) => {
+    if (!notification) return null;
+
+    const buttonBaseClass = "mt-3 w-full flex items-center justify-center gap-2";
+
+    switch (notification.type) {
+      case 'message_received':
+        return (
+          <Button 
+            variant="secondary" 
+            size="sm" 
+            className={buttonBaseClass}
+            onClick={(e) => {
+              e.stopPropagation();
+              markAsRead(notification.id);
+              setLocation(`/dashboard?messageId=${notification.metadata?.applicationId}`);
+              setIsOpen(false);
+            }}
+          >
+            <MessageSquare className="h-4 w-4" />
+            View Message Thread
+          </Button>
+        );
+
+      case 'status_change':
+      case 'application_status':
+        return (
+          <Button 
+            variant="secondary" 
+            size="sm" 
+            className={buttonBaseClass}
+            onClick={(e) => {
+              e.stopPropagation();
+              markAsRead(notification.id);
+              setLocation(`/dashboard?applicationId=${notification.metadata?.applicationId}`);
+              setIsOpen(false);
+            }}
+          >
+            <BriefcaseIcon className="h-4 w-4 mr-2" />
+            View Application Details
+          </Button>
+        );
+
+      case 'application_submitted':
+        return (
+          <Button 
+            variant="secondary" 
+            size="sm" 
+            className={buttonBaseClass}
+            onClick={(e) => {
+              e.stopPropagation();
+              markAsRead(notification.id);
+              setLocation(`/dashboard?applicationId=${notification.metadata?.applicationId}`);
+              setIsOpen(false);
+            }}
+          >
+            <BriefcaseIcon className="h-4 w-4 mr-2" />
+            View Application
+          </Button>
+        );
+
+      default:
+        return null;
+    }
+  };
 
   return (
     <>
@@ -86,7 +141,7 @@ export function NotificationsDialog() {
           <DialogHeader className="flex flex-row items-center justify-between">
             <DialogTitle>Notifications</DialogTitle>
             {notifications?.length > 0 && (
-              <Button variant="ghost" size="sm" onClick={() => markAllAsRead()}>
+              <Button variant="ghost" size="sm" onClick={markAllAsRead}>
                 Mark all as read
               </Button>
             )}
@@ -94,50 +149,37 @@ export function NotificationsDialog() {
 
           <ScrollArea className="h-[400px] pr-4">
             {isLoading ? (
-              <div className="flex items-center justify-center h-full">
-                <Loader2 className="h-6 w-6 animate-spin" />
+              <div className="flex items-center justify-center h-[200px]">
+                <Loader2 className="h-8 w-8 animate-spin" />
               </div>
-            ) : !notifications || notifications.length === 0 ? (
-              <div className="flex items-center justify-center h-full text-muted-foreground">
+            ) : notifications.length === 0 ? (
+              <div className="text-center text-muted-foreground py-8">
                 No notifications
               </div>
             ) : (
               <div className="space-y-4">
-                {notifications.map((notification) => (
+                {notifications.map((notification: any) => (
                   <div
                     key={notification.id}
-                    className={`w-full p-4 rounded-lg border transition-colors ${
-                      !notification.isRead ? "bg-muted/50" : ""
+                    className={`p-4 rounded-lg border ${
+                      !notification.isRead ? 'bg-muted/50' : ''
                     }`}
                   >
-                    <div
-                      role="button"
-                      tabIndex={0}
-                      onClick={() => handleNotificationClick(notification)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                          handleNotificationClick(notification);
-                        }
-                      }}
-                      className="w-full text-left focus:outline-none"
-                    >
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="flex-1">
-                          <span className="block font-medium text-sm">
-                            {notification.title}
-                          </span>
-                          <span className="block text-sm text-muted-foreground mt-1">
-                            {notification.content}
-                          </span>
-                          <span className="block text-xs text-muted-foreground mt-2">
-                            {format(new Date(notification.createdAt), "PPp")}
-                          </span>
-                        </div>
-                        {!notification.isRead && (
-                          <Badge variant="secondary">New</Badge>
-                        )}
-                      </div>
+                    <div className="flex flex-col">
+                      <span className="font-medium">
+                        {getNotificationTitle(notification)}
+                      </span>
+                      <span className="text-sm text-muted-foreground mt-1">
+                        {notification.message}
+                      </span>
+                      <span className="text-xs text-muted-foreground mt-2">
+                        {format(new Date(notification.createdAt), "PPp")}
+                      </span>
+                      {getNotificationActions(notification)}
                     </div>
+                    {!notification.isRead && (
+                      <Badge variant="secondary" className="mt-2">New</Badge>
+                    )}
                   </div>
                 ))}
               </div>

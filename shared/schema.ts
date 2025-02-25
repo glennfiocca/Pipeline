@@ -256,17 +256,14 @@ export const messages = pgTable("messages", {
   senderUsername: text("sender_username") 
 });
 
-export const insertMessageSchema = createInsertSchema(messages).omit({ 
-  id: true,
-  createdAt: true 
-}).extend({
-  metadata: z.object({
-    interviewDate: z.string().optional(),
-    interviewLocation: z.string().optional(),
-    interviewType: z.string().optional(),
-    additionalNotes: z.string().optional()
-  }).optional(),
-  senderUsername: z.string()
+export const insertMessageSchema = createInsertSchema(messages).extend({
+  applicationId: z.number(),
+  content: z.string().min(1, "Message content cannot be empty"),
+  isFromAdmin: z.boolean(),
+  senderUsername: z.string().min(1, "Sender username is required"),
+  isRead: z.boolean().default(false),
+  createdAt: z.string().optional(),
+  metadata: z.record(z.unknown()).optional()
 });
 
 // Types remain unchanged except for Message which will now include senderUsername
