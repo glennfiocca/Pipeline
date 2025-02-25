@@ -3,7 +3,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Application, Job } from "@shared/schema";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
-import { Loader2, AlertCircle, ChevronRight } from "lucide-react";
+import { 
+  Loader2, AlertCircle, ChevronRight, 
+  CalendarIcon, MapPinIcon, NotebookIcon, ArrowRightIcon, BriefcaseIcon, XCircleIcon 
+} from "lucide-react";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -70,7 +73,7 @@ export default function DashboardPage() {
     Interviewing: applications.filter((app) => app.status === "Interviewing" && !isArchivedJob(app)).length,
     Accepted: applications.filter((app) => app.status === "Accepted" && !isArchivedJob(app)).length,
     Rejected: applications.filter((app) => app.status === "Rejected" && !isArchivedJob(app)).length,
-    Archived: applications.filter((app) => isArchivedJob(app)).length,
+    Inactive: applications.filter((app) => isArchivedJob(app)).length,
     total: applications.length,
   };
 
@@ -87,6 +90,7 @@ export default function DashboardPage() {
       case "withdrawn":
         return "bg-gray-500/10 text-gray-500";
       case "archived":
+      case "inactive":
         return "bg-purple-500/10 text-purple-500";
       default:
         return "bg-gray-500/10 text-gray-500";
@@ -94,7 +98,7 @@ export default function DashboardPage() {
   };
 
   const filteredApplications = selectedStatus
-    ? selectedStatus === "Archived"
+    ? selectedStatus === "Inactive"
       ? applications.filter(app => isArchivedJob(app))
       : applications.filter(app => app.status === selectedStatus && !isArchivedJob(app))
     : applications;
@@ -142,37 +146,38 @@ export default function DashboardPage() {
 
   return (
     <div className="container mx-auto px-4 py-10 max-w-7xl">
-      <div className="flex items-center justify-between mb-1">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-3">
         <h1 className="text-3xl font-bold">Application Dashboard</h1>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-2">
           <ApplicationCreditsCard />
           {selectedStatus && (
-            <Button variant="ghost" onClick={() => setSelectedStatus(null)}>
+            <Button variant="outline" size="sm" onClick={() => setSelectedStatus(null)} className="h-9">
+              <XCircleIcon className="h-4 w-4 mr-1" />
               Clear Filter
             </Button>
           )}
         </div>
       </div>
 
-      <div className="grid grid-cols-6 gap-[2px]">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
         {Object.entries(stats).map(([status, count]) => (
           <Card
             key={status}
             className={cn(
-              "cursor-pointer transition-all hover:shadow-md h-[140px] rounded-none border-[1px]",
+              "cursor-pointer transition-all hover:shadow-md rounded-lg border-[1px]",
               selectedStatus === status && "ring-2 ring-primary"
             )}
             onClick={() => setSelectedStatus(status === "total" ? null : status)}
           >
-            <CardHeader className="p-2 pb-0">
+            <CardHeader className="p-3 pb-0">
               <CardTitle className="text-sm font-medium">
                 {status === "total" ? "Total Applications" : status}
               </CardTitle>
             </CardHeader>
-            <CardContent className="p-2">
+            <CardContent className="p-3">
               <div className={cn(
-                "text-4xl font-bold text-center pt-4",
-                status !== "total" && getStatusColor(status)
+                "text-4xl font-bold text-center py-3 rounded-md",
+                status !== "total" ? getStatusColor(status) : "bg-gray-100 dark:bg-gray-800"
               )}>
                 {count}
               </div>
@@ -181,17 +186,20 @@ export default function DashboardPage() {
         ))}
       </div>
 
-      <Card className="mt-1 rounded-none">
-        <CardHeader className="p-4">
-          <CardTitle>
+      <Card className="mt-4 rounded-lg shadow-sm">
+        <CardHeader className="p-4 border-b">
+          <CardTitle className="text-xl">
             {selectedStatus ? `${selectedStatus} Applications` : "Your Applications"}
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <ScrollArea className="h-[calc(100vh-300px)] pr-2">
-            <div className="space-y-1">
+        <CardContent className="p-0">
+          <ScrollArea className="h-[calc(100vh-300px)]">
+            <div className="space-y-3 p-4">
               {filteredApplications.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
+                <div className="text-center py-12 text-muted-foreground">
+                  <div className="mb-3">
+                    <BriefcaseIcon className="h-12 w-12 mx-auto text-muted-foreground/50" />
+                  </div>
                   No applications {selectedStatus && `with status "${selectedStatus}"`} yet.
                   {!selectedStatus && " Start applying to jobs to track your progress here!"}
                 </div>
@@ -206,14 +214,17 @@ export default function DashboardPage() {
                     <div
                       key={application.id}
                       className={cn(
-                        "p-4 rounded-lg border space-y-3 cursor-pointer hover:bg-accent/50 transition-colors",
-                        !job.isActive && "bg-muted/30"
+                        "p-4 rounded-lg border space-y-3 cursor-pointer hover:bg-accent/30 transition-colors",
+                        !job.isActive && "bg-muted/30",
+                        application.status === "Interviewing" && "border-yellow-500/30",
+                        application.status === "Accepted" && "border-green-500/30",
+                        application.status === "Rejected" && "border-red-500/30"
                       )}
                       onClick={() => handleJobClick(job)}
                     >
                       <div className="flex items-start justify-between">
                         <div className="space-y-1">
-                          <div className="font-medium flex items-center gap-2">
+                          <div className="font-medium flex items-center gap-2 text-lg">
                             {job.title}
                             {!job.isActive && (
                               <div className="flex items-center text-muted-foreground text-sm">
@@ -222,19 +233,21 @@ export default function DashboardPage() {
                               </div>
                             )}
                           </div>
-                          <div className="text-sm text-muted-foreground">{job.company}</div>
-                          <div className="text-xs text-muted-foreground">
-                            Applied on {format(new Date(application.appliedAt), "MMM d, yyyy")}
+                          <div className="text-sm font-medium">{job.company}</div>
+                          <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1">
+                            <div className="flex items-center gap-1">
+                              <CalendarIcon className="h-3.5 w-3.5" />
+                              Applied {format(new Date(application.appliedAt), "MMM d, yyyy")}
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <MapPinIcon className="h-3.5 w-3.5" />
+                              {job.location}
+                            </div>
                           </div>
                         </div>
-                        <div className="flex items-center gap-4">
-                          <div className="text-sm text-muted-foreground">
-                            {job.location}
-                          </div>
-                          <Badge className={getStatusColor(!job.isActive ? "archived" : application.status)}>
-                            {!job.isActive ? "Archived" : application.status}
-                          </Badge>
-                        </div>
+                        <Badge className={getStatusColor(!job.isActive ? "inactive" : application.status)}>
+                          {!job.isActive ? "Inactive" : application.status}
+                        </Badge>
                       </div>
 
                       {statusHistory && statusHistory.length > 0 && (
@@ -242,26 +255,25 @@ export default function DashboardPage() {
                           <Collapsible>
                             <CollapsibleTrigger asChild>
                               <Button 
-                                variant="outline" 
+                                variant="ghost" 
                                 size="sm" 
-                                className="flex items-center gap-1 mb-1"
+                                className="flex items-center gap-1 mb-1 px-2 h-7 text-xs"
                                 onClick={(e) => {
-                                  // Stop event propagation to prevent parent click handler from firing
                                   e.stopPropagation();
                                 }}
                               >
                                 <ChevronRight className="h-3 w-3 transition-transform ui-expanded:rotate-90" />
-                                Status Changes
+                                Status History
                               </Button>
                             </CollapsibleTrigger>
-                            <CollapsibleContent onClick={(e) => e.stopPropagation()}>
+                            <CollapsibleContent onClick={(e) => e.stopPropagation()} className="pl-2 border-l-2 border-muted ml-1">
                               {statusHistory.map((history, index) => (
-                                <div key={index} className="flex items-center text-muted-foreground">
-                                  <span className="mr-2">
+                                <div key={index} className="flex items-center text-muted-foreground py-1">
+                                  <span className="mr-2 text-xs">
                                     {format(new Date(history.date), "MMM d, yyyy")}:
                                   </span>
-                                  <Badge variant="outline" className={getStatusColor(!job.isActive && index === statusHistory.length - 1 ? "archived" : history.status)}>
-                                    {!job.isActive && index === statusHistory.length - 1 ? "Archived" : history.status}
+                                  <Badge variant="outline" size="sm" className={getStatusColor(!job.isActive && index === statusHistory.length - 1 ? "inactive" : history.status)}>
+                                    {!job.isActive && index === statusHistory.length - 1 ? "Inactive" : history.status}
                                   </Badge>
                                 </div>
                               ))}
@@ -271,20 +283,26 @@ export default function DashboardPage() {
                       )}
 
                       {application.notes && (
-                        <div className="mt-2 text-sm">
-                          <div className="font-medium">Notes:</div>
+                        <div className="mt-2 text-sm bg-muted/50 p-2 rounded-md">
+                          <div className="font-medium flex items-center gap-1">
+                            <NotebookIcon className="h-3.5 w-3.5" />
+                            Notes:
+                          </div>
                           <p className="text-muted-foreground">{application.notes}</p>
                         </div>
                       )}
 
                       {application.nextStep && (
-                        <div className="mt-2 text-sm">
-                          <div className="font-medium">Next Step:</div>
+                        <div className="mt-2 text-sm bg-primary/5 p-2 rounded-md">
+                          <div className="font-medium flex items-center gap-1">
+                            <ArrowRightIcon className="h-3.5 w-3.5" />
+                            Next Step:
+                          </div>
                           <p className="text-muted-foreground">
                             {application.nextStep}
                             {application.nextStepDueDate && (
-                              <span className="ml-2">
-                                (Due: {format(new Date(application.nextStepDueDate), "MMM d, yyyy")})
+                              <span className="ml-2 text-xs bg-background px-1.5 py-0.5 rounded-full">
+                                Due: {format(new Date(application.nextStepDueDate), "MMM d, yyyy")}
                               </span>
                             )}
                           </p>
