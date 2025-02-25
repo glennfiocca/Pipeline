@@ -87,7 +87,7 @@ const fetchOrCreateProfile = async (userId: number) => {
 export default function ProfilePage() {
   const { toast } = useToast();
   const { user } = useAuth();
-  const [debugMsg, setDebugMsg] = useState("No action yet");
+  const [debugMsg, setDebugMsg] = useState("");
 
   // Update the query to use fetchOrCreateProfile
   const { data: profile, isLoading } = useQuery<Profile>({
@@ -212,15 +212,13 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="container py-10">
+    <div className="container mx-auto py-6">
       <h1 className="text-3xl font-bold mb-6">Profile</h1>
-      <p className="text-sm text-muted-foreground mb-2">Debug: {debugMsg}</p>
       
-      {/* Use a single form that wraps all tabs */}
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)}>
           <Tabs defaultValue="personal">
-            <TabsList>
+            <TabsList className="mb-4">
               <TabsTrigger value="personal">Personal Info</TabsTrigger>
               <TabsTrigger value="education">Education</TabsTrigger>
               <TabsTrigger value="experience">Experience</TabsTrigger>

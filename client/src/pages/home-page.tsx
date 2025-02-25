@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
+import { UserPlus, FileText, Send } from "lucide-react";
 
 export default function HomePage() {
   const { user } = useAuth();
@@ -21,15 +22,36 @@ export default function HomePage() {
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 w-full max-w-4xl">
               {[
-                { number: 1, text: "Signup" },
-                { number: 2, text: "Make a Profile" },
-                { number: 3, text: "Apply" },
+                { 
+                  number: 1, 
+                  text: "Signup", 
+                  description: "Create your account in seconds",
+                  icon: "UserPlus"
+                },
+                { 
+                  number: 2, 
+                  text: "Make a Profile", 
+                  description: "Showcase your skills and experience",
+                  icon: "FileText" 
+                },
+                { 
+                  number: 3, 
+                  text: "Apply", 
+                  description: "One-click applications to top jobs",
+                  icon: "Send" 
+                },
               ].map((step) => (
-                <div key={step.number} className="flex flex-col items-center">
-                  <div className="w-16 h-16 sm:w-20 sm:h-20 lg:w-24 lg:h-24 rounded-full border-2 border-primary flex items-center justify-center mb-4 transition-transform hover:scale-110 hover:border-4 hover:shadow-lg">
-                    <span className="text-2xl sm:text-3xl lg:text-4xl font-bold">{step.number}</span>
+                <div 
+                  key={step.number} 
+                  className="flex flex-col items-center bg-card p-6 rounded-lg border shadow-sm hover:shadow-md transition-all"
+                >
+                  <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-primary/10 flex items-center justify-center mb-4 transition-transform hover:scale-105">
+                    {step.icon === "UserPlus" && <UserPlus className="h-8 w-8 text-primary" />}
+                    {step.icon === "FileText" && <FileText className="h-8 w-8 text-primary" />}
+                    {step.icon === "Send" && <Send className="h-8 w-8 text-primary" />}
                   </div>
-                  <span className="text-lg sm:text-xl lg:text-2xl font-medium">{step.text}</span>
+                  <span className="text-xl font-semibold mb-1">{step.text}</span>
+                  <span className="text-sm text-muted-foreground text-center">{step.description}</span>
                 </div>
               ))}
             </div>
