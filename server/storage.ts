@@ -29,6 +29,7 @@ export interface IStorage {
   getProfileByEmail(email: string): Promise<Profile | undefined>;
   createProfile(profile: InsertProfile): Promise<Profile>;
   updateProfile(id: number, profile: Partial<InsertProfile>): Promise<Profile>;
+  getProfileByUserId(userId: number): Promise<Profile | undefined>;
 
   // Applications
   getApplications(): Promise<Application[]>;
@@ -218,18 +219,59 @@ export class DatabaseStorage implements IStorage {
     return profile;
   }
 
-  async createProfile(insertProfile: InsertProfile): Promise<Profile> {
-    const [profile] = await db.insert(profiles).values(insertProfile).returning();
-    return profile;
+  async createProfile(profile: InsertProfile): Promise<Profile> {
+    try {
+      console.log("Creating profile with data:", profile);
+      
+      const [newProfile] = await db
+        .insert(profiles)
+        .values({
+          ...profile,
+          // Ensure arrays are properly handled
+          education: profile.education || [],
+          experience: profile.experience || [],
+          skills: profile.skills || [],
+          certifications: profile.certifications || [],
+          languages: profile.languages || [],
+          publications: profile.publications || [],
+          projects: profile.projects || []
+        })
+        .returning();
+
+      console.log("Created profile:", newProfile);
+      return newProfile;
+    } catch (error) {
+      console.error("Error in createProfile:", error);
+      throw error;
+    }
   }
 
   async updateProfile(id: number, profile: Partial<InsertProfile>): Promise<Profile> {
-    const [updatedProfile] = await db
-      .update(profiles)
-      .set(profile)
-      .where(eq(profiles.id, id))
-      .returning();
-    return updatedProfile;
+    try {
+      console.log("Updating profile with data:", { id, profile });
+      
+      const [updatedProfile] = await db
+        .update(profiles)
+        .set({
+          ...profile,
+          // Ensure arrays are properly handled
+          education: profile.education || undefined,
+          experience: profile.experience || undefined,
+          skills: profile.skills || undefined,
+          certifications: profile.certifications || undefined,
+          languages: profile.languages || undefined,
+          publications: profile.publications || undefined,
+          projects: profile.projects || undefined
+        })
+        .where(eq(profiles.id, id))
+        .returning();
+
+      console.log("Updated profile:", updatedProfile);
+      return updatedProfile;
+    } catch (error) {
+      console.error("Error in updateProfile:", error);
+      throw error;
+    }
   }
 
   async getApplications(): Promise<Application[]> {
@@ -609,6 +651,14 @@ export class DatabaseStorage implements IStorage {
       .update(notifications)
       .set({ isRead: true })
       .where(eq(notifications.userId, userId));
+  }
+
+  async getProfileByUserId(userId: number): Promise<Profile | undefined> {
+    const [profile] = await db
+      .select()
+      .from(profiles)
+      .where(eq(profiles.userId, userId));
+    return profile;
   }
 }
 

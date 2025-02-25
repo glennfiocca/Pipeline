@@ -114,7 +114,10 @@ export const profiles = pgTable("profiles", {
   referenceList: jsonb("reference_list").default([]),
   securityClearance: text("security_clearance"),
   clearanceType: text("clearance_type"),
-  clearanceExpiry: text("clearance_expiry")
+  clearanceExpiry: text("clearance_expiry"),
+  userId: integer("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" })
 });
 
 export const applications = pgTable("applications", {
@@ -202,18 +205,56 @@ const referenceSchema = z.object({
   relationship: z.string()
 });
 
-export const insertProfileSchema = createInsertSchema(profiles).extend({
-  education: z.array(educationSchema),
-  experience: z.array(experienceSchema),
-  certifications: z.array(certificationSchema),
-  languages: z.array(languageSchema),
-  publications: z.array(publicationSchema).optional(),
-  projects: z.array(projectSchema).optional(),
-  workAuthorization: z.enum(["US Citizen", "Green Card", "H1B", "Other"]),
-  availability: z.enum(["Immediate", "2 Weeks", "1 Month", "Other"]),
-  referenceList: z.array(referenceSchema).optional()
+// Create the insert profile schema with all fields optional
+export const insertProfileSchema = createInsertSchema(profiles).omit({
+  id: true
+}).extend({
+  // Make all fields optional
+  name: z.string().optional(),
+  email: z.string().email("Invalid email format").optional(),
+  phone: z.coerce.string().optional(),
+  title: z.string().optional(),
+  bio: z.string().optional(),
+  location: z.string().optional(),
+  address: z.coerce.string().optional(),
+  city: z.string().optional(),
+  state: z.string().optional(),
+  zipCode: z.coerce.string().optional(),
+  country: z.string().optional(),
+  workAuthorization: z.string().optional(),
+  availability: z.string().optional(),
+  citizenshipStatus: z.string().optional(),
+  
+  // Arrays can be empty
+  education: z.array(educationSchema).optional().default([]),
+  experience: z.array(experienceSchema).optional().default([]),
+  skills: z.array(z.string()).optional().default([]),
+  certifications: z.array(certificationSchema).optional().default([]),
+  languages: z.array(languageSchema).optional().default([]),
+  publications: z.array(publicationSchema).optional().default([]),
+  projects: z.array(projectSchema).optional().default([]),
+  
+  // Optional fields
+  resumeUrl: z.string().optional().nullable(),
+  transcriptUrl: z.string().optional().nullable(),
+  linkedinUrl: z.string().optional().nullable(),
+  portfolioUrl: z.string().optional().nullable(),
+  githubUrl: z.string().optional().nullable(),
+  visaSponsorship: z.boolean().optional(),
+  willingToRelocate: z.boolean().optional(),
+  preferredLocations: z.array(z.string()).optional().default([]),
+  salaryExpectation: z.string().optional().nullable(),
+  veteranStatus: z.string().optional().nullable(),
+  militaryBranch: z.string().optional().nullable(),
+  militaryServiceDates: z.string().optional().nullable(),
+  referenceList: z.array(referenceSchema).optional().default([]),
+  securityClearance: z.string().optional().nullable(),
+  clearanceType: z.string().optional().nullable(),
+  clearanceExpiry: z.string().optional().nullable(),
+  
+  // If the client might send userId as a string, coerce it to number
+  userId: z.coerce.number()
 });
-
 
 export const insertApplicationSchema = createInsertSchema(applications).omit({ 
   id: true 
@@ -243,7 +284,6 @@ export type Language = z.infer<typeof languageSchema>;
 export type Publication = z.infer<typeof publicationSchema>;
 export type Project = z.infer<typeof projectSchema>;
 export type Reference = z.infer<typeof referenceSchema>;
-
 
 export const messages = pgTable("messages", {
   id: serial("id").primaryKey(),

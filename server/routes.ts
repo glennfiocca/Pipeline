@@ -377,14 +377,92 @@ export function registerRoutes(app: Express): Server {
         return res.status(400).json({ error: "Invalid profile ID" });
       }
 
-      const profile = await storage.getProfile(profileId);
+      // First try to get profile by ID
+      let profile = await storage.getProfile(profileId);
+      
+      // If no profile found, try to get profile by user ID
       if (!profile) {
-        return res.status(404).json({ error: "Profile not found" });
+        profile = await storage.getProfileByUserId(req.user.id);
+      }
+
+      // If still no profile, create a new one for the user
+      if (!profile) {
+        profile = await storage.createProfile({
+          userId: req.user.id,
+          name: req.user.name || "",
+          email: req.user.email || "",
+          phone: "",
+          title: "",
+          bio: "",
+          location: "",
+          education: [],
+          experience: [],
+          skills: [],
+          certifications: [],
+          languages: [],
+          publications: [],
+          projects: [],
+          address: "",
+          city: "",
+          state: "",
+          zipCode: "",
+          country: "",
+          workAuthorization: "US Citizen",
+          availability: "2 Weeks",
+          citizenshipStatus: ""
+        });
       }
 
       // Ensure users can only access their own profile
       if (profile.userId !== req.user.id && !req.user.isAdmin) {
         return res.status(403).json({ error: "Unauthorized" });
+      }
+
+      res.json(profile);
+    } catch (error) {
+      console.error('Error fetching profile:', error);
+      res.status(500).json({ error: "Failed to fetch profile" });
+    }
+  });
+
+  app.get("/api/profiles/:userId", async (req: any, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ error: "Authentication required" });
+      }
+
+      const userId = parseInt(req.params.userId);
+      if (isNaN(userId)) {
+        return res.status(400).json({ error: "Invalid user ID" });
+      }
+
+      // Get profile by user ID
+      let profile = await storage.getProfileByUserId(userId);
+
+      // If no profile exists, create one
+      if (!profile) {
+        profile = await storage.createProfile({
+          userId,
+          name: req.user.username || "",
+          email: req.user.email || "",
+          phone: "",
+          title: "",
+          bio: "",
+          location: "",
+          education: [],
+          experience: [],
+          skills: [],
+          certifications: [],
+          languages: [],
+          address: "",
+          city: "",
+          state: "",
+          zipCode: "",
+          country: "",
+          workAuthorization: "US Citizen",
+          availability: "2 Weeks",
+          citizenshipStatus: ""
+        });
       }
 
       res.json(profile);
@@ -400,21 +478,62 @@ export function registerRoutes(app: Express): Server {
         return res.status(401).json({ error: "Authentication required" });
       }
 
-      const parsed = insertProfileSchema.safeParse(req.body);
-      if (!parsed.success) {
-        return res.status(400).json({ error: "Invalid profile data", details: parsed.error });
+      console.log("Received profile data:", req.body);
+
+      // 1) Validate incoming data with insertProfileSchema
+      const safeParse = insertProfileSchema.safeParse({
+        ...req.body,
+        userId: req.user.id // Force userId from session
+      });
+
+      // 2) Handle invalid data
+      if (!safeParse.success) {
+        console.error("Validation error:", safeParse.error.format());
+        return res.status(400).json({
+          error: "Invalid profile data",
+          details: safeParse.error.format()
+        });
       }
 
-      // Associate the profile with the user
-      const profile = await storage.createProfile({
-        ...parsed.data,
-        userId: req.user.id // Add userId to associate with the logged-in user
-      });
-      
-      res.status(201).json(profile);
+      // 3) Use the validated data for DB operations
+      const profileData = safeParse.data;
+
+      // Check if profile already exists
+      let existingProfile = await storage.getProfileByUserId(req.user.id);
+      let profile;
+
+      try {
+        if (existingProfile) {
+          // Update existing profile
+          profile = await storage.updateProfile(existingProfile.id, profileData);
+          console.log("Updated profile:", profile);
+        } else {
+          // Create new profile
+          profile = await storage.createProfile(profileData);
+          console.log("Created new profile:", profile);
+        }
+
+        if (!profile) {
+          throw new Error("Failed to save profile");
+        }
+
+        // Fetch the complete profile to return
+        const savedProfile = await storage.getProfileByUserId(req.user.id);
+        if (!savedProfile) {
+          throw new Error("Failed to fetch saved profile");
+        }
+
+        res.json(savedProfile);
+      } catch (error) {
+        console.error("Database operation failed:", error);
+        throw error; // Re-throw to be caught by outer try-catch
+      }
     } catch (error) {
-      console.error('Error creating profile:', error);
-      res.status(500).json({ error: "Failed to create profile" });
+      console.error("Error saving profile:", error);
+      res.status(500).json({
+        error: "Failed to save profile",
+        details: error instanceof Error ? error.message : "Unknown error"
+      });
     }
   });
 
@@ -429,26 +548,37 @@ export function registerRoutes(app: Express): Server {
         return res.status(400).json({ error: "Invalid profile ID" });
       }
 
+      // Get existing profile
       const existingProfile = await storage.getProfile(profileId);
       if (!existingProfile) {
         return res.status(404).json({ error: "Profile not found" });
       }
 
-      // Ensure users can only update their own profile
+      // Check ownership
       if (existingProfile.userId !== req.user.id && !req.user.isAdmin) {
         return res.status(403).json({ error: "Unauthorized" });
       }
 
-      const parsed = insertProfileSchema.partial().safeParse(req.body);
+      const parsed = insertProfileSchema.partial().safeParse({
+        ...req.body,
+        userId: existingProfile.userId // Preserve the original userId
+      });
+
       if (!parsed.success) {
-        return res.status(400).json({ error: "Invalid profile data", details: parsed.error });
+        return res.status(400).json({ 
+          error: "Invalid profile data", 
+          details: parsed.error.format() 
+        });
       }
 
-      const profile = await storage.updateProfile(profileId, parsed.data);
-      res.json(profile);
+      const updatedProfile = await storage.updateProfile(profileId, parsed.data);
+      res.json(updatedProfile);
     } catch (error) {
       console.error('Error updating profile:', error);
-      res.status(500).json({ error: "Failed to update profile" });
+      res.status(500).json({ 
+        error: "Failed to update profile",
+        message: error instanceof Error ? error.message : "Unknown error"
+      });
     }
   });
 

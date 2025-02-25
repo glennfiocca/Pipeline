@@ -6,31 +6,71 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDes
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Profile, insertProfileSchema, type InsertProfile } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2, Plus, X } from "lucide-react";
-import { useEffect, useMemo, useCallback } from 'react';
+import { useEffect, useMemo, useCallback, useState } from 'react';
 import { ApplicationCreditsCard } from "@/components/ApplicationCreditsCard";
 import { useAuth } from "@/hooks/use-auth";
 
-// Optimize the profile query function by extracting it and adding better error handling
+// Update the fetchOrCreateProfile function with better error handling
 const fetchOrCreateProfile = async (userId: number) => {
-  const response = await apiRequest("GET", `/api/profiles/${userId}`);
-  const isNewProfile = response.status === 404;
-  
-  if (isNewProfile) {
-    const createResponse = await apiRequest("POST", "/api/profiles", {
-      userId,
-      name: user?.name || "",
-      email: user?.email || "",
-      // Set minimal required fields for initial profile
+  try {
+    console.log("Fetching profile for user:", userId);
+    const response = await apiRequest("GET", `/api/profiles/${userId}`);
+    
+    if (!response.ok) {
+      // If profile doesn't exist, return a default profile instead of throwing
+      console.log("Profile not found, creating default");
+      return {
+        name: "",
+        email: "",
+        phone: "",
+        title: "",
+        bio: "",
+        location: "",
+        education: [],
+        experience: [],
+        skills: [],
+        certifications: [],
+        languages: [],
+        publications: [],
+        projects: [],
+        address: "",
+        city: "",
+        state: "",
+        zipCode: "",
+        country: "",
+        workAuthorization: "US Citizen",
+        availability: "2 Weeks",
+        citizenshipStatus: "",
+        userId: userId
+      };
+    }
+    
+    const profile = await response.json();
+    console.log("Fetched profile:", profile);
+    return profile;
+  } catch (error) {
+    console.error("Error fetching profile:", error);
+    // Return default profile instead of throwing
+    return {
+      name: "",
+      email: "",
       phone: "",
       title: "",
       bio: "",
       location: "",
+      education: [],
+      experience: [],
+      skills: [],
+      certifications: [],
+      languages: [],
+      publications: [],
+      projects: [],
       address: "",
       city: "",
       state: "",
@@ -38,83 +78,54 @@ const fetchOrCreateProfile = async (userId: number) => {
       country: "",
       workAuthorization: "US Citizen",
       availability: "2 Weeks",
-      citizenshipStatus: ""
-    });
-    
-    if (!createResponse.ok) {
-      const error = await createResponse.json();
-      throw new Error(error.message || "Failed to create initial profile");
-    }
-    
-    return createResponse.json();
+      citizenshipStatus: "",
+      userId: userId
+    };
   }
-  
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.message || "Failed to fetch profile");
-  }
-  
-  return response.json();
 };
 
 export default function ProfilePage() {
   const { toast } = useToast();
   const { user } = useAuth();
+  const [debugMsg, setDebugMsg] = useState("No action yet");
 
-  // Optimize the query with better caching and error handling
+  // Update the query to use fetchOrCreateProfile
   const { data: profile, isLoading } = useQuery<Profile>({
-    queryKey: ["/api/profiles", user?.id],
+    queryKey: ["profile", user?.id],
     queryFn: () => {
       if (!user?.id) throw new Error("No user ID");
       return fetchOrCreateProfile(user.id);
     },
     enabled: !!user?.id,
-    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
-    cacheTime: 30 * 60 * 1000, // Keep in cache for 30 minutes
-    retry: 2 // Retry failed requests twice
+    staleTime: 0, // Always fetch fresh data
+    cacheTime: 0, // Don't cache
   });
-
-  // Optimize form initialization with memoized default values
-  const defaultValues = useMemo(() => ({
-    name: "",
-    email: "",
-    phone: "",
-    title: "",
-    bio: "",
-    location: "",
-    education: [],
-    experience: [],
-    skills: [],
-    certifications: [],
-    languages: [],
-    publications: [],
-    projects: [],
-    address: "",
-    city: "",
-    state: "",
-    zipCode: "",
-    country: "",
-    workAuthorization: "US Citizen",
-    availability: "2 Weeks",
-    citizenshipStatus: "",
-    resumeUrl: "",
-    transcriptUrl: "",
-    referenceList: [],
-    visaSponsorship: false,
-    willingToRelocate: false,
-    preferredLocations: [],
-    salaryExpectation: "",
-    veteranStatus: "",
-    militaryBranch: "",
-    militaryServiceDates: "",
-    securityClearance: "",
-    clearanceType: "",
-    clearanceExpiry: ""
-  }), []);
 
   const form = useForm<InsertProfile>({
     resolver: zodResolver(insertProfileSchema),
-    defaultValues
+    defaultValues: profile || {
+      name: "",
+      email: "",
+      phone: "",
+      title: "",
+      bio: "",
+      location: "",
+      education: [],
+      experience: [],
+      skills: [],
+      certifications: [],
+      languages: [],
+      publications: [],
+      projects: [],
+      address: "",
+      city: "",
+      state: "",
+      zipCode: "",
+      country: "",
+      workAuthorization: "US Citizen",
+      availability: "2 Weeks",
+      citizenshipStatus: "US Citizen"
+    }
   });
 
   const { fields: educationFields, append: appendEducation, remove: removeEducation } =
@@ -129,105 +140,98 @@ export default function ProfilePage() {
       name: "experience"
     });
 
-  // Optimize form submission with better error handling and type safety
-  const onSubmit = useCallback(async (values: InsertProfile) => {
-    try {
-      if (!user?.id) {
-        throw new Error("You must be logged in to save your profile");
-      }
-
-      const formData = {
-        ...values,
-        userId: user.id,
-        education: values.education?.filter(Boolean) || [],
-        experience: values.experience?.filter(Boolean) || [],
-        skills: values.skills?.filter(Boolean) || [],
-        certifications: values.certifications?.filter(Boolean) || [],
-        languages: values.languages?.filter(Boolean) || [],
-        publications: values.publications?.filter(Boolean) || [],
-        projects: values.projects?.filter(Boolean) || [],
-        referenceList: values.referenceList?.filter(Boolean) || [],
-        preferredLocations: values.preferredLocations?.filter(Boolean) || [],
-        visaSponsorship: Boolean(values.visaSponsorship),
-        willingToRelocate: Boolean(values.willingToRelocate)
-      } as InsertProfile;
-
-      const method = profile?.id ? "PATCH" : "POST";
-      const endpoint = profile?.id ? `/api/profiles/${profile.id}` : "/api/profiles";
-
-      const response = await apiRequest(method, endpoint, formData);
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to save profile');
-      }
-
-      const savedProfile = await response.json();
-      
-      // Update cache atomically
-      queryClient.setQueryData(["/api/profiles", user.id], savedProfile);
-
-      toast({
-        title: "Success!",
-        description: "Your profile has been saved successfully.",
-      });
-    } catch (error) {
-      console.error("Form submission error:", error);
-      toast({
-        title: "Error saving profile",
-        description: error instanceof Error ? error.message : "Failed to save profile",
-        variant: "destructive",
-      });
-    }
-  }, [user?.id, profile?.id, toast]);
-
-  // Optimize form reset with error boundary
+  // Make sure form is updated when profile data changes
   useEffect(() => {
     if (profile) {
-      try {
-        form.reset(profile as InsertProfile);
-      } catch (error) {
-        console.error("Error resetting form:", error);
-        toast({
-          title: "Error",
-          description: "Failed to load profile data",
-          variant: "destructive",
-        });
-      }
+      console.log("Resetting form with profile:", profile); // Debug log
+      form.reset(profile);
     }
   }, [profile, form]);
 
+  // Update the onSubmit function to be more robust and add more debugging
+  const onSubmit = async (data: InsertProfile) => {
+    try {
+      setDebugMsg("Submitting form...");
+      console.log("Form data being submitted:", data);
+      
+      if (!user?.id) {
+        throw new Error("No user ID");
+      }
+      
+      // Ensure userId is set
+      data.userId = user.id;
+      
+      // Log the request details
+      console.log("Sending request to /api/profiles with data:", JSON.stringify(data));
+      
+      const response = await apiRequest("POST", "/api/profiles", data);
+      console.log("Response status:", response.status);
+      
+      // Try to get response body regardless of status
+      let responseBody;
+      try {
+        responseBody = await response.json();
+        console.log("Response body:", responseBody);
+      } catch (e) {
+        console.log("Could not parse response as JSON");
+      }
+      
+      if (!response.ok) {
+        throw new Error(responseBody?.message || `Failed to save profile: ${response.status}`);
+      }
+      
+      // Invalidate the profile query to refresh data
+      queryClient.invalidateQueries(["profile", user.id]);
+      
+      toast({
+        title: "Profile Updated",
+        description: "Your profile has been successfully updated.",
+      });
+      
+      setDebugMsg("Form submitted successfully");
+    } catch (error: any) {
+      console.error("Error saving profile:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to save profile",
+        variant: "destructive",
+      });
+      setDebugMsg(`Error: ${error.message}`);
+    }
+  };
+
+  // Add a direct save button handler for debugging
+  const handleDirectSave = () => {
+    console.log("Direct save button clicked");
+    console.log("Current form values:", form.getValues());
+    form.handleSubmit(onSubmit)();
+  };
+
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-[calc(100vh-4rem)]">
-        <Loader2 className="h-8 w-8 animate-spin" />
-      </div>
-    );
+    return <div className="flex justify-center items-center h-screen"><Loader2 className="animate-spin" /></div>;
   }
 
   return (
-    <div className="container mx-auto px-4 py-10 max-w-7xl">
-      <div className="flex items-center justify-between mb-8">
-        <h1 className="text-3xl font-bold">Profile</h1>
-        <div className="flex items-center space-x-4">
-          <ApplicationCreditsCard />
-        </div>
-      </div>
+    <div className="container py-10">
+      <h1 className="text-3xl font-bold mb-6">Profile</h1>
+      <p className="text-sm text-muted-foreground mb-2">Debug: {debugMsg}</p>
+      
+      {/* Use a single form that wraps all tabs */}
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-          <Tabs defaultValue="personal" className="w-full">
-            <TabsList className="grid w-full grid-cols-5">
+        <form onSubmit={form.handleSubmit(onSubmit)}>
+          <Tabs defaultValue="personal">
+            <TabsList>
               <TabsTrigger value="personal">Personal Info</TabsTrigger>
               <TabsTrigger value="education">Education</TabsTrigger>
               <TabsTrigger value="experience">Experience</TabsTrigger>
               <TabsTrigger value="documents">Documents</TabsTrigger>
-              <TabsTrigger value="additional">Additional Info</TabsTrigger>
+              <TabsTrigger value="additional">Additional</TabsTrigger>
             </TabsList>
 
-            <TabsContent value="personal" className="space-y-6">
+            <TabsContent value="personal">
               <Card>
                 <CardHeader>
-                  <CardTitle>Personal Information</CardTitle>
+                  <CardTitle>Personal Info</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -363,32 +367,35 @@ export default function ProfilePage() {
               </Card>
             </TabsContent>
 
-            <TabsContent value="education" className="space-y-6">
+            <TabsContent value="education">
               <Card>
-                <CardHeader className="flex flex-row items-center justify-between">
+                <CardHeader>
                   <CardTitle>Education</CardTitle>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => appendEducation({
-                      school: "",
-                      degree: "",
-                      field: "",
-                      startDate: "",
-                      endDate: "",
-                      gpa: "",
-                      majorCourses: [],
-                      transcriptUrl: null,
-                      honors: [],
-                      activities: []
-                    })}
-                  >
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Education
-                  </Button>
                 </CardHeader>
-                <CardContent className="space-y-6">
+                <CardContent className="space-y-4">
+                  <CardHeader className="flex flex-row items-center justify-between">
+                    <CardTitle>Education</CardTitle>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => appendEducation({
+                        school: "",
+                        degree: "",
+                        field: "",
+                        startDate: "",
+                        endDate: "",
+                        gpa: "",
+                        majorCourses: [],
+                        transcriptUrl: null,
+                        honors: [],
+                        activities: []
+                      })}
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Education
+                    </Button>
+                  </CardHeader>
                   {educationFields.map((field, index) => (
                     <div key={field.id} className="space-y-4 p-4 border rounded-lg relative">
                       <Button
@@ -494,32 +501,35 @@ export default function ProfilePage() {
               </Card>
             </TabsContent>
 
-            <TabsContent value="experience" className="space-y-6">
+            <TabsContent value="experience">
               <Card>
-                <CardHeader className="flex flex-row items-center justify-between">
-                  <CardTitle>Work Experience</CardTitle>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => appendExperience({
-                      company: "",
-                      title: "",
-                      location: "",
-                      startDate: "",
-                      endDate: "",
-                      current: false,
-                      description: "",
-                      achievements: [],
-                      technologiesUsed: [],
-                      responsibilities: []
-                    })}
-                  >
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Experience
-                  </Button>
+                <CardHeader>
+                  <CardTitle>Experience</CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-6">
+                <CardContent className="space-y-4">
+                  <CardHeader className="flex flex-row items-center justify-between">
+                    <CardTitle>Work Experience</CardTitle>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => appendExperience({
+                        company: "",
+                        title: "",
+                        location: "",
+                        startDate: "",
+                        endDate: "",
+                        current: false,
+                        description: "",
+                        achievements: [],
+                        technologiesUsed: [],
+                        responsibilities: []
+                      })}
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Experience
+                    </Button>
+                  </CardHeader>
                   {experienceFields.map((field, index) => (
                     <div key={field.id} className="space-y-4 p-4 border rounded-lg relative">
                       <Button
@@ -625,10 +635,13 @@ export default function ProfilePage() {
               </Card>
             </TabsContent>
 
-            <TabsContent value="documents" className="space-y-6">
+            <TabsContent value="documents">
               <Card>
                 <CardHeader>
                   <CardTitle>Documents</CardTitle>
+                  <CardDescription>
+                    Upload your resume, transcript, and other documents
+                  </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-1 gap-4">
@@ -712,7 +725,7 @@ export default function ProfilePage() {
               </Card>
             </TabsContent>
 
-            <TabsContent value="additional" className="space-y-6">
+            <TabsContent value="additional">
               <Card>
                 <CardHeader>
                   <CardTitle>Additional Information</CardTitle>
@@ -766,18 +779,43 @@ export default function ProfilePage() {
                         </FormItem>
                       )}
                     />
+
+                    <FormField
+                      control={form.control}
+                      name="citizenshipStatus"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Citizenship Status</FormLabel>
+                          <FormControl>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select citizenship status" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="US Citizen">US Citizen</SelectItem>
+                                <SelectItem value="Permanent Resident">Permanent Resident</SelectItem>
+                                <SelectItem value="Other">Other</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
                   </div>
                 </CardContent>
               </Card>
             </TabsContent>
           </Tabs>
-
-          <div className="flex justify-end">
+          
+          {/* Single submit button for the entire form */}
+          <div className="flex justify-end mt-6">
             <Button
-              type="submit"
-              className="min-w-[120px]"
+              type="button"
+              onClick={handleDirectSave}
+              disabled={form.formState.isSubmitting}
             >
-              Save Profile
+              {form.formState.isSubmitting ? "Saving..." : "Save Profile"}
             </Button>
           </div>
         </form>
