@@ -53,6 +53,11 @@ export function JobModal({
 
   const isButtonDisabled = isApplying || (isApplied && !previouslyApplied);
 
+  const handleApplyClick = () => {
+    if (!user) return;
+    setShowCreditsDialog(true);
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
@@ -110,15 +115,17 @@ export function JobModal({
         </div>
 
         <DialogFooter className="flex gap-2 mt-6">
-          {user ? (
+          {user && !applicationControls ? (
             <Button
-              onClick={() => !isButtonDisabled && onApply()}
+              onClick={handleApplyClick}
               disabled={isButtonDisabled}
               className="flex-1"
             >
               {isApplying && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {buttonText}
             </Button>
+          ) : user && applicationControls ? (
+            applicationControls
           ) : (
             <Link href="/auth/login" className="flex-1">
               <Button className="w-full">Sign in to Apply</Button>
@@ -129,6 +136,16 @@ export function JobModal({
           </Button>
         </DialogFooter>
       </DialogContent>
+
+      <ApplicationCreditsDialog
+        isOpen={showCreditsDialog}
+        onClose={() => setShowCreditsDialog(false)}
+        onConfirm={() => {
+          onApply && onApply(job.id);
+          setShowCreditsDialog(false);
+        }}
+        jobTitle={job.title}
+      />
     </Dialog>
   );
 }
