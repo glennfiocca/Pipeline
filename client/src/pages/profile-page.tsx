@@ -1563,8 +1563,16 @@ export default function ProfilePage() {
               type="button"
               onClick={handleDirectSave}
               disabled={form.formState.isSubmitting}
+              className="min-w-[120px]" // Ensure button maintains size during loading state
             >
-              {form.formState.isSubmitting ? "Saving..." : "Save Profile"}
+              {form.formState.isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                "Save Profile"
+              )}
             </Button>
           </div>
         </form>
