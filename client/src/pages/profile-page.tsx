@@ -15,6 +15,9 @@ import { Loader2, Plus, X } from "lucide-react";
 import { useEffect, useMemo, useCallback, useState } from 'react';
 import { ApplicationCreditsCard } from "@/components/ApplicationCreditsCard";
 import { useAuth } from "@/hooks/use-auth";
+import { Badge } from "@/components/ui/badge";
+import { Calendar, Award, Globe, Code } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 
 // Update the fetchOrCreateProfile function with better error handling
 const fetchOrCreateProfile = async (userId: number) => {
@@ -88,6 +91,8 @@ export default function ProfilePage() {
   const { toast } = useToast();
   const { user } = useAuth();
   const [debugMsg, setDebugMsg] = useState("");
+  const [skillInput, setSkillInput] = useState("");
+  const [languageInput, setLanguageInput] = useState("");
 
   // Update the query to use fetchOrCreateProfile
   const { data: profile, isLoading } = useQuery<Profile>({
@@ -140,15 +145,78 @@ export default function ProfilePage() {
       name: "experience"
     });
 
+  // Add field arrays for new sections
+  const { fields: certificationFields, append: appendCertification, remove: removeCertification } =
+    useFieldArray({
+      control: form.control,
+      name: "certifications"
+    });
+
+  const { fields: projectFields, append: appendProject, remove: removeProject } =
+    useFieldArray({
+      control: form.control,
+      name: "projects"
+    });
+
+  const { fields: languageFields, append: appendLanguage, remove: removeLanguage } =
+    useFieldArray({
+      control: form.control,
+      name: "languages"
+    });
+
   // Make sure form is updated when profile data changes
   useEffect(() => {
     if (profile) {
       console.log("Resetting form with profile:", profile); // Debug log
-      form.reset(profile);
+      
+      // Ensure all array fields are properly initialized
+      const formattedProfile = {
+        ...profile,
+        education: profile.education || [],
+        experience: profile.experience || [],
+        skills: profile.skills || [],
+        certifications: profile.certifications || [],
+        languages: profile.languages || [],
+        publications: profile.publications || [],
+        projects: profile.projects || [],
+        // Ensure boolean fields are properly initialized
+        visaSponsorship: profile.visaSponsorship === true,
+        willingToRelocate: profile.willingToRelocate === true
+      };
+      
+      form.reset(formattedProfile);
     }
   }, [profile, form]);
 
-  // Update the onSubmit function to be more robust and add more debugging
+  // Handle adding skills
+  const handleAddSkill = useCallback(() => {
+    if (skillInput.trim()) {
+      const currentSkills = form.getValues("skills") || [];
+      if (!currentSkills.includes(skillInput.trim())) {
+        form.setValue("skills", [...currentSkills, skillInput.trim()]);
+      }
+      setSkillInput("");
+    }
+  }, [skillInput, form]);
+
+  // Handle removing skills
+  const handleRemoveSkill = useCallback((skill: string) => {
+    const currentSkills = form.getValues("skills") || [];
+    form.setValue("skills", currentSkills.filter(s => s !== skill));
+  }, [form]);
+
+  // Handle adding language
+  const handleAddLanguage = useCallback(() => {
+    if (languageInput.trim()) {
+      appendLanguage({
+        name: languageInput.trim(),
+        proficiency: "Intermediate"
+      });
+      setLanguageInput("");
+    }
+  }, [languageInput, appendLanguage]);
+
+  // Update the onSubmit function to handle validation errors gracefully
   const onSubmit = async (data: InsertProfile) => {
     try {
       setDebugMsg("Submitting form...");
@@ -160,6 +228,35 @@ export default function ProfilePage() {
       
       // Ensure userId is set
       data.userId = user.id;
+      
+      // Ensure all array fields are properly initialized
+      data.education = data.education || [];
+      data.experience = data.experience || [];
+      data.skills = data.skills || [];
+      data.certifications = data.certifications || [];
+      data.languages = data.languages || [];
+      data.publications = data.publications || [];
+      data.projects = data.projects || [];
+      
+      // Ensure boolean fields are properly set
+      data.visaSponsorship = data.visaSponsorship === true;
+      data.willingToRelocate = data.willingToRelocate === true;
+      
+      // Ensure all required string fields have at least empty string values
+      data.name = data.name || "";
+      data.email = data.email || "";
+      data.phone = data.phone || "";
+      data.title = data.title || "";
+      data.bio = data.bio || "";
+      data.location = data.location || "";
+      data.address = data.address || "";
+      data.city = data.city || "";
+      data.state = data.state || "";
+      data.zipCode = data.zipCode || "";
+      data.country = data.country || "";
+      data.workAuthorization = data.workAuthorization || "US Citizen";
+      data.availability = data.availability || "2 Weeks";
+      data.citizenshipStatus = data.citizenshipStatus || "US Citizen";
       
       // Log the request details
       console.log("Sending request to /api/profiles with data:", JSON.stringify(data));
@@ -189,6 +286,10 @@ export default function ProfilePage() {
       });
       
       setDebugMsg("Form submitted successfully");
+      
+      // Reset form state to mark it as pristine, but don't trigger revalidation
+      form.reset(data, { keepValues: true, keepDirty: false });
+      
     } catch (error: any) {
       console.error("Error saving profile:", error);
       toast({
@@ -200,11 +301,131 @@ export default function ProfilePage() {
     }
   };
 
-  // Add a direct save button handler for debugging
+  // Update the handleDirectSave function to bypass validation errors
   const handleDirectSave = () => {
     console.log("Direct save button clicked");
     console.log("Current form values:", form.getValues());
-    form.handleSubmit(onSubmit)();
+    console.log("Form state:", form.formState);
+    
+    // Get current form values
+    const formData = form.getValues();
+    
+    // Log validation errors
+    if (Object.keys(form.formState.errors).length > 0) {
+      console.warn("Form has validation errors:", form.formState.errors);
+    }
+    
+    // Bypass the form validation and submit directly
+    submitProfileData(formData);
+  };
+
+  // Add this function to handle direct submission without validation
+  const submitProfileData = async (data: any) => {
+    try {
+      setDebugMsg("Submitting form data directly...");
+      console.log("Form data being submitted directly:", data);
+      
+      if (!user?.id) {
+        throw new Error("No user ID");
+      }
+      
+      // Ensure userId is set
+      data.userId = user.id;
+      
+      // Ensure all array fields are properly initialized and formatted
+      data.education = Array.isArray(data.education) ? data.education.map(cleanObject) : [];
+      data.experience = Array.isArray(data.experience) ? data.experience.map(cleanObject) : [];
+      data.skills = Array.isArray(data.skills) ? data.skills.map(cleanObject) : [];
+      data.certifications = Array.isArray(data.certifications) ? data.certifications.map(cleanObject) : [];
+      data.languages = Array.isArray(data.languages) ? data.languages.map(cleanObject) : [];
+      data.publications = Array.isArray(data.publications) ? data.publications.map(cleanObject) : [];
+      data.projects = Array.isArray(data.projects) ? data.projects.map(cleanObject) : [];
+      
+      // Ensure boolean fields are properly set
+      data.visaSponsorship = data.visaSponsorship === true || data.visaSponsorship === "true";
+      data.willingToRelocate = data.willingToRelocate === true || data.willingToRelocate === "true";
+      
+      // Ensure all required string fields have at least empty string values
+      data.name = data.name || "";
+      data.email = data.email || "";
+      data.phone = data.phone || "";
+      data.title = data.title || "";
+      data.bio = data.bio || "";
+      data.location = data.location || "";
+      data.address = data.address || "";
+      data.city = data.city || "";
+      data.state = data.state || "";
+      data.zipCode = data.zipCode || "";
+      data.country = data.country || "";
+      data.workAuthorization = data.workAuthorization || "US Citizen";
+      data.availability = data.availability || "2 Weeks";
+      data.citizenshipStatus = data.citizenshipStatus || "US Citizen";
+      
+      // Log the request details
+      console.log("Sending request to /api/profiles with data:", JSON.stringify(data));
+      
+      const response = await apiRequest("POST", "/api/profiles", data);
+      console.log("Response status:", response.status);
+      
+      // Try to get response body regardless of status
+      let responseBody;
+      try {
+        responseBody = await response.json();
+        console.log("Response body:", responseBody);
+      } catch (e) {
+        console.log("Could not parse response as JSON");
+      }
+      
+      if (!response.ok) {
+        throw new Error(responseBody?.message || `Failed to save profile: ${response.status}`);
+      }
+      
+      // Invalidate the profile query to refresh data
+      queryClient.invalidateQueries(["profile", user.id]);
+      
+      toast({
+        title: "Profile Updated",
+        description: "Your profile has been successfully updated.",
+      });
+      
+      setDebugMsg("Form submitted successfully");
+      
+    } catch (error: any) {
+      console.error("Error saving profile:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to save profile",
+        variant: "destructive",
+      });
+      setDebugMsg(`Error: ${error.message}`);
+    }
+  };
+
+  // Helper function to clean objects by removing undefined values and ensuring proper types
+  const cleanObject = (obj: any) => {
+    const cleaned: any = {};
+    
+    // Copy all defined properties
+    Object.keys(obj).forEach(key => {
+      if (obj[key] !== undefined) {
+        // Handle specific field types
+        if (typeof obj[key] === 'string') {
+          cleaned[key] = obj[key] || "";
+        } else if (Array.isArray(obj[key])) {
+          cleaned[key] = obj[key].map(cleanObject);
+        } else {
+          cleaned[key] = obj[key];
+        }
+      } else {
+        // For undefined values, set defaults based on field type
+        if (key === 'name' || key === 'title' || key === 'description' || key === 'institution' || 
+            key === 'company' || key === 'location' || key === 'url' || key === 'issuer') {
+          cleaned[key] = "";
+        }
+      }
+    });
+    
+    return cleaned;
   };
 
   if (isLoading) {
@@ -222,6 +443,9 @@ export default function ProfilePage() {
               <TabsTrigger value="personal">Personal Info</TabsTrigger>
               <TabsTrigger value="education">Education</TabsTrigger>
               <TabsTrigger value="experience">Experience</TabsTrigger>
+              <TabsTrigger value="skills">Skills & Languages</TabsTrigger>
+              <TabsTrigger value="certifications">Certifications</TabsTrigger>
+              <TabsTrigger value="projects">Projects</TabsTrigger>
               <TabsTrigger value="documents">Documents</TabsTrigger>
               <TabsTrigger value="additional">Additional</TabsTrigger>
             </TabsList>
@@ -360,6 +584,35 @@ export default function ProfilePage() {
                         </FormItem>
                       )}
                     />
+
+                    <FormField
+                      control={form.control}
+                      name="country"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Country</FormLabel>
+                          <FormControl>
+                            <Input {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="location"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Preferred Location</FormLabel>
+                          <FormControl>
+                            <Input {...field} placeholder="e.g., Remote, New York, San Francisco" />
+                          </FormControl>
+                          <FormDescription>Where you prefer to work</FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
                   </div>
                 </CardContent>
               </Card>
@@ -369,58 +622,36 @@ export default function ProfilePage() {
               <Card>
                 <CardHeader>
                   <CardTitle>Education</CardTitle>
+                  <CardDescription>Add your educational background</CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <CardHeader className="flex flex-row items-center justify-between">
-                    <CardTitle>Education</CardTitle>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => appendEducation({
-                        school: "",
-                        degree: "",
-                        field: "",
-                        startDate: "",
-                        endDate: "",
-                        gpa: "",
-                        majorCourses: [],
-                        transcriptUrl: null,
-                        honors: [],
-                        activities: []
-                      })}
-                    >
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add Education
-                    </Button>
-                  </CardHeader>
+                <CardContent>
                   {educationFields.map((field, index) => (
-                    <div key={field.id} className="space-y-4 p-4 border rounded-lg relative">
+                    <div key={field.id} className="mb-8 p-4 border rounded-md relative">
                       <Button
                         type="button"
                         variant="ghost"
                         size="icon"
-                        className="absolute right-2 top-2"
+                        className="absolute top-2 right-2"
                         onClick={() => removeEducation(index)}
                       >
                         <X className="h-4 w-4" />
                       </Button>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                         <FormField
                           control={form.control}
-                          name={`education.${index}.school`}
+                          name={`education.${index}.institution`}
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>School</FormLabel>
+                              <FormLabel>Institution</FormLabel>
                               <FormControl>
-                                <Input {...field} />
+                                <Input {...field} placeholder="University or school name" />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
                           )}
                         />
-
+                        
                         <FormField
                           control={form.control}
                           name={`education.${index}.degree`}
@@ -428,13 +659,15 @@ export default function ProfilePage() {
                             <FormItem>
                               <FormLabel>Degree</FormLabel>
                               <FormControl>
-                                <Input {...field} />
+                                <Input {...field} placeholder="e.g., Bachelor of Science" />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
                           )}
                         />
-
+                      </div>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                         <FormField
                           control={form.control}
                           name={`education.${index}.field`}
@@ -442,13 +675,13 @@ export default function ProfilePage() {
                             <FormItem>
                               <FormLabel>Field of Study</FormLabel>
                               <FormControl>
-                                <Input {...field} />
+                                <Input {...field} placeholder="e.g., Computer Science" />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
                           )}
                         />
-
+                        
                         <FormField
                           control={form.control}
                           name={`education.${index}.gpa`}
@@ -456,28 +689,30 @@ export default function ProfilePage() {
                             <FormItem>
                               <FormLabel>GPA</FormLabel>
                               <FormControl>
-                                <Input {...field} />
+                                <Input {...field} placeholder="e.g., 3.8" />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
                           )}
                         />
-
-                        <div className="grid grid-cols-2 gap-4">
-                          <FormField
-                            control={form.control}
-                            name={`education.${index}.startDate`}
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Start Date</FormLabel>
-                                <FormControl>
-                                  <Input type="date" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-
+                      </div>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <FormField
+                          control={form.control}
+                          name={`education.${index}.startDate`}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Start Date</FormLabel>
+                              <FormControl>
+                                <Input {...field} type="month" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        
+                        <div>
                           <FormField
                             control={form.control}
                             name={`education.${index}.endDate`}
@@ -485,9 +720,32 @@ export default function ProfilePage() {
                               <FormItem>
                                 <FormLabel>End Date</FormLabel>
                                 <FormControl>
-                                  <Input type="date" {...field} />
+                                  <Input {...field} type="month" disabled={form.watch(`education.${index}.isPresent`)} />
                                 </FormControl>
                                 <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          
+                          <FormField
+                            control={form.control}
+                            name={`education.${index}.isPresent`}
+                            render={({ field }) => (
+                              <FormItem className="flex flex-row items-start space-x-3 space-y-0 mt-2">
+                                <FormControl>
+                                  <Checkbox
+                                    checked={field.value}
+                                    onCheckedChange={(checked) => {
+                                      field.onChange(checked);
+                                      if (checked) {
+                                        form.setValue(`education.${index}.endDate`, "");
+                                      }
+                                    }}
+                                  />
+                                </FormControl>
+                                <div className="space-y-1 leading-none">
+                                  <FormLabel>Currently studying here</FormLabel>
+                                </div>
                               </FormItem>
                             )}
                           />
@@ -495,6 +753,24 @@ export default function ProfilePage() {
                       </div>
                     </div>
                   ))}
+                  
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="mt-2"
+                    onClick={() => appendEducation({
+                      institution: "",
+                      degree: "",
+                      field: "",
+                      startDate: "",
+                      endDate: "",
+                      isPresent: false,
+                      gpa: ""
+                    })}
+                  >
+                    <Plus className="mr-2 h-4 w-4" /> Add Education
+                  </Button>
                 </CardContent>
               </Card>
             </TabsContent>
@@ -503,44 +779,22 @@ export default function ProfilePage() {
               <Card>
                 <CardHeader>
                   <CardTitle>Experience</CardTitle>
+                  <CardDescription>Add your work experience</CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <CardHeader className="flex flex-row items-center justify-between">
-                    <CardTitle>Work Experience</CardTitle>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => appendExperience({
-                        company: "",
-                        title: "",
-                        location: "",
-                        startDate: "",
-                        endDate: "",
-                        current: false,
-                        description: "",
-                        achievements: [],
-                        technologiesUsed: [],
-                        responsibilities: []
-                      })}
-                    >
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add Experience
-                    </Button>
-                  </CardHeader>
+                <CardContent>
                   {experienceFields.map((field, index) => (
-                    <div key={field.id} className="space-y-4 p-4 border rounded-lg relative">
+                    <div key={field.id} className="mb-8 p-4 border rounded-md relative">
                       <Button
                         type="button"
                         variant="ghost"
                         size="icon"
-                        className="absolute right-2 top-2"
+                        className="absolute top-2 right-2"
                         onClick={() => removeExperience(index)}
                       >
                         <X className="h-4 w-4" />
                       </Button>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                         <FormField
                           control={form.control}
                           name={`experience.${index}.company`}
@@ -548,13 +802,13 @@ export default function ProfilePage() {
                             <FormItem>
                               <FormLabel>Company</FormLabel>
                               <FormControl>
-                                <Input {...field} />
+                                <Input {...field} placeholder="Company name" />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
                           )}
                         />
-
+                        
                         <FormField
                           control={form.control}
                           name={`experience.${index}.title`}
@@ -562,13 +816,15 @@ export default function ProfilePage() {
                             <FormItem>
                               <FormLabel>Title</FormLabel>
                               <FormControl>
-                                <Input {...field} />
+                                <Input {...field} placeholder="Job title" />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
                           )}
                         />
-
+                      </div>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                         <FormField
                           control={form.control}
                           name={`experience.${index}.location`}
@@ -576,14 +832,14 @@ export default function ProfilePage() {
                             <FormItem>
                               <FormLabel>Location</FormLabel>
                               <FormControl>
-                                <Input {...field} />
+                                <Input {...field} placeholder="City, State or Remote" />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
                           )}
                         />
-
-                        <div className="grid grid-cols-2 gap-4">
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <FormField
                             control={form.control}
                             name={`experience.${index}.startDate`}
@@ -591,36 +847,324 @@ export default function ProfilePage() {
                               <FormItem>
                                 <FormLabel>Start Date</FormLabel>
                                 <FormControl>
-                                  <Input type="date" {...field} />
+                                  <Input {...field} type="month" />
                                 </FormControl>
                                 <FormMessage />
                               </FormItem>
                             )}
                           />
+                          
+                          <div>
+                            <FormField
+                              control={form.control}
+                              name={`experience.${index}.endDate`}
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>End Date</FormLabel>
+                                  <FormControl>
+                                    <Input {...field} type="month" disabled={form.watch(`experience.${index}.isPresent`)} />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                            
+                            <FormField
+                              control={form.control}
+                              name={`experience.${index}.isPresent`}
+                              render={({ field }) => (
+                                <FormItem className="flex flex-row items-start space-x-3 space-y-0 mt-2">
+                                  <FormControl>
+                                    <Checkbox
+                                      checked={field.value}
+                                      onCheckedChange={(checked) => {
+                                        field.onChange(checked);
+                                        if (checked) {
+                                          form.setValue(`experience.${index}.endDate`, "");
+                                        }
+                                      }}
+                                    />
+                                  </FormControl>
+                                  <div className="space-y-1 leading-none">
+                                    <FormLabel>Currently working here</FormLabel>
+                                  </div>
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <FormField
+                        control={form.control}
+                        name={`experience.${index}.description`}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Description</FormLabel>
+                            <FormControl>
+                              <Textarea {...field} placeholder="Describe your responsibilities and achievements" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  ))}
+                  
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="mt-2"
+                    onClick={() => appendExperience({
+                      company: "",
+                      title: "",
+                      location: "",
+                      startDate: "",
+                      endDate: "",
+                      isPresent: false,
+                      description: ""
+                    })}
+                  >
+                    <Plus className="mr-2 h-4 w-4" /> Add Experience
+                  </Button>
+                </CardContent>
+              </Card>
+            </TabsContent>
 
+            <TabsContent value="skills">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Skills & Languages</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div>
+                    <FormLabel>Skills</FormLabel>
+                    <div className="flex flex-wrap gap-2 mt-2 mb-4">
+                      {form.watch("skills")?.map((skill, index) => (
+                        <Badge key={index} variant="secondary" className="px-3 py-1 text-sm">
+                          {skill}
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-4 w-4 p-0 ml-2"
+                            onClick={() => handleRemoveSkill(skill)}
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
+                        </Badge>
+                      ))}
+                    </div>
+                    <div className="flex gap-2">
+                      <Input
+                        value={skillInput}
+                        onChange={(e) => setSkillInput(e.target.value)}
+                        placeholder="Add a skill (e.g., JavaScript, Project Management)"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleAddSkill();
+                          }
+                        }}
+                      />
+                      <Button type="button" onClick={handleAddSkill}>Add</Button>
+                    </div>
+                  </div>
+
+                  <div className="mt-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <FormLabel className="text-base">Languages</FormLabel>
+                      <div className="flex gap-2">
+                        <Input
+                          value={languageInput}
+                          onChange={(e) => setLanguageInput(e.target.value)}
+                          placeholder="Language name"
+                          className="w-48"
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              handleAddLanguage();
+                            }
+                          }}
+                        />
+                        <Button type="button" onClick={handleAddLanguage}>Add</Button>
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-4">
+                      {languageFields.map((field, index) => (
+                        <div key={field.id} className="flex items-center gap-4 p-3 border rounded-lg">
+                          <div className="flex-1">
+                            <FormField
+                              control={form.control}
+                              name={`languages.${index}.name`}
+                              render={({ field }) => (
+                                <div className="font-medium">{field.value}</div>
+                              )}
+                            />
+                          </div>
+                          
                           <FormField
                             control={form.control}
-                            name={`experience.${index}.endDate`}
+                            name={`languages.${index}.proficiency`}
                             render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>End Date</FormLabel>
-                                <FormControl>
-                                  <Input type="date" {...field} />
-                                </FormControl>
+                              <FormItem className="flex-1">
+                                <Select
+                                  onValueChange={field.onChange}
+                                  defaultValue={field.value}
+                                >
+                                  <FormControl>
+                                    <SelectTrigger>
+                                      <SelectValue placeholder="Select proficiency" />
+                                    </SelectTrigger>
+                                  </FormControl>
+                                  <SelectContent>
+                                    <SelectItem value="Basic">Basic</SelectItem>
+                                    <SelectItem value="Intermediate">Intermediate</SelectItem>
+                                    <SelectItem value="Advanced">Advanced</SelectItem>
+                                    <SelectItem value="Native">Native</SelectItem>
+                                  </SelectContent>
+                                </Select>
                                 <FormMessage />
                               </FormItem>
                             )}
                           />
+                          
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeLanguage(index)}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
                         </div>
+                      ))}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="certifications">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Certifications</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <CardHeader className="flex flex-row items-center justify-between">
+                    <CardTitle>Professional Certifications</CardTitle>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => appendCertification({
+                        name: "",
+                        issuer: "",
+                        issueDate: "",
+                        expiryDate: "",
+                        credentialId: "",
+                        credentialUrl: ""
+                      })}
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      <Award className="h-4 w-4 mr-2" />
+                      Add Certification
+                    </Button>
+                  </CardHeader>
+                  
+                  {certificationFields.map((field, index) => (
+                    <div key={field.id} className="space-y-4 p-4 border rounded-lg relative">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="absolute right-2 top-2"
+                        onClick={() => removeCertification(index)}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <FormField
+                          control={form.control}
+                          name={`certifications.${index}.name`}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Certification Name</FormLabel>
+                              <FormControl>
+                                <Input {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
 
                         <FormField
                           control={form.control}
-                          name={`experience.${index}.description`}
+                          name={`certifications.${index}.issuer`}
                           render={({ field }) => (
-                            <FormItem className="col-span-2">
-                              <FormLabel>Description</FormLabel>
+                            <FormItem>
+                              <FormLabel>Issuing Organization</FormLabel>
                               <FormControl>
-                                <Textarea {...field} />
+                                <Input {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name={`certifications.${index}.credentialId`}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Credential ID</FormLabel>
+                              <FormControl>
+                                <Input {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name={`certifications.${index}.credentialUrl`}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Credential URL</FormLabel>
+                              <FormControl>
+                                <Input {...field} type="url" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name={`certifications.${index}.issueDate`}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Issue Date</FormLabel>
+                              <FormControl>
+                                <Input type="date" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name={`certifications.${index}.expiryDate`}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Expiry Date (if applicable)</FormLabel>
+                              <FormControl>
+                                <Input type="date" {...field} />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -629,6 +1173,145 @@ export default function ProfilePage() {
                       </div>
                     </div>
                   ))}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="projects">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Projects</CardTitle>
+                  <CardDescription>Add your projects</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {projectFields.map((field, index) => (
+                    <div key={field.id} className="mb-8 p-4 border rounded-md relative">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="absolute top-2 right-2"
+                        onClick={() => removeProject(index)}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <FormField
+                          control={form.control}
+                          name={`projects.${index}.name`}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Project Name</FormLabel>
+                              <FormControl>
+                                <Input {...field} placeholder="Project name" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        
+                        <FormField
+                          control={form.control}
+                          name={`projects.${index}.url`}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Project URL</FormLabel>
+                              <FormControl>
+                                <Input {...field} placeholder="https://..." />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <FormField
+                          control={form.control}
+                          name={`projects.${index}.startDate`}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Start Date</FormLabel>
+                              <FormControl>
+                                <Input {...field} type="month" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        
+                        <FormField
+                          control={form.control}
+                          name={`projects.${index}.endDate`}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>End Date</FormLabel>
+                              <FormControl>
+                                <Input {...field} type="month" disabled={form.watch(`projects.${index}.isPresent`)} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        
+                        <FormField
+                          control={form.control}
+                          name={`projects.${index}.isPresent`}
+                          render={({ field }) => (
+                            <FormItem className="flex flex-row items-start space-x-3 space-y-0 mt-2">
+                              <FormControl>
+                                <Checkbox
+                                  checked={field.value}
+                                  onCheckedChange={(checked) => {
+                                    field.onChange(checked);
+                                    // Clear end date if "Present" is checked
+                                    if (checked) {
+                                      form.setValue(`projects.${index}.endDate`, "");
+                                    }
+                                  }}
+                                />
+                              </FormControl>
+                              <div className="space-y-1 leading-none">
+                                <FormLabel>Currently working on this project</FormLabel>
+                              </div>
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                      
+                      <FormField
+                        control={form.control}
+                        name={`projects.${index}.description`}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Description</FormLabel>
+                            <FormControl>
+                              <Textarea {...field} placeholder="Describe the project and your role" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  ))}
+                  
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="mt-2"
+                    onClick={() => appendProject({
+                      name: "",
+                      description: "",
+                      url: "",
+                      startDate: "",
+                      endDate: "",
+                      isPresent: false
+                    })}
+                  >
+                    <Plus className="mr-2 h-4 w-4" /> Add Project
+                  </Button>
                 </CardContent>
               </Card>
             </TabsContent>
@@ -746,6 +1429,8 @@ export default function ProfilePage() {
                               <SelectItem value="US Citizen">US Citizen</SelectItem>
                               <SelectItem value="Green Card">Green Card</SelectItem>
                               <SelectItem value="H1B">H1B</SelectItem>
+                              <SelectItem value="F1 OPT">F1 OPT</SelectItem>
+                              <SelectItem value="TN Visa">TN Visa</SelectItem>
                               <SelectItem value="Other">Other</SelectItem>
                             </SelectContent>
                           </Select>
@@ -770,6 +1455,7 @@ export default function ProfilePage() {
                               <SelectItem value="Immediate">Immediate</SelectItem>
                               <SelectItem value="2 Weeks">2 Weeks</SelectItem>
                               <SelectItem value="1 Month">1 Month</SelectItem>
+                              <SelectItem value="3 Months">3 Months</SelectItem>
                               <SelectItem value="Other">Other</SelectItem>
                             </SelectContent>
                           </Select>
@@ -792,9 +1478,74 @@ export default function ProfilePage() {
                               <SelectContent>
                                 <SelectItem value="US Citizen">US Citizen</SelectItem>
                                 <SelectItem value="Permanent Resident">Permanent Resident</SelectItem>
+                                <SelectItem value="Non-Resident">Non-Resident</SelectItem>
                                 <SelectItem value="Other">Other</SelectItem>
                               </SelectContent>
                             </Select>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="visaSponsorship"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Need Visa Sponsorship</FormLabel>
+                          <Select 
+                            onValueChange={(value) => field.onChange(value === "true")} 
+                            value={field.value ? "true" : "false"}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select option" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="true">Yes</SelectItem>
+                              <SelectItem value="false">No</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="willingToRelocate"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Willing to Relocate</FormLabel>
+                          <Select 
+                            onValueChange={(value) => field.onChange(value === "true")} 
+                            value={field.value ? "true" : "false"}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select option" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="true">Yes</SelectItem>
+                              <SelectItem value="false">No</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="salaryExpectation"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Salary Expectation</FormLabel>
+                          <FormControl>
+                            <Input {...field} placeholder="e.g., $80,000 - $100,000" />
                           </FormControl>
                           <FormMessage />
                         </FormItem>

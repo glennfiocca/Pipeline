@@ -222,21 +222,25 @@ export class DatabaseStorage implements IStorage {
 
   async createProfile(profile: InsertProfile): Promise<Profile> {
     try {
-      console.log("Creating profile with data:", profile);
+      console.log("Creating profile with data:", JSON.stringify(profile));
+
+      // Ensure all array fields are properly initialized
+      const dataToCreate: InsertProfile = {
+        ...profile,
+        education: Array.isArray(profile.education) ? profile.education : [],
+        experience: Array.isArray(profile.experience) ? profile.experience : [],
+        skills: Array.isArray(profile.skills) ? profile.skills : [],
+        certifications: Array.isArray(profile.certifications) ? profile.certifications : [],
+        languages: Array.isArray(profile.languages) ? profile.languages : [],
+        publications: Array.isArray(profile.publications) ? profile.publications : [],
+        projects: Array.isArray(profile.projects) ? profile.projects : [],
+        visaSponsorship: profile.visaSponsorship === true,
+        willingToRelocate: profile.willingToRelocate === true
+      };
 
       const [newProfile] = await db
         .insert(profiles)
-        .values({
-          ...profile,
-          // Ensure arrays are properly handled
-          education: profile.education || [],
-          experience: profile.experience || [],
-          skills: profile.skills || [],
-          certifications: profile.certifications || [],
-          languages: profile.languages || [],
-          publications: profile.publications || [],
-          projects: profile.projects || []
-        })
+        .values(dataToCreate)
         .returning();
 
       console.log("Created profile:", newProfile);
@@ -249,21 +253,41 @@ export class DatabaseStorage implements IStorage {
 
   async updateProfile(id: number, profile: Partial<InsertProfile>): Promise<Profile> {
     try {
-      console.log("Updating profile with data:", { id, profile });
+      console.log(`Updating profile with ID ${id} with data:`, JSON.stringify(profile));
+
+      // Create a sanitized copy of the profile data
+      const sanitizedProfile: any = { ...profile };
+
+      // Process skills array - ensure it's an array of strings
+      if (profile.skills) {
+        sanitizedProfile.skills = profile.skills.map(skill =>
+          typeof skill === 'string' ? skill :
+            typeof skill === 'object' ? Object.values(skill).join('') :
+              String(skill)
+        );
+      }
+
+      // Ensure boolean fields are properly typed
+      if ('visaSponsorship' in profile) {
+        sanitizedProfile.visaSponsorship = Boolean(profile.visaSponsorship);
+      }
+      if ('willingToRelocate' in profile) {
+        sanitizedProfile.willingToRelocate = Boolean(profile.willingToRelocate);
+      }
+
+      // Ensure all array fields are arrays
+      const arrayFields = ['education', 'experience', 'certifications', 'languages', 'publications', 'projects', 'referenceList'];
+      arrayFields.forEach(field => {
+        if (field in profile) {
+          sanitizedProfile[field] = Array.isArray(profile[field]) ? profile[field] : [];
+        }
+      });
+
+      console.log("Sanitized profile data:", JSON.stringify(sanitizedProfile));
 
       const [updatedProfile] = await db
         .update(profiles)
-        .set({
-          ...profile,
-          // Ensure arrays are properly handled
-          education: profile.education || undefined,
-          experience: profile.experience || undefined,
-          skills: profile.skills || undefined,
-          certifications: profile.certifications || undefined,
-          languages: profile.languages || undefined,
-          publications: profile.publications || undefined,
-          projects: profile.projects || undefined
-        })
+        .set(sanitizedProfile)
         .where(eq(profiles.id, id))
         .returning();
 

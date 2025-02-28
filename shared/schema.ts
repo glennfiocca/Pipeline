@@ -158,16 +158,13 @@ const educationSchema = z.object({
 });
 
 const experienceSchema = z.object({
-  company: z.string(),
-  title: z.string(),
-  location: z.string(),
-  startDate: z.string(),
+  company: z.string().optional(),
+  title: z.string().optional(),
+  location: z.string().optional(),
+  startDate: z.string().optional(),
   endDate: z.string().optional(),
-  current: z.boolean(),
-  description: z.string(),
-  achievements: z.array(z.string()),
-  technologiesUsed: z.array(z.string()),
-  responsibilities: z.array(z.string())
+  isPresent: z.boolean().optional().default(false),
+  description: z.string().optional()
 });
 
 const certificationSchema = z.object({
@@ -195,12 +192,13 @@ const publicationSchema = z.object({
 });
 
 const projectSchema = z.object({
-  name: z.string(),
-  description: z.string(),
+  name: z.string().optional(),
+  description: z.string().optional(),
   role: z.string(),
   url: z.string().optional(),
-  startDate: z.string(),
+  startDate: z.string().optional(),
   endDate: z.string().optional(),
+  isPresent: z.boolean().optional().default(false),
   technologiesUsed: z.array(z.string()),
   achievements: z.array(z.string())
 });
@@ -234,14 +232,14 @@ export const insertProfileSchema = createInsertSchema(profiles).omit({
   availability: z.string().optional(),
   citizenshipStatus: z.string().optional(),
 
-  // Arrays can be empty
-  education: z.array(educationSchema).optional().default([]),
-  experience: z.array(experienceSchema).optional().default([]),
-  skills: z.array(z.string()).optional().default([]),
-  certifications: z.array(certificationSchema).optional().default([]),
-  languages: z.array(languageSchema).optional().default([]),
-  publications: z.array(publicationSchema).optional().default([]),
-  projects: z.array(projectSchema).optional().default([]),
+  // Make array fields optional with simpler validation
+  education: z.array(z.any()).optional().default([]),
+  experience: z.array(z.any()).optional().default([]),
+  skills: z.array(z.union([z.string(), z.record(z.string())])).optional().default([]),
+  certifications: z.array(z.any()).optional().default([]),
+  languages: z.array(z.any()).optional().default([]),
+  publications: z.array(z.any()).optional().default([]),
+  projects: z.array(z.any()).optional().default([]),
 
   // Optional fields
   resumeUrl: z.string().optional().nullable(),
@@ -256,7 +254,7 @@ export const insertProfileSchema = createInsertSchema(profiles).omit({
   veteranStatus: z.string().optional().nullable(),
   militaryBranch: z.string().optional().nullable(),
   militaryServiceDates: z.string().optional().nullable(),
-  referenceList: z.array(referenceSchema).optional().default([]),
+  referenceList: z.array(z.any()).optional().default([]),
   securityClearance: z.string().optional().nullable(),
   clearanceType: z.string().optional().nullable(),
   clearanceExpiry: z.string().optional().nullable(),
