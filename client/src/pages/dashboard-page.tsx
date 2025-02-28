@@ -69,12 +69,12 @@ export default function DashboardPage() {
   };
 
   const stats = {
-    Applied: applications.filter((app) => app.status === "Applied" && !isArchivedJob(app)).length,
-    Interviewing: applications.filter((app) => app.status === "Interviewing" && !isArchivedJob(app)).length,
-    Accepted: applications.filter((app) => app.status === "Accepted" && !isArchivedJob(app)).length,
-    Rejected: applications.filter((app) => app.status === "Rejected" && !isArchivedJob(app)).length,
-    Inactive: applications.filter((app) => isArchivedJob(app)).length,
-    total: applications.length,
+    Applied: (applications || []).filter((app) => app.status === "Applied" && !isArchivedJob(app)).length,
+    Interviewing: (applications || []).filter((app) => app.status === "Interviewing" && !isArchivedJob(app)).length,
+    Accepted: (applications || []).filter((app) => app.status === "Accepted" && !isArchivedJob(app)).length,
+    Rejected: (applications || []).filter((app) => app.status === "Rejected" && !isArchivedJob(app)).length,
+    Inactive: (applications || []).filter((app) => isArchivedJob(app)).length,
+    total: applications?.length || 0,
   };
 
   const getStatusColor = (status: string) => {
