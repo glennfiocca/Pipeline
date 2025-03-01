@@ -194,23 +194,25 @@ export function FeedbackManagement() {
                         </div>
                         <div className="flex items-center gap-2">
                           <Button
-                            variant="outline"
+                            variant="ghost"
                             size="icon"
+                            className="h-8 w-8"
                             onClick={() => handleAddNote(feedback)}
                           >
                             <MessageSquarePlus className="h-4 w-4" />
                           </Button>
                           <Button
-                            variant="outline"
+                            variant="ghost"
                             size="icon"
+                            className="h-8 w-8"
                             onClick={() => handleToggleArchive(feedback)}
                           >
                             <Archive className="h-4 w-4" />
                           </Button>
                           <Button
-                            variant="outline"
+                            variant="ghost"
                             size="icon"
-                            className="text-red-500 hover:text-red-600"
+                            className="h-8 w-8 text-red-500 hover:text-red-600"
                             onClick={() => handleDelete(feedback)}
                           >
                             <Trash2 className="h-4 w-4" />
@@ -221,6 +223,7 @@ export function FeedbackManagement() {
                         <Badge variant="outline" className="mb-2">
                           {feedback.category}
                         </Badge>
+                        <h3 className="text-base font-semibold mb-1">{feedback.subject || "No Subject"}</h3>
                         <p className="text-sm text-muted-foreground mb-2">{feedback.comment}</p>
                         {feedback.internalNotes && (
                           <div className="mt-2 p-2 bg-muted rounded-md">
@@ -276,16 +279,17 @@ export function FeedbackManagement() {
                         </div>
                         <div className="flex items-center gap-2">
                           <Button
-                            variant="outline"
+                            variant="ghost"
                             size="icon"
+                            className="h-8 w-8"
                             onClick={() => handleToggleArchive(feedback)}
                           >
                             <ArchiveX className="h-4 w-4" />
                           </Button>
                           <Button
-                            variant="outline"
+                            variant="ghost"
                             size="icon"
-                            className="text-red-500 hover:text-red-600"
+                            className="h-8 w-8 text-red-500 hover:text-red-600"
                             onClick={() => handleDelete(feedback)}
                           >
                             <Trash2 className="h-4 w-4" />
@@ -296,6 +300,7 @@ export function FeedbackManagement() {
                         <Badge variant="outline" className="mb-2">
                           {feedback.category}
                         </Badge>
+                        <h3 className="text-base font-semibold mb-1">{feedback.subject}</h3>
                         <p className="text-sm text-muted-foreground mb-2">{feedback.comment}</p>
                         {feedback.internalNotes && (
                           <div className="mt-2 p-2 bg-background rounded-md">
@@ -377,6 +382,7 @@ export function FeedbackManagement() {
               <Badge variant="outline" className="mb-2">
                 {feedbackToDelete.category}
               </Badge>
+              <h4 className="text-sm font-medium mb-1">{feedbackToDelete.subject}</h4>
               <p className="text-sm text-muted-foreground">{feedbackToDelete.comment}</p>
             </div>
           )}

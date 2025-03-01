@@ -321,6 +321,7 @@ export const feedback = pgTable("feedback", {
   id: serial("id").primaryKey(),
   userId: integer("user_id"),
   rating: integer("rating").notNull(),
+  subject: text("subject").notNull(),
   comment: text("comment"),
   category: text("category").notNull(),
   status: text("status").notNull().default("pending"),
@@ -341,6 +342,7 @@ export const insertFeedbackSchema = createInsertSchema(feedback).omit({
   archived: true
 }).extend({
   rating: z.number().min(1).max(5),
+  subject: z.string().min(3, "Please provide a subject").max(100, "Subject is too long"),
   category: z.enum(["bug", "feature", "general", "ui", "other"]),
   status: z.enum(["pending", "in_progress", "resolved", "rejected", "received"])
 });

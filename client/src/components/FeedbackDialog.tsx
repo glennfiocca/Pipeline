@@ -31,9 +31,11 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Star, MessageSquarePlus } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { z } from "zod";
+import { Input } from "@/components/ui/input";
 
 const feedbackSchema = z.object({
   rating: z.number().min(1).max(5),
+  subject: z.string().min(3, "Please provide a subject").max(100, "Subject is too long"),
   category: z.enum(["bug", "feature", "general", "ui", "other"]),
   comment: z.string().min(10, "Please provide more detailed feedback"),
 });
@@ -77,6 +79,7 @@ export function FeedbackDialog({ feedbackId, readOnly = false, open, onClose }: 
     resolver: zodResolver(feedbackSchema),
     defaultValues: {
       rating: feedbackData?.rating || 0,
+      subject: feedbackData?.subject || "",
       category: feedbackData?.category || "general",
       comment: feedbackData?.comment || "",
     },
@@ -184,6 +187,23 @@ export function FeedbackDialog({ feedbackId, readOnly = false, open, onClose }: 
                         </div>
                       ))}
                     </div>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="subject"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Subject</FormLabel>
+                  <FormControl>
+                    <Input 
+                      placeholder="Brief description of your feedback"
+                      {...field}
+                      disabled={readOnly}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
