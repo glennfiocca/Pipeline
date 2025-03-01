@@ -283,7 +283,12 @@ export function ApplicationsManagement() {
               <SelectContent>
                 <SelectItem value="">All Statuses</SelectItem>
                 {APPLICATION_STATUSES.map((status) => (
-                  <SelectItem key={status} value={status}>{status}</SelectItem>
+                  <SelectItem 
+                    key={status} 
+                    value={status}
+                  >
+                    {status}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -429,13 +434,18 @@ export function ApplicationsManagement() {
                   const notesElement = document.getElementById('application-notes') as HTMLTextAreaElement;
                   const nextStepElement = document.getElementById('next-step') as HTMLInputElement;
                   
+                  // Get the date from the DatePicker component
+                  let nextStepDueDate = null;
+                  if (document.querySelector('.date-picker-value')) {
+                    const dateValue = document.querySelector('.date-picker-value')?.getAttribute('data-value');
+                    nextStepDueDate = dateValue || null;
+                  }
+                  
                   updateApplicationMutation.mutate({
                     applicationId: currentApplication.id,
                     notes: notesElement?.value,
                     nextStep: nextStepElement?.value,
-                    // You would need to get the date from your DatePicker component
-                    // This is a placeholder - implement based on how your DatePicker works
-                    nextStepDueDate: document.querySelector('.date-picker-value')?.getAttribute('data-value') || null
+                    nextStepDueDate
                   });
                 }}
                 disabled={updateApplicationMutation.isPending}
