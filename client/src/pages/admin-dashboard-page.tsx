@@ -11,7 +11,7 @@ import { queryClient } from "@/lib/queryClient";
 import { apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
 import { useLocation } from "wouter";
-import { Users, Mail, User as UserIcon, Edit, Trash2, Plus, CreditCard } from "lucide-react";
+import { Users, Mail, User as UserIcon, Edit, Trash2, Plus, CreditCard, FileDown } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -22,6 +22,8 @@ import { insertJobSchema, insertUserSchema } from "@shared/schema";
 import { ApplicationsManagement } from "@/components/ApplicationsManagement";
 import { FeedbackManagement } from "@/components/FeedbackManagement";
 import { ManageCreditsDialog } from "@/components/ManageCreditsDialog";
+import { jsPDF } from "jspdf";
+import "jspdf-autotable";
 type NewJobForm = z.infer<typeof insertJobSchema>;
 type NewUserForm = z.infer<typeof insertUserSchema>;
 type SelectedUserCredits = {
@@ -255,6 +257,180 @@ export default function AdminDashboardPage() {
       });
     },
   });
+  const handleExportProfile = async (userId: number) => {
+    try {
+      toast({
+        title: "Exporting profile...",
+        description: "Please wait while we generate the PDF.",
+      });
+      
+      // Fetch the user's profile
+      const response = await apiRequest("GET", `/api/profiles/${userId}`);
+      
+      if (!response.ok) {
+        throw new Error("Failed to fetch profile");
+      }
+      
+      const profile = await response.json();
+      
+      // Get the user details
+      const user = users.find(u => u.id === userId);
+      
+      if (!profile || !user) {
+        throw new Error("Profile or user not found");
+      }
+      
+      // Create a new PDF document
+      const doc = new jsPDF();
+      const timestamp = format(new Date(), "yyyy-MM-dd HH:mm:ss");
+      
+      // Add title and timestamp
+      doc.setFontSize(20);
+      doc.text("User Profile", 14, 22);
+      
+      doc.setFontSize(10);
+      doc.setTextColor(100, 100, 100);
+      doc.text(`Generated on: ${timestamp}`, 14, 30);
+      
+      // Add user info
+      doc.setFontSize(14);
+      doc.setTextColor(0, 0, 0);
+      doc.text(`${user.username} (${user.email})`, 14, 40);
+      
+      // Add profile sections
+      doc.setFontSize(12);
+      let yPos = 50;
+      
+      // Personal Information
+      doc.setFontSize(14);
+      doc.text("Personal Information", 14, yPos);
+      yPos += 8;
+      
+      doc.setFontSize(12);
+      if (profile.name) doc.text(`Name: ${profile.name}`, 14, yPos); yPos += 6;
+      if (profile.email) doc.text(`Email: ${profile.email}`, 14, yPos); yPos += 6;
+      if (profile.phone) doc.text(`Phone: ${profile.phone}`, 14, yPos); yPos += 6;
+      if (profile.title) doc.text(`Title: ${profile.title}`, 14, yPos); yPos += 6;
+      if (profile.location) doc.text(`Location: ${profile.location}`, 14, yPos); yPos += 6;
+      
+      // Address
+      yPos += 4;
+      doc.setFontSize(14);
+      doc.text("Address", 14, yPos);
+      yPos += 8;
+      
+      doc.setFontSize(12);
+      const address = [
+        profile.address,
+        profile.city,
+        profile.state,
+        profile.zipCode,
+        profile.country
+      ].filter(Boolean).join(", ");
+      
+      if (address) {
+        doc.text(`Address: ${address}`, 14, yPos);
+        yPos += 6;
+      }
+      
+      // Work Information
+      yPos += 4;
+      doc.setFontSize(14);
+      doc.text("Work Information", 14, yPos);
+      yPos += 8;
+      
+      doc.setFontSize(12);
+      if (profile.workAuthorization) doc.text(`Work Authorization: ${profile.workAuthorization}`, 14, yPos); yPos += 6;
+      if (profile.availability) doc.text(`Availability: ${profile.availability}`, 14, yPos); yPos += 6;
+      if (profile.citizenshipStatus) doc.text(`Citizenship Status: ${profile.citizenshipStatus}`, 14, yPos); yPos += 6;
+      
+      // Skills
+      if (profile.skills && profile.skills.length > 0) {
+        yPos += 4;
+        doc.setFontSize(14);
+        doc.text("Skills", 14, yPos);
+        yPos += 8;
+        
+        doc.setFontSize(12);
+        const skillsText = Array.isArray(profile.skills) 
+          ? profile.skills.join(", ") 
+          : typeof profile.skills === 'string' 
+            ? profile.skills 
+            : '';
+        
+        if (skillsText) {
+          const splitSkills = doc.splitTextToSize(skillsText, 180);
+          doc.text(splitSkills, 14, yPos);
+          yPos += splitSkills.length * 6 + 4;
+        }
+      }
+      
+      // Education
+      if (profile.education && profile.education.length > 0) {
+        yPos += 4;
+        doc.setFontSize(14);
+        doc.text("Education", 14, yPos);
+        yPos += 8;
+        
+        doc.setFontSize(12);
+        profile.education.forEach((edu: any) => {
+          if (edu.institution) doc.text(`Institution: ${edu.institution}`, 14, yPos); yPos += 6;
+          if (edu.degree) doc.text(`Degree: ${edu.degree}`, 14, yPos); yPos += 6;
+          if (edu.field) doc.text(`Field: ${edu.field}`, 14, yPos); yPos += 6;
+          if (edu.startDate) doc.text(`Start Date: ${edu.startDate}`, 14, yPos); yPos += 6;
+          if (edu.endDate) doc.text(`End Date: ${edu.endDate}`, 14, yPos); yPos += 6;
+          if (edu.isPresent) doc.text(`Current: Yes`, 14, yPos); yPos += 6;
+          yPos += 4;
+        });
+      }
+      
+      // Check if we need a new page for experience
+      if (yPos > 250 && profile.experience && profile.experience.length > 0) {
+        doc.addPage();
+        yPos = 20;
+      }
+      
+      // Experience
+      if (profile.experience && profile.experience.length > 0) {
+        yPos += 4;
+        doc.setFontSize(14);
+        doc.text("Experience", 14, yPos);
+        yPos += 8;
+        
+        doc.setFontSize(12);
+        profile.experience.forEach((exp: any) => {
+          if (exp.company) doc.text(`Company: ${exp.company}`, 14, yPos); yPos += 6;
+          if (exp.position) doc.text(`Position: ${exp.position}`, 14, yPos); yPos += 6;
+          if (exp.startDate) doc.text(`Start Date: ${exp.startDate}`, 14, yPos); yPos += 6;
+          if (exp.endDate) doc.text(`End Date: ${exp.endDate}`, 14, yPos); yPos += 6;
+          if (exp.isPresent) doc.text(`Current: Yes`, 14, yPos); yPos += 6;
+          if (exp.description) {
+            const splitDesc = doc.splitTextToSize(`Description: ${exp.description}`, 180);
+            doc.text(splitDesc, 14, yPos);
+            yPos += splitDesc.length * 6;
+          }
+          yPos += 4;
+        });
+      }
+      
+      // Save the PDF
+      const fileName = `${user.username}_profile_${format(new Date(), "yyyyMMdd_HHmmss")}.pdf`;
+      doc.save(fileName);
+      
+      toast({
+        title: "Profile exported successfully",
+        description: `Saved as ${fileName}`,
+        variant: "success",
+      });
+    } catch (error) {
+      console.error("Error exporting profile:", error);
+      toast({
+        title: "Failed to export profile",
+        description: error instanceof Error ? error.message : "Unknown error occurred",
+        variant: "destructive",
+      });
+    }
+  };
   if (isLoadingJobs || isLoadingUsers) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -463,6 +639,14 @@ export default function AdminDashboardPage() {
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() => handleExportProfile(user.id)}
+                          title="Export Profile as PDF"
+                        >
+                          <FileDown className="h-4 w-4" />
+                        </Button>
                         <Button
                           variant="outline"
                           size="icon"

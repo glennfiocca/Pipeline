@@ -983,6 +983,26 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Add this endpoint with other admin routes
+  app.get("/api/admin/profiles/:userId", isAdmin, async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      if (isNaN(userId)) {
+        return res.status(400).json({ error: "Invalid user ID" });
+      }
+
+      const profile = await storage.getProfileByUserId(userId);
+      if (!profile) {
+        return res.status(404).json({ error: "Profile not found" });
+      }
+
+      res.json(profile);
+    } catch (error) {
+      console.error('Error fetching profile:', error);
+      res.status(500).json({ error: "Failed to fetch profile" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

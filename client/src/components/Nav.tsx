@@ -46,7 +46,7 @@ const Nav = () => {
                 Profile
               </Link>
               {user.isAdmin && (
-                <Link href="/admin" className={navStyles.navLink}>
+                <Link href="/admin/dashboard" className={navStyles.navLink}>
                   Admin
                 </Link>
               )}
