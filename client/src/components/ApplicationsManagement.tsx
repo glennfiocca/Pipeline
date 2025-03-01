@@ -12,8 +12,10 @@ import { apiRequest } from "@/lib/queryClient";
 import { ChevronRight, Loader2, MessageSquare, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { AdminMessageDialog } from "./AdminMessageDialog";
+import { useLocation } from "wouter";
+import { UserApplications } from "./UserApplications";
 
 const APPLICATION_STATUSES = ["Applied", "Interviewing", "Accepted", "Rejected", "Withdrawn"];
 
@@ -23,11 +25,19 @@ interface ApplicationsByUser {
 
 export function ApplicationsManagement() {
   const { toast } = useToast();
-  const [selectedApplication, setSelectedApplication] = useState<{
-    id: number;
-    username: string;
-    companyName: string;
-  } | null>(null);
+  const [location, setLocation] = useLocation();
+  const [selectedUsername, setSelectedUsername] = useState<string | null>(null);
+
+  // Extract username from URL if present
+  useEffect(() => {
+    // Check if we're on the admin applications page with a username
+    const match = location.match(/\/admin\/applications\/(.+)/);
+    if (match && match[1]) {
+      setSelectedUsername(decodeURIComponent(match[1]));
+    } else {
+      setSelectedUsername(null);
+    }
+  }, [location]);
 
   const { data: applications = [], isLoading: isLoadingApps } = useQuery<Application[]>({
     queryKey: ["/api/admin/applications"],
@@ -116,6 +126,26 @@ export function ApplicationsManagement() {
     );
   }
 
+  // If we have a selected username, show that user's applications
+  if (selectedUsername) {
+    const userApps = applications.filter(app => {
+      const user = users.find(u => u.id === app.profileId);
+      return user?.username === selectedUsername;
+    }).map(app => {
+      const job = jobs.find(j => j.id === app.jobId);
+      return { ...app, job: job! };
+    });
+
+    return (
+      <UserApplications 
+        username={selectedUsername}
+        applications={userApps}
+        onBack={() => setLocation("/admin")}
+      />
+    );
+  }
+
+  // Group applications by username
   const applicationsByUser = applications.reduce((acc, app) => {
     const user = users.find(u => u.id === app.profileId);
     const job = jobs.find(j => j.id === app.jobId);
@@ -157,112 +187,23 @@ export function ApplicationsManagement() {
         <ScrollArea className="h-[600px] pr-4">
           <div className="space-y-4">
             {Object.entries(applicationsByUser).map(([username, userApps]) => (
-              <Collapsible key={username}>
-                <div className="flex items-center justify-between p-4 rounded-lg border">
-                  <CollapsibleTrigger className="flex items-center justify-between w-full">
-                    <div className="flex items-center">
-                      <ChevronRight className="h-4 w-4 mr-2 transition-transform ui-expanded:rotate-90" />
-                      <h3 className="font-medium">{username}</h3>
-                      <Badge variant="secondary" className="ml-2">
-                        {userApps.length} applications
-                      </Badge>
-                    </div>
-                  </CollapsibleTrigger>
+              <div 
+                key={username}
+                className="flex items-center justify-between p-4 rounded-lg border cursor-pointer hover:bg-accent/10 transition-colors"
+                onClick={() => setLocation(`/admin/applications/${encodeURIComponent(username)}`)}
+              >
+                <div className="flex items-center">
+                  <h3 className="font-medium">{username}</h3>
+                  <Badge variant="secondary" className="ml-2">
+                    {userApps.length} applications
+                  </Badge>
                 </div>
-
-                <CollapsibleContent>
-                  <div className="space-y-2 mt-2 ml-4">
-                    {userApps.map((app) => (
-                      <div
-                        key={app.id}
-                        className={cn(
-                          "p-4 rounded-lg border space-y-2",
-                          !app.job.isActive && "bg-muted/30"
-                        )}
-                      >
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <h4 className="font-medium flex items-center gap-2">
-                              {app.job.title}
-                              {!app.job.isActive && (
-                                <Badge variant="secondary" className="flex items-center gap-1">
-                                  <AlertCircle className="h-3 w-3" />
-                                  Archived Job
-                                </Badge>
-                              )}
-                            </h4>
-                            <p className="text-sm text-muted-foreground">
-                              {app.job.company}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              Applied on {format(new Date(app.appliedAt), "MMM d, yyyy")}
-                            </p>
-                          </div>
-                          <div className="flex items-center gap-4">
-                            <Badge className={getStatusColor(app.status)}>
-                              {app.status}
-                            </Badge>
-                            <Select
-                              defaultValue={app.status}
-                              onValueChange={(newStatus) => {
-                                updateStatusMutation.mutate({
-                                  applicationId: app.id,
-                                  status: newStatus,
-                                });
-                              }}
-                              disabled={updateStatusMutation.isPending}
-                            >
-                              <SelectTrigger className="w-[180px]">
-                                <SelectValue placeholder="Change status" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {APPLICATION_STATUSES.map((status) => (
-                                  <SelectItem key={status} value={status}>
-                                    {status}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            <Button
-                              variant="outline"
-                              size="icon"
-                              onClick={() => setSelectedApplication({
-                                id: app.id,
-                                username,
-                                companyName: app.job.company
-                              })}
-                              className="text-primary hover:text-primary-foreground"
-                            >
-                              <MessageSquare className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </div>
-
-                        {app.notes && (
-                          <div>
-                            <p className="text-sm font-medium">Notes:</p>
-                            <p className="text-sm text-muted-foreground">{app.notes}</p>
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </CollapsibleContent>
-              </Collapsible>
+                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+              </div>
             ))}
           </div>
         </ScrollArea>
       </CardContent>
-
-      {selectedApplication && (
-        <AdminMessageDialog
-          isOpen={!!selectedApplication}
-          onClose={() => setSelectedApplication(null)}
-          applicationId={selectedApplication.id}
-          username={selectedApplication.username}
-          companyName={selectedApplication.companyName}
-        />
-      )}
     </Card>
   );
 }

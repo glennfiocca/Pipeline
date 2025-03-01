@@ -3,13 +3,15 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { NotificationBell } from "@/components/NotificationBell";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/hooks/use-auth";
 
 const Nav = () => {
   const router = useRouter();
-  const user = null; // Replace with actual user data
+  const { user, logout } = useAuth();
 
   const handleLogout = () => {
-    // Implement logout functionality
+    logout?.();
+    router.push('/login');
   };
 
   const navStyles = {
