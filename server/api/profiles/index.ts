@@ -73,22 +73,49 @@ router.post("/api/profiles", upload.fields([
       return res.status(401).json({ message: "Unauthorized" });
     }
 
-    const profileData = req.body;
-    console.log("Received profile data:", JSON.stringify(profileData));
+    // Parse the profile data from FormData
+    let profileData;
+    try {
+      profileData = JSON.parse(req.body.profile);
+      console.log("Received profile data:", JSON.stringify(profileData));
+    } catch (error) {
+      console.error("Error parsing profile data:", error);
+      return res.status(400).json({ message: "Invalid profile data format" });
+    }
 
     // Handle file uploads
     const files = req.files as { [fieldname: string]: Express.Multer.File[] };
-    if (files.resume) {
+    if (files.resume?.[0]) {
       profileData.resumeUrl = `/uploads/${files.resume[0].filename}`;
     }
-    if (files.transcript) {
+    if (files.transcript?.[0]) {
       profileData.transcriptUrl = `/uploads/${files.transcript[0].filename}`;
     }
 
-    // Ensure userId is set
+    // Remove old files if new ones are uploaded
+    if (profileData.resumeUrl) {
+      const existingProfile = await storage.getProfileByUserId(userId);
+      if (existingProfile?.resumeUrl) {
+        const oldFilePath = path.join(uploadsDir, path.basename(existingProfile.resumeUrl));
+        if (fs.existsSync(oldFilePath)) {
+          fs.unlinkSync(oldFilePath);
+        }
+      }
+    }
+
+    if (profileData.transcriptUrl) {
+      const existingProfile = await storage.getProfileByUserId(userId);
+      if (existingProfile?.transcriptUrl) {
+        const oldFilePath = path.join(uploadsDir, path.basename(existingProfile.transcriptUrl));
+        if (fs.existsSync(oldFilePath)) {
+          fs.unlinkSync(oldFilePath);
+        }
+      }
+    }
+
     profileData.userId = userId;
 
-    // Ensure all array fields are properly initialized and sanitized
+    // Sanitize array fields
     const sanitizeArrayField = (field: any[]) => {
       return Array.isArray(field) ? field.map(item => {
         const sanitized: any = {};
@@ -122,7 +149,7 @@ router.post("/api/profiles", upload.fields([
     profileData.visaSponsorship = profileData.visaSponsorship === true || profileData.visaSponsorship === "true";
     profileData.willingToRelocate = profileData.willingToRelocate === true || profileData.willingToRelocate === "true";
 
-    // Ensure all required string fields have at least empty string values
+    // Ensure all required string fields have values
     const requiredStringFields = [
       'name', 'email', 'phone', 'title', 'bio', 'location',
       'address', 'city', 'state', 'zipCode', 'country',
@@ -135,7 +162,7 @@ router.post("/api/profiles", upload.fields([
 
     console.log("Processing sanitized profile data:", JSON.stringify(profileData));
 
-    // Check if profile exists
+    // Check if profile exists and update/create accordingly
     const existingProfile = await storage.getProfileByUserId(userId);
 
     let result;
@@ -164,10 +191,11 @@ router.post("/api/profiles", upload.fields([
   }
 });
 
-// Add a route to serve uploaded files
+// Add a route to serve uploaded files with proper Content-Type
 router.get('/uploads/:filename', (req, res) => {
   const filename = req.params.filename;
   const filePath = path.join(uploadsDir, filename);
+  res.setHeader('Content-Type', 'application/pdf');
   res.sendFile(filePath);
 });
 

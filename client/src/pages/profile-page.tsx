@@ -12,19 +12,25 @@ import { Profile, insertProfileSchema, type InsertProfile } from "@shared/schema
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2, Plus, X } from "lucide-react";
-import { useEffect, useMemo, useCallback, useState } from 'react';
+import { useEffect, useMemo, useCallback, useState, useRef } from 'react';
 import { ApplicationCreditsCard } from "@/components/ApplicationCreditsCard";
 import { useAuth } from "@/hooks/use-auth";
 import { Badge } from "@/components/ui/badge";
 import { Calendar, Award, Globe, Code } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 
+// Add file state management
+interface FileState {
+  resume?: File;
+  transcript?: File;
+}
+
 // Update the fetchOrCreateProfile function with better error handling
 const fetchOrCreateProfile = async (userId: number) => {
   try {
     console.log("Fetching profile for user:", userId);
     const response = await apiRequest("GET", `/api/profiles/${userId}`);
-    
+
     if (!response.ok) {
       // If profile doesn't exist, return a default profile instead of throwing
       console.log("Profile not found, creating default");
@@ -50,10 +56,12 @@ const fetchOrCreateProfile = async (userId: number) => {
         workAuthorization: "US Citizen",
         availability: "2 Weeks",
         citizenshipStatus: "",
-        userId: userId
+        userId: userId,
+        resumeUrl: "",
+        transcriptUrl: ""
       };
     }
-    
+
     const profile = await response.json();
     console.log("Fetched profile:", profile);
     return profile;
@@ -82,7 +90,9 @@ const fetchOrCreateProfile = async (userId: number) => {
       workAuthorization: "US Citizen",
       availability: "2 Weeks",
       citizenshipStatus: "",
-      userId: userId
+      userId: userId,
+      resumeUrl: "",
+      transcriptUrl: ""
     };
   }
 };
@@ -93,22 +103,10 @@ export default function ProfilePage() {
   const [debugMsg, setDebugMsg] = useState("");
   const [skillInput, setSkillInput] = useState("");
   const [languageInput, setLanguageInput] = useState("");
-
-  // Update the query to use fetchOrCreateProfile
-  const { data: profile, isLoading } = useQuery<Profile>({
-    queryKey: ["profile", user?.id],
-    queryFn: () => {
-      if (!user?.id) throw new Error("No user ID");
-      return fetchOrCreateProfile(user.id);
-    },
-    enabled: !!user?.id,
-    staleTime: 0, // Always fetch fresh data
-    cacheTime: 0, // Don't cache
-  });
-
+  const [fileState, setFileState] = useState<FileState>({});
   const form = useForm<InsertProfile>({
     resolver: zodResolver(insertProfileSchema),
-    defaultValues: profile || {
+    defaultValues: {
       name: "",
       email: "",
       phone: "",
@@ -129,9 +127,46 @@ export default function ProfilePage() {
       country: "",
       workAuthorization: "US Citizen",
       availability: "2 Weeks",
-      citizenshipStatus: "US Citizen"
+      citizenshipStatus: "US Citizen",
+      resumeUrl: "",
+      transcriptUrl: ""
     }
   });
+
+  const { data: profile, isLoading } = useQuery<Profile>({
+    queryKey: ["profile", user?.id],
+    queryFn: () => {
+      if (!user?.id) throw new Error("No user ID");
+      return fetchOrCreateProfile(user.id);
+    },
+    enabled: !!user?.id,
+    staleTime: 0, // Always fetch fresh data
+    cacheTime: 0, // Don't cache
+  });
+
+
+  useEffect(() => {
+    if (profile) {
+      console.log("Resetting form with profile:", profile); // Debug log
+
+      // Ensure all array fields are properly initialized
+      const formattedProfile = {
+        ...profile,
+        education: profile.education || [],
+        experience: profile.experience || [],
+        skills: profile.skills || [],
+        certifications: profile.certifications || [],
+        languages: profile.languages || [],
+        publications: profile.publications || [],
+        projects: profile.projects || [],
+        // Ensure boolean fields are properly initialized
+        visaSponsorship: profile.visaSponsorship === true,
+        willingToRelocate: profile.willingToRelocate === true
+      };
+
+      form.reset(formattedProfile);
+    }
+  }, [profile, form]);
 
   const { fields: educationFields, append: appendEducation, remove: removeEducation } =
     useFieldArray({
@@ -164,30 +199,6 @@ export default function ProfilePage() {
       name: "languages"
     });
 
-  // Make sure form is updated when profile data changes
-  useEffect(() => {
-    if (profile) {
-      console.log("Resetting form with profile:", profile); // Debug log
-      
-      // Ensure all array fields are properly initialized
-      const formattedProfile = {
-        ...profile,
-        education: profile.education || [],
-        experience: profile.experience || [],
-        skills: profile.skills || [],
-        certifications: profile.certifications || [],
-        languages: profile.languages || [],
-        publications: profile.publications || [],
-        projects: profile.projects || [],
-        // Ensure boolean fields are properly initialized
-        visaSponsorship: profile.visaSponsorship === true,
-        willingToRelocate: profile.willingToRelocate === true
-      };
-      
-      form.reset(formattedProfile);
-    }
-  }, [profile, form]);
-
   // Handle adding skills
   const handleAddSkill = useCallback(() => {
     if (skillInput.trim()) {
@@ -216,80 +227,71 @@ export default function ProfilePage() {
     }
   }, [languageInput, appendLanguage]);
 
-  // Update the onSubmit function to handle validation errors gracefully
+  // Update the onSubmit function to handle file uploads
   const onSubmit = async (data: InsertProfile) => {
     try {
       setDebugMsg("Submitting form...");
       console.log("Form data being submitted:", data);
-      
+
       if (!user?.id) {
         throw new Error("No user ID");
       }
-      
-      // Ensure userId is set
-      data.userId = user.id;
-      
-      // Ensure all array fields are properly initialized
-      data.education = data.education || [];
-      data.experience = data.experience || [];
-      data.skills = data.skills || [];
-      data.certifications = data.certifications || [];
-      data.languages = data.languages || [];
-      data.publications = data.publications || [];
-      data.projects = data.projects || [];
-      
-      // Ensure boolean fields are properly set
-      data.visaSponsorship = data.visaSponsorship === true;
-      data.willingToRelocate = data.willingToRelocate === true;
-      
-      // Ensure all required string fields have at least empty string values
-      data.name = data.name || "";
-      data.email = data.email || "";
-      data.phone = data.phone || "";
-      data.title = data.title || "";
-      data.bio = data.bio || "";
-      data.location = data.location || "";
-      data.address = data.address || "";
-      data.city = data.city || "";
-      data.state = data.state || "";
-      data.zipCode = data.zipCode || "";
-      data.country = data.country || "";
-      data.workAuthorization = data.workAuthorization || "US Citizen";
-      data.availability = data.availability || "2 Weeks";
-      data.citizenshipStatus = data.citizenshipStatus || "US Citizen";
-      
-      // Log the request details
-      console.log("Sending request to /api/profiles with data:", JSON.stringify(data));
-      
-      const response = await apiRequest("POST", "/api/profiles", data);
-      console.log("Response status:", response.status);
-      
-      // Try to get response body regardless of status
-      let responseBody;
-      try {
-        responseBody = await response.json();
-        console.log("Response body:", responseBody);
-      } catch (e) {
-        console.log("Could not parse response as JSON");
+
+      // Create FormData object
+      const formData = new FormData();
+
+      // Add all the profile data as JSON
+      const profileData = {
+        ...data,
+        userId: user.id,
+        education: data.education || [],
+        experience: data.experience || [],
+        skills: data.skills || [],
+        certifications: data.certifications || [],
+        languages: data.languages || [],
+        publications: data.publications || [],
+        projects: data.projects || [],
+        visaSponsorship: data.visaSponsorship === true,
+        willingToRelocate: data.willingToRelocate === true,
+      };
+
+      // Add the profile data as a JSON string
+      formData.append('profile', JSON.stringify(profileData));
+
+      // Add files if they exist
+      if (fileState.resume) {
+        formData.append('resume', fileState.resume);
       }
-      
+      if (fileState.transcript) {
+        formData.append('transcript', fileState.transcript);
+      }
+
+      // Send the request with FormData
+      const response = await fetch('/api/profiles', {
+        method: 'POST',
+        body: formData,
+        credentials: 'include'
+      });
+
+      const responseData = await response.json();
+
       if (!response.ok) {
-        throw new Error(responseBody?.message || `Failed to save profile: ${response.status}`);
+        throw new Error(responseData.message || `Failed to save profile: ${response.status}`);
       }
-      
+
       // Invalidate the profile query to refresh data
-      queryClient.invalidateQueries(["profile", user.id]);
-      
+      queryClient.invalidateQueries({ queryKey: ["profile", user.id] });
+
       toast({
         title: "Profile Updated",
         description: "Your profile has been successfully updated.",
       });
-      
+
       setDebugMsg("Form submitted successfully");
-      
-      // Reset form state to mark it as pristine, but don't trigger revalidation
-      form.reset(data, { keepValues: true, keepDirty: false });
-      
+
+      // Reset form state to mark it as pristine
+      form.reset(responseData, { keepValues: true, keepDirty: false });
+
     } catch (error: any) {
       console.error("Error saving profile:", error);
       toast({
@@ -301,110 +303,27 @@ export default function ProfilePage() {
     }
   };
 
-  // Update the handleDirectSave function to bypass validation errors
   const handleDirectSave = () => {
     console.log("Direct save button clicked");
     console.log("Current form values:", form.getValues());
     console.log("Form state:", form.formState);
-    
+
     // Get current form values
     const formData = form.getValues();
-    
+
     // Log validation errors
     if (Object.keys(form.formState.errors).length > 0) {
       console.warn("Form has validation errors:", form.formState.errors);
     }
-    
+
     // Bypass the form validation and submit directly
-    submitProfileData(formData);
+    onSubmit(formData);
   };
 
-  // Add this function to handle direct submission without validation
-  const submitProfileData = async (data: any) => {
-    try {
-      setDebugMsg("Submitting form data directly...");
-      console.log("Form data being submitted directly:", data);
-      
-      if (!user?.id) {
-        throw new Error("No user ID");
-      }
-      
-      // Ensure userId is set
-      data.userId = user.id;
-      
-      // Ensure all array fields are properly initialized and formatted
-      data.education = Array.isArray(data.education) ? data.education.map(cleanObject) : [];
-      data.experience = Array.isArray(data.experience) ? data.experience.map(cleanObject) : [];
-      data.skills = Array.isArray(data.skills) ? data.skills.map(cleanObject) : [];
-      data.certifications = Array.isArray(data.certifications) ? data.certifications.map(cleanObject) : [];
-      data.languages = Array.isArray(data.languages) ? data.languages.map(cleanObject) : [];
-      data.publications = Array.isArray(data.publications) ? data.publications.map(cleanObject) : [];
-      data.projects = Array.isArray(data.projects) ? data.projects.map(cleanObject) : [];
-      
-      // Ensure boolean fields are properly set
-      data.visaSponsorship = data.visaSponsorship === true || data.visaSponsorship === "true";
-      data.willingToRelocate = data.willingToRelocate === true || data.willingToRelocate === "true";
-      
-      // Ensure all required string fields have at least empty string values
-      data.name = data.name || "";
-      data.email = data.email || "";
-      data.phone = data.phone || "";
-      data.title = data.title || "";
-      data.bio = data.bio || "";
-      data.location = data.location || "";
-      data.address = data.address || "";
-      data.city = data.city || "";
-      data.state = data.state || "";
-      data.zipCode = data.zipCode || "";
-      data.country = data.country || "";
-      data.workAuthorization = data.workAuthorization || "US Citizen";
-      data.availability = data.availability || "2 Weeks";
-      data.citizenshipStatus = data.citizenshipStatus || "US Citizen";
-      
-      // Log the request details
-      console.log("Sending request to /api/profiles with data:", JSON.stringify(data));
-      
-      const response = await apiRequest("POST", "/api/profiles", data);
-      console.log("Response status:", response.status);
-      
-      // Try to get response body regardless of status
-      let responseBody;
-      try {
-        responseBody = await response.json();
-        console.log("Response body:", responseBody);
-      } catch (e) {
-        console.log("Could not parse response as JSON");
-      }
-      
-      if (!response.ok) {
-        throw new Error(responseBody?.message || `Failed to save profile: ${response.status}`);
-      }
-      
-      // Invalidate the profile query to refresh data
-      queryClient.invalidateQueries(["profile", user.id]);
-      
-      toast({
-        title: "Profile Updated",
-        description: "Your profile has been successfully updated.",
-      });
-      
-      setDebugMsg("Form submitted successfully");
-      
-    } catch (error: any) {
-      console.error("Error saving profile:", error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to save profile",
-        variant: "destructive",
-      });
-      setDebugMsg(`Error: ${error.message}`);
-    }
-  };
 
-  // Helper function to clean objects by removing undefined values and ensuring proper types
   const cleanObject = (obj: any) => {
     const cleaned: any = {};
-    
+
     // Copy all defined properties
     Object.keys(obj).forEach(key => {
       if (obj[key] !== undefined) {
@@ -418,13 +337,13 @@ export default function ProfilePage() {
         }
       } else {
         // For undefined values, set defaults based on field type
-        if (key === 'name' || key === 'title' || key === 'description' || key === 'institution' || 
+        if (key === 'name' || key === 'title' || key === 'description' || key === 'institution' ||
             key === 'company' || key === 'location' || key === 'url' || key === 'issuer') {
           cleaned[key] = "";
         }
       }
     });
-    
+
     return cleaned;
   };
 
@@ -435,7 +354,7 @@ export default function ProfilePage() {
   return (
     <div className="container mx-auto py-6">
       <h1 className="text-3xl font-bold mb-6">Profile</h1>
-      
+
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)}>
           <Tabs defaultValue="personal">
@@ -598,7 +517,7 @@ export default function ProfilePage() {
                         </FormItem>
                       )}
                     />
-                    
+
                     <FormField
                       control={form.control}
                       name="location"
@@ -636,7 +555,7 @@ export default function ProfilePage() {
                       >
                         <X className="h-4 w-4" />
                       </Button>
-                      
+
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                         <FormField
                           control={form.control}
@@ -651,7 +570,7 @@ export default function ProfilePage() {
                             </FormItem>
                           )}
                         />
-                        
+
                         <FormField
                           control={form.control}
                           name={`education.${index}.degree`}
@@ -666,7 +585,7 @@ export default function ProfilePage() {
                           )}
                         />
                       </div>
-                      
+
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                         <FormField
                           control={form.control}
@@ -681,7 +600,7 @@ export default function ProfilePage() {
                             </FormItem>
                           )}
                         />
-                        
+
                         <FormField
                           control={form.control}
                           name={`education.${index}.gpa`}
@@ -696,7 +615,7 @@ export default function ProfilePage() {
                           )}
                         />
                       </div>
-                      
+
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                         <FormField
                           control={form.control}
@@ -711,7 +630,7 @@ export default function ProfilePage() {
                             </FormItem>
                           )}
                         />
-                        
+
                         <div>
                           <FormField
                             control={form.control}
@@ -726,7 +645,7 @@ export default function ProfilePage() {
                               </FormItem>
                             )}
                           />
-                          
+
                           <FormField
                             control={form.control}
                             name={`education.${index}.isPresent`}
@@ -753,7 +672,7 @@ export default function ProfilePage() {
                       </div>
                     </div>
                   ))}
-                  
+
                   <Button
                     type="button"
                     variant="outline"
@@ -793,7 +712,7 @@ export default function ProfilePage() {
                       >
                         <X className="h-4 w-4" />
                       </Button>
-                      
+
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                         <FormField
                           control={form.control}
@@ -808,7 +727,7 @@ export default function ProfilePage() {
                             </FormItem>
                           )}
                         />
-                        
+
                         <FormField
                           control={form.control}
                           name={`experience.${index}.title`}
@@ -823,7 +742,7 @@ export default function ProfilePage() {
                           )}
                         />
                       </div>
-                      
+
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                         <FormField
                           control={form.control}
@@ -838,7 +757,7 @@ export default function ProfilePage() {
                             </FormItem>
                           )}
                         />
-                        
+
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <FormField
                             control={form.control}
@@ -853,7 +772,7 @@ export default function ProfilePage() {
                               </FormItem>
                             )}
                           />
-                          
+
                           <div>
                             <FormField
                               control={form.control}
@@ -868,7 +787,7 @@ export default function ProfilePage() {
                                 </FormItem>
                               )}
                             />
-                            
+
                             <FormField
                               control={form.control}
                               name={`experience.${index}.isPresent`}
@@ -894,7 +813,7 @@ export default function ProfilePage() {
                           </div>
                         </div>
                       </div>
-                      
+
                       <FormField
                         control={form.control}
                         name={`experience.${index}.description`}
@@ -910,7 +829,7 @@ export default function ProfilePage() {
                       />
                     </div>
                   ))}
-                  
+
                   <Button
                     type="button"
                     variant="outline"
@@ -991,7 +910,7 @@ export default function ProfilePage() {
                         <Button type="button" onClick={handleAddLanguage}>Add</Button>
                       </div>
                     </div>
-                    
+
                     <div className="space-y-4">
                       {languageFields.map((field, index) => (
                         <div key={field.id} className="flex items-center gap-4 p-3 border rounded-lg">
@@ -1004,7 +923,7 @@ export default function ProfilePage() {
                               )}
                             />
                           </div>
-                          
+
                           <FormField
                             control={form.control}
                             name={`languages.${index}.proficiency`}
@@ -1030,7 +949,7 @@ export default function ProfilePage() {
                               </FormItem>
                             )}
                           />
-                          
+
                           <Button
                             type="button"
                             variant="ghost"
@@ -1073,7 +992,7 @@ export default function ProfilePage() {
                       Add Certification
                     </Button>
                   </CardHeader>
-                  
+
                   {certificationFields.map((field, index) => (
                     <div key={field.id} className="space-y-4 p-4 border rounded-lg relative">
                       <Button
@@ -1184,8 +1103,8 @@ export default function ProfilePage() {
                   <CardDescription>Add your projects</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  {projectFields.map((field, index) => (
-                    <div key={field.id} className="mb-8 p-4 border rounded-md relative">
+                  {projectFields.map((field, index) =>(
+                    <div key={field.id} className="space-y-4 p-4 border rounded-lg relative">
                       <Button
                         type="button"
                         variant="ghost"
@@ -1195,14 +1114,14 @@ export default function ProfilePage() {
                       >
                         <X className="h-4 w-4" />
                       </Button>
-                      
+
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                         <FormField
                           control={form.control}
-                          name={`projects.${index}.name`}
+                          name={`projects.${index}.title`}
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Project Name</FormLabel>
+                              <FormLabel>Project Title</FormLabel>
                               <FormControl>
                                 <Input {...field} placeholder="Project name" />
                               </FormControl>
@@ -1210,7 +1129,7 @@ export default function ProfilePage() {
                             </FormItem>
                           )}
                         />
-                        
+
                         <FormField
                           control={form.control}
                           name={`projects.${index}.url`}
@@ -1218,68 +1137,14 @@ export default function ProfilePage() {
                             <FormItem>
                               <FormLabel>Project URL</FormLabel>
                               <FormControl>
-                                <Input {...field} placeholder="https://..." />
+                                <Input {...field} placeholder="https://" />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
                           )}
                         />
                       </div>
-                      
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                        <FormField
-                          control={form.control}
-                          name={`projects.${index}.startDate`}
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Start Date</FormLabel>
-                              <FormControl>
-                                <Input {...field} type="month" />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        
-                        <FormField
-                          control={form.control}
-                          name={`projects.${index}.endDate`}
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>End Date</FormLabel>
-                              <FormControl>
-                                <Input {...field} type="month" disabled={form.watch(`projects.${index}.isPresent`)} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        
-                        <FormField
-                          control={form.control}
-                          name={`projects.${index}.isPresent`}
-                          render={({ field }) => (
-                            <FormItem className="flex flex-row items-start space-x-3 space-y-0 mt-2">
-                              <FormControl>
-                                <Checkbox
-                                  checked={field.value}
-                                  onCheckedChange={(checked) => {
-                                    field.onChange(checked);
-                                    // Clear end date if "Present" is checked
-                                    if (checked) {
-                                      form.setValue(`projects.${index}.endDate`, "");
-                                    }
-                                  }}
-                                />
-                              </FormControl>
-                              <div className="space-y-1 leading-none">
-                                <FormLabel>Currently working on this project</FormLabel>
-                              </div>
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-                      
+
                       <FormField
                         control={form.control}
                         name={`projects.${index}.description`}
@@ -1287,7 +1152,7 @@ export default function ProfilePage() {
                           <FormItem>
                             <FormLabel>Description</FormLabel>
                             <FormControl>
-                              <Textarea {...field} placeholder="Describe the project and your role" />
+                              <Textarea {...field} placeholder="Describe your project" />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -1295,19 +1160,16 @@ export default function ProfilePage() {
                       />
                     </div>
                   ))}
-                  
+
                   <Button
                     type="button"
                     variant="outline"
                     size="sm"
                     className="mt-2"
                     onClick={() => appendProject({
-                      name: "",
-                      description: "",
+                      title: "",
                       url: "",
-                      startDate: "",
-                      endDate: "",
-                      isPresent: false
+                      description: ""
                     })}
                   >
                     <Plus className="mr-2 h-4 w-4" /> Add Project
@@ -1321,87 +1183,80 @@ export default function ProfilePage() {
                 <CardHeader>
                   <CardTitle>Documents</CardTitle>
                   <CardDescription>
-                    Upload your resume, transcript, and other documents
+                    Upload your resume and other documents
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="grid grid-cols-1 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="resumeUrl"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Resume</FormLabel>
-                          <FormControl>
-                            <div className="flex gap-4 items-center">
-                              <Input
-                                type="file"
-                                accept=".pdf,.doc,.docx"
-                                onChange={(e) => {
-                                  const file = e.target.files?.[0];
-                                  if (file) {
-                                    field.onChange(URL.createObjectURL(file));
-                                  }
-                                }}
-                              />
-                              {field.value && (
-                                <a
-                                  href={field.value}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="text-sm text-blue-500 hover:underline"
-                                >
-                                  View Current Resume
-                                </a>
-                              )}
-                            </div>
-                          </FormControl>
-                          <FormDescription>
-                            Upload your resume in PDF, DOC, or DOCX format (max 5MB)
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormItem>
+                      <FormLabel>Resume (PDF only)</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="file"
+                          accept=".pdf"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              setFileState(prev => ({ ...prev, resume: file }));
+                            }
+                          }}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Upload your current resume (max 5MB)
+                      </FormDescription>
+                    </FormItem>
 
-                    <FormField
-                      control={form.control}
-                      name="transcriptUrl"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Academic Transcript</FormLabel>
-                          <FormControl>
-                            <div className="flex gap-4 items-center">
-                              <Input
-                                type="file"
-                                accept=".pdf"
-                                onChange={(e) => {
-                                  const file = e.target.files?.[0];
-                                  if (file) {
-                                    field.onChange(URL.createObjectURL(file));
-                                  }
-                                }}
-                              />
-                              {field.value && (
-                                <a
-                                  href={field.value}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="text-sm text-blue-500 hover:underline"
-                                >
-                                  View Current Transcript
-                                </a>
-                              )}
-                            </div>
-                          </FormControl>
-                          <FormDescription>
-                            Upload your academic transcript in PDF format (max 5MB)
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                    <FormItem>
+                      <FormLabel>Transcript (PDF only)</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="file"
+                          accept=".pdf"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              setFileState(prev => ({ ...prev, transcript: file }));
+                            }
+                          }}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Upload your academic transcript (max 5MB)
+                      </FormDescription>
+                    </FormItem>
                   </div>
+
+                  {/* Display current documents if they exist */}
+                  {(profile?.resumeUrl || profile?.transcriptUrl) && (
+                    <div className="mt-4 space-y-2">
+                      <h4 className="text-sm font-medium">Current Documents:</h4>
+                      {profile.resumeUrl && (
+                        <div className="flex items-center gap-2">
+                          <a
+                            href={profile.resumeUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-sm text-blue-600 hover:underline"
+                          >
+                            View Resume
+                          </a>
+                        </div>
+                      )}
+                      {profile.transcriptUrl && (
+                        <div className="flex items-center gap-2">
+                          <a
+                            href={profile.transcriptUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-sm text-blue-600 hover:underline"
+                          >
+                            View Transcript
+                          </a>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>
@@ -1487,15 +1342,15 @@ export default function ProfilePage() {
                         </FormItem>
                       )}
                     />
-                    
+
                     <FormField
                       control={form.control}
                       name="visaSponsorship"
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Need Visa Sponsorship</FormLabel>
-                          <Select 
-                            onValueChange={(value) => field.onChange(value === "true")} 
+                          <Select
+                            onValueChange={(value) => field.onChange(value === "true")}
                             value={field.value ? "true" : "false"}
                           >
                             <FormControl>
@@ -1512,15 +1367,15 @@ export default function ProfilePage() {
                         </FormItem>
                       )}
                     />
-                    
+
                     <FormField
                       control={form.control}
                       name="willingToRelocate"
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Willing to Relocate</FormLabel>
-                          <Select 
-                            onValueChange={(value) => field.onChange(value === "true")} 
+                          <Select
+                            onValueChange={(value) => field.onChange(value === "true")}
                             value={field.value ? "true" : "false"}
                           >
                             <FormControl>
@@ -1537,7 +1392,7 @@ export default function ProfilePage() {
                         </FormItem>
                       )}
                     />
-                    
+
                     <FormField
                       control={form.control}
                       name="salaryExpectation"
@@ -1556,12 +1411,11 @@ export default function ProfilePage() {
               </Card>
             </TabsContent>
           </Tabs>
-          
+
           {/* Single submit button for the entire form */}
           <div className="flex justify-end mt-6">
             <Button
-              type="button"
-              onClick={handleDirectSave}
+              type="submit"
               disabled={form.formState.isSubmitting}
               className="min-w-[120px]" // Ensure button maintains size during loading state
             >
