@@ -1208,7 +1208,7 @@ export default function ProfilePage() {
                       {profile?.resumeUrl && !profile.resumeUrl.startsWith('blob:') && (
                         <div className="mt-2">
                           <a
-                            href={`/api${profile.resumeUrl}`}
+                            href={profile.resumeUrl}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="text-sm text-blue-600 hover:underline flex items-center gap-2"
@@ -1239,7 +1239,7 @@ export default function ProfilePage() {
                       {profile?.transcriptUrl && !profile.transcriptUrl.startsWith('blob:') && (
                         <div className="mt-2">
                           <a
-                            href={`/api${profile.transcriptUrl}`}
+                            href={profile.transcriptUrl}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="text-sm text-blue-600 hover:underline flex items-center gap-2"

@@ -1,0 +1,93 @@
+It sounds like your AI agents are storing temporary URLs or BLOB references instead of actually persisting the PDF files properly in your database. Here are a few common reasons why this happens and how to fix it:
+
+1. File Storage vs. Database Storage
+    •    Many frontend frameworks handle file uploads by storing files in temporary locations (such as local storage, AWS S3, or Firebase Storage) and then providing a URL or a Blob reference instead of the actual file content.
+    •    If your database is only storing the URL or Blob reference, the file itself may expire or become inaccessible when the temporary URL expires.
+
+2. The Frontend is Only Storing a Reference Instead of the Actual File
+    •    If your frontend is only passing the URL to the backend, instead of uploading the actual PDF, then the backend never actually saves the file to persistent storage.
+    •    Fix: Ensure your frontend sends the actual file contents (not just a URL) when making an API request.
+
+Example (Frontend Fix)
+
+If using JavaScript:
+
+const fileInput = document.querySelector("#pdf-upload");
+const formData = new FormData();
+formData.append("pdf", fileInput.files[0]);
+
+fetch("/upload", {
+  method: "POST",
+  body: formData
+});
+
+3. The Backend is Saving a Temporary URL Instead of the PDF
+    •    Your backend might be storing the temporary file location instead of actually reading and saving the file contents.
+    •    Fix: Ensure your backend extracts the actual file data from the request and stores it persistently.
+
+Example (Backend Fix - Python Flask)
+
+from flask import Flask, request
+import os
+
+app = Flask(__name__)
+UPLOAD_FOLDER = "uploads"
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+@app.route("/upload", methods=["POST"])
+def upload_file():
+    pdf_file = request.files["pdf"]
+    file_path = os.path.join(UPLOAD_FOLDER, pdf_file.filename)
+    pdf_file.save(file_path)  # Save PDF permanently
+    return {"message": "File uploaded successfully", "path": file_path}
+
+if __name__ == "__main__":
+    app.run()
+
+4. Database is Saving a Blob Reference Instead of the PDF Content
+    •    If you’re using BLOB storage, but only storing a reference to a blob, then the actual PDF may not be stored permanently.
+    •    Fix: Store the actual binary content of the PDF in the database.
+
+Example (Saving PDFs as BLOBs in MySQL)
+
+import mysql.connector
+
+def save_pdf_to_db(file_path):
+    with open(file_path, "rb") as f:
+        pdf_data = f.read()
+
+    conn = mysql.connector.connect(user="root", password="password", database="files_db")
+    cursor = conn.cursor()
+    
+    cursor.execute("INSERT INTO pdf_files (file_name, file_data) VALUES (%s, %s)", 
+                   (file_path, pdf_data))
+    
+    conn.commit()
+    conn.close()
+
+save_pdf_to_db("uploads/sample.pdf")
+
+5. Cloud Storage (S3, Firebase) Issues
+    •    If you’re using AWS S3, Firebase, or other cloud storage, but only saving the temporary URL, those URLs will expire.
+    •    Fix: Store the permanent file URL after ensuring the file is properly uploaded.
+
+Example (Uploading to AWS S3 and Storing Permanent URL)
+
+import boto3
+
+s3 = boto3.client("s3")
+bucket_name = "my-bucket"
+
+def upload_pdf(file_path):
+    file_key = f"pdfs/{os.path.basename(file_path)}"
+    s3.upload_file(file_path, bucket_name, file_key)
+    file_url = f"https://{bucket_name}.s3.amazonaws.com/{file_key}"
+    return file_url  # Store this in your database
+
+How to Fix Your Issue:
+    •    ✅ Ensure the frontend sends the actual file, not just the URL.
+    •    ✅ Make sure the backend saves the actual file, not just a temporary reference.
+    •    ✅ If using BLOBs, store the actual binary content, not just a URL reference.
+    •    ✅ If using cloud storage, store a permanent file URL after a successful upload.
+
+Let me know which setup you’re using (BLOBs, file system, or cloud storage), and I can refine the fix!

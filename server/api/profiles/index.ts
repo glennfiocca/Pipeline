@@ -6,13 +6,13 @@ import { storage } from '../../storage';
 
 const router = express.Router();
 
-// Ensure uploads directory exists
-const uploadsDir = path.join(process.cwd(), 'uploads');
+// Ensure uploads directory exists in a persistent location
+const uploadsDir = path.join(process.cwd(), 'public', 'uploads');
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
 
-// Configure multer for file uploads
+// Configure multer for file uploads with proper storage configuration
 const multerStorage = multer.diskStorage({
   destination: function (req, file, cb) {
     cb(null, uploadsDir);
@@ -95,7 +95,7 @@ router.post("/api/profiles", upload.fields([
           fs.unlinkSync(oldPath);
         }
       }
-      profileData.resumeUrl = `/uploads/${(req.files as any).resume[0].filename}`;
+      profileData.resumeUrl = `/public/uploads/${(req.files as any).resume[0].filename}`;
     } else {
       // Keep existing resume URL if no new file uploaded and it's not a blob URL
       if (existingProfile?.resumeUrl && !existingProfile.resumeUrl.startsWith('blob:')) {
@@ -114,7 +114,7 @@ router.post("/api/profiles", upload.fields([
           fs.unlinkSync(oldPath);
         }
       }
-      profileData.transcriptUrl = `/uploads/${(req.files as any).transcript[0].filename}`;
+      profileData.transcriptUrl = `/public/uploads/${(req.files as any).transcript[0].filename}`;
     } else {
       // Keep existing transcript URL if no new file uploaded and it's not a blob URL
       if (existingProfile?.transcriptUrl && !existingProfile.transcriptUrl.startsWith('blob:')) {
@@ -198,21 +198,6 @@ router.post("/api/profiles", upload.fields([
     console.error("Error saving profile:", error);
     return res.status(500).json({ message: "Failed to save profile", error: error.message });
   }
-});
-
-// Add a route to serve uploaded files with proper Content-Type
-router.get('/uploads/:filename', (req, res) => {
-  const filename = req.params.filename;
-  const filePath = path.join(uploadsDir, filename);
-
-  if (!fs.existsSync(filePath)) {
-    return res.status(404).json({ message: "File not found" });
-  }
-
-  // Set proper headers for PDF files
-  res.setHeader('Content-Type', 'application/pdf');
-  res.setHeader('Content-Disposition', 'inline; filename=' + filename);
-  res.sendFile(filePath);
 });
 
 export default router;
