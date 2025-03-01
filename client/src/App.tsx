@@ -27,7 +27,7 @@ function Router() {
       <Route path="/dashboard" component={DashboardPage} />
       <Route path="/admin-dashboard" component={AdminDashboardPage} />
       <Route path="/admin/user-applications/:username" component={UserApplicationsPage} />
-      <Route component={NotFound} />
+      <Route path="/:rest*" component={NotFound} />
     </Switch>
   );
 }
