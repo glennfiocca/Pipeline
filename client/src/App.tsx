@@ -14,7 +14,6 @@ import NotFound from "@/pages/not-found";
 import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from "@/hooks/use-auth";
 import { NotificationsProvider } from "@/hooks/use-notifications";
-import UserApplicationsPage from "@/pages/admin/user-applications/[username]";
 
 function Router() {
   return (
@@ -25,9 +24,8 @@ function Router() {
       <Route path="/jobs" component={JobsPage} />
       <Route path="/profile" component={ProfilePage} />
       <Route path="/dashboard" component={DashboardPage} />
-      <Route path="/admin-dashboard" component={AdminDashboardPage} />
-      <Route path="/admin/user-applications/:username" component={UserApplicationsPage} />
-      <Route path="/:rest*" component={NotFound} />
+      <Route path="/admin/dashboard" component={AdminDashboardPage} />
+      <Route component={NotFound} />
     </Switch>
   );
 }

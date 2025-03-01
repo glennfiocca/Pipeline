@@ -9,12 +9,16 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
 import { apiRequest } from "@/lib/queryClient";
-import { ChevronRight, Loader2, MessageSquare, AlertCircle } from "lucide-react";
+import { ChevronRight, Loader2, MessageSquare, AlertCircle, Search, CalendarIcon, Filter } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { AdminMessageDialog } from "./AdminMessageDialog";
-import { useLocation } from "wouter";
+import { Input } from "@/components/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { DatePicker } from "@/components/ui/date-picker";
 
 const APPLICATION_STATUSES = ["Applied", "Interviewing", "Accepted", "Rejected", "Withdrawn"];
 
@@ -24,12 +28,15 @@ interface ApplicationsByUser {
 
 export function ApplicationsManagement() {
   const { toast } = useToast();
-  const [, setLocation] = useLocation();
   const [selectedApplication, setSelectedApplication] = useState<{
     id: number;
     username: string;
     companyName: string;
   } | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string | null>(null);
+  const [showDetailsDialog, setShowDetailsDialog] = useState(false);
+  const [currentApplication, setCurrentApplication] = useState<(Application & { job: Job, user: User }) | null>(null);
 
   const { data: applications = [], isLoading: isLoadingApps } = useQuery<Application[]>({
     queryKey: ["/api/admin/applications"],
@@ -43,51 +50,64 @@ export function ApplicationsManagement() {
     queryKey: ["/api/jobs"],
   });
 
-  const updateStatusMutation = useMutation({
-    mutationFn: async ({ applicationId, status }: { applicationId: number; status: string }) => {
+  const updateApplicationMutation = useMutation({
+    mutationFn: async ({ 
+      applicationId, 
+      status, 
+      notes, 
+      nextStep, 
+      nextStepDueDate 
+    }: { 
+      applicationId: number; 
+      status?: string;
+      notes?: string;
+      nextStep?: string;
+      nextStepDueDate?: string | null;
+    }) => {
       const now = new Date().toISOString();
-
-      // Update the application status
+      
+      // Update the application
       const response = await apiRequest(
         "PATCH",
-        `/api/applications/${applicationId}/status`,
+        `/api/admin/applications/${applicationId}`,
         { 
           status,
-          statusHistory: [{
-            status,
-            date: now
-          }]
+          notes,
+          nextStep,
+          nextStepDueDate
         }
       );
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.message || "Failed to update application status");
+        throw new Error(error.message || "Failed to update application");
       }
 
       const application = await response.json();
 
-      // Create a notification for the status change
-      const notifRes = await apiRequest(
-        "POST",
-        "/api/notifications",
-        {
-          userId: application.profileId,
-          type: "status_change",
-          title: "Application Status Updated",
-          message: `Your application status has been updated to ${status}.`,
-          metadata: {
-            applicationId,
-            status,
-            jobId: application.jobId
-          },
-          read: false,
-          createdAt: now
-        }
-      );
+      // Create a notification for the status change if status was updated
+      if (status) {
+        const notifRes = await apiRequest(
+          "POST",
+          "/api/notifications",
+          {
+            userId: application.profileId,
+            type: "status_change",
+            title: "Application Status Updated",
+            message: `Your application status has been updated to ${status}.`,
+            metadata: {
+              applicationId,
+              status,
+              jobId: application.jobId
+            },
+            read: false,
+            createdAt: now
+          }
+        );
 
-      if (!notifRes.ok) {
-        console.error("Failed to create notification");
+        if (!notifRes.ok) {
+          console.error("Failed to create notification");
+        }
       }
 
       return application;
@@ -98,8 +118,9 @@ export function ApplicationsManagement() {
       queryClient.invalidateQueries({ queryKey: ["/api/notifications/unread-count"] });
       toast({
         title: "Success",
-        description: "Application status updated successfully",
+        description: "Application updated successfully",
       });
+      setShowDetailsDialog(false);
     },
     onError: (error: Error) => {
       toast({
@@ -118,20 +139,41 @@ export function ApplicationsManagement() {
     );
   }
 
-  const applicationsByUser = applications.reduce((acc, app) => {
+  // Combine application data with user and job data
+  const enrichedApplications = applications.map(app => {
     const user = users.find(u => u.id === app.profileId);
     const job = jobs.find(j => j.id === app.jobId);
+    
+    if (!user || !job) return null;
+    
+    return {
+      ...app,
+      user,
+      job
+    };
+  }).filter(Boolean) as (Application & { job: Job, user: User })[];
 
-    if (!user || !job) return acc;
+  // Filter applications based on search term and status
+  const filteredApplications = enrichedApplications.filter(app => {
+    const matchesSearch = searchTerm === "" || 
+      app.user.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      app.job.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      app.job.company.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesStatus = statusFilter === null || app.status === statusFilter;
+    
+    return matchesSearch && matchesStatus;
+  });
 
-    const username = user.username;
-    if (!acc[username]) {
-      acc[username] = [];
-    }
-
-    acc[username].push({ ...app, job });
-    return acc;
-  }, {} as ApplicationsByUser);
+  // Group applications by status for the tabbed view
+  const applicationsByStatus = {
+    "Applied": filteredApplications.filter(app => app.status === "Applied"),
+    "Interviewing": filteredApplications.filter(app => app.status === "Interviewing"),
+    "Accepted": filteredApplications.filter(app => app.status === "Accepted"),
+    "Rejected": filteredApplications.filter(app => app.status === "Rejected"),
+    "Withdrawn": filteredApplications.filter(app => app.status === "Withdrawn"),
+    "All": filteredApplications
+  };
 
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
@@ -150,10 +192,71 @@ export function ApplicationsManagement() {
     }
   };
 
-  // Navigate to user applications page using wouter
-  const navigateToUserApplications = (username: string) => {
-    setLocation(`/admin/user-applications/${username}`);
+  const handleViewDetails = (app: Application & { job: Job, user: User }) => {
+    setCurrentApplication(app);
+    setShowDetailsDialog(true);
   };
+
+  const renderApplicationCard = (app: Application & { job: Job, user: User }) => (
+    <div
+      key={app.id}
+      className={cn(
+        "p-4 rounded-lg border space-y-2 hover:bg-accent/10 transition-colors",
+        !app.job.isActive && "bg-muted/30"
+      )}
+    >
+      <div className="flex items-center justify-between">
+        <div>
+          <h4 className="font-medium flex items-center gap-2">
+            {app.job.title}
+            {!app.job.isActive && (
+              <Badge variant="secondary" className="flex items-center gap-1">
+                <AlertCircle className="h-3 w-3" />
+                Archived Job
+              </Badge>
+            )}
+          </h4>
+          <p className="text-sm text-muted-foreground">
+            {app.job.company}
+          </p>
+          <p className="text-xs text-muted-foreground flex items-center gap-1">
+            <CalendarIcon className="h-3 w-3" />
+            Applied on {format(new Date(app.appliedAt), "MMM d, yyyy")}
+          </p>
+          <p className="text-xs font-medium mt-1">
+            Applicant: {app.user.username}
+          </p>
+        </div>
+        <div className="flex flex-col items-end gap-2">
+          <Badge className={getStatusColor(app.status)}>
+            {app.status}
+          </Badge>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleViewDetails(app)}
+              className="text-primary"
+            >
+              View Details
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => setSelectedApplication({
+                id: app.id,
+                username: app.user.username,
+                companyName: app.job.company
+              })}
+              className="text-primary hover:text-primary-foreground"
+            >
+              <MessageSquare className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 
   return (
     <Card>
@@ -161,117 +264,58 @@ export function ApplicationsManagement() {
         <CardTitle>Applications Management</CardTitle>
       </CardHeader>
       <CardContent>
-        <ScrollArea className="h-[600px] pr-4">
-          <div className="space-y-4">
-            {Object.entries(applicationsByUser).map(([username, userApps]) => (
-              <Collapsible key={username}>
-                <div className="flex items-center justify-between p-4 rounded-lg border">
-                  <div className="flex items-center w-full">
-                    <CollapsibleTrigger className="flex items-center justify-between w-full">
-                      <div className="flex items-center">
-                        <ChevronRight className="h-4 w-4 mr-2 transition-transform ui-expanded:rotate-90" />
-                        <h3 className="font-medium">{username}</h3>
-                        <Badge variant="secondary" className="ml-2">
-                          {userApps.length} applications
-                        </Badge>
-                      </div>
-                    </CollapsibleTrigger>
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      className="ml-auto"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        navigateToUserApplications(username);
-                      }}
-                    >
-                      View Details
-                    </Button>
-                  </div>
-                </div>
-
-                <CollapsibleContent>
-                  <div className="space-y-2 mt-2 ml-4">
-                    {userApps.map((app) => (
-                      <div
-                        key={app.id}
-                        className={cn(
-                          "p-4 rounded-lg border space-y-2",
-                          !app.job.isActive && "bg-muted/30"
-                        )}
-                      >
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <h4 className="font-medium flex items-center gap-2">
-                              {app.job.title}
-                              {!app.job.isActive && (
-                                <Badge variant="secondary" className="flex items-center gap-1">
-                                  <AlertCircle className="h-3 w-3" />
-                                  Archived Job
-                                </Badge>
-                              )}
-                            </h4>
-                            <p className="text-sm text-muted-foreground">
-                              {app.job.company}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              Applied on {format(new Date(app.appliedAt), "MMM d, yyyy")}
-                            </p>
-                          </div>
-                          <div className="flex items-center gap-4">
-                            <Badge className={getStatusColor(app.status)}>
-                              {app.status}
-                            </Badge>
-                            <Select
-                              defaultValue={app.status}
-                              onValueChange={(newStatus) => {
-                                updateStatusMutation.mutate({
-                                  applicationId: app.id,
-                                  status: newStatus,
-                                });
-                              }}
-                              disabled={updateStatusMutation.isPending}
-                            >
-                              <SelectTrigger className="w-[180px]">
-                                <SelectValue placeholder="Change status" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {APPLICATION_STATUSES.map((status) => (
-                                  <SelectItem key={status} value={status}>
-                                    {status}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            <Button
-                              variant="outline"
-                              size="icon"
-                              onClick={() => setSelectedApplication({
-                                id: app.id,
-                                username,
-                                companyName: app.job.company
-                              })}
-                              className="text-primary hover:text-primary-foreground"
-                            >
-                              <MessageSquare className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </div>
-
-                        {app.notes && (
-                          <div>
-                            <p className="text-sm font-medium">Notes:</p>
-                            <p className="text-sm text-muted-foreground">{app.notes}</p>
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </CollapsibleContent>
-              </Collapsible>
-            ))}
+        <div className="flex flex-col md:flex-row gap-4 mb-4">
+          <div className="relative flex-1">
+            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search by applicant, job title, or company..."
+              className="pl-8"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
           </div>
-        </ScrollArea>
+          <div className="flex items-center gap-2">
+            <Filter className="h-4 w-4 text-muted-foreground" />
+            <Select value={statusFilter || ""} onValueChange={(value) => setStatusFilter(value || null)}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Filter by status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">All Statuses</SelectItem>
+                {APPLICATION_STATUSES.map((status) => (
+                  <SelectItem key={status} value={status}>{status}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        <Tabs defaultValue="All" className="w-full">
+          <TabsList className="mb-4 w-full justify-start">
+            <TabsTrigger value="All">All ({filteredApplications.length})</TabsTrigger>
+            <TabsTrigger value="Applied">Applied ({applicationsByStatus.Applied.length})</TabsTrigger>
+            <TabsTrigger value="Interviewing">Interviewing ({applicationsByStatus.Interviewing.length})</TabsTrigger>
+            <TabsTrigger value="Accepted">Accepted ({applicationsByStatus.Accepted.length})</TabsTrigger>
+            <TabsTrigger value="Rejected">Rejected ({applicationsByStatus.Rejected.length})</TabsTrigger>
+            <TabsTrigger value="Withdrawn">Withdrawn ({applicationsByStatus.Withdrawn.length})</TabsTrigger>
+          </TabsList>
+          
+          {Object.entries(applicationsByStatus).map(([status, apps]) => (
+            <TabsContent key={status} value={status} className="mt-0">
+              <ScrollArea className="h-[600px] pr-4">
+                <div className="space-y-3">
+                  {apps.length > 0 ? (
+                    apps.map(app => renderApplicationCard(app))
+                  ) : (
+                    <div className="text-center py-8 text-muted-foreground">
+                      No applications found
+                    </div>
+                  )}
+                </div>
+              </ScrollArea>
+            </TabsContent>
+          ))}
+        </Tabs>
       </CardContent>
 
       {selectedApplication && (
@@ -282,6 +326,130 @@ export function ApplicationsManagement() {
           username={selectedApplication.username}
           companyName={selectedApplication.companyName}
         />
+      )}
+
+      {currentApplication && (
+        <Dialog open={showDetailsDialog} onOpenChange={setShowDetailsDialog}>
+          <DialogContent className="max-w-3xl">
+            <DialogHeader>
+              <DialogTitle>Application Details</DialogTitle>
+            </DialogHeader>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-4">
+                <div>
+                  <h3 className="text-lg font-medium">{currentApplication.job.title}</h3>
+                  <p className="text-muted-foreground">{currentApplication.job.company}</p>
+                </div>
+                
+                <div className="space-y-2">
+                  <h4 className="font-medium">Applicant</h4>
+                  <p>{currentApplication.user.username}</p>
+                  <p className="text-sm text-muted-foreground">{currentApplication.user.email}</p>
+                </div>
+                
+                <div className="space-y-2">
+                  <h4 className="font-medium">Application Timeline</h4>
+                  <p className="text-sm">Applied on: {format(new Date(currentApplication.appliedAt), "MMM d, yyyy")}</p>
+                  {currentApplication.statusHistory && (
+                    <div className="space-y-1 text-sm">
+                      {(currentApplication.statusHistory as any[]).map((history, index) => (
+                        <div key={index} className="flex items-center">
+                          <span className="mr-2">{format(new Date(history.date), "MMM d, yyyy")}:</span>
+                          <Badge variant="outline" className={getStatusColor(history.status)}>
+                            {history.status}
+                          </Badge>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+              
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <h4 className="font-medium">Current Status</h4>
+                  <Select 
+                    defaultValue={currentApplication.status}
+                    onValueChange={(value) => {
+                      updateApplicationMutation.mutate({
+                        applicationId: currentApplication.id,
+                        status: value
+                      });
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {APPLICATION_STATUSES.map((status) => (
+                        <SelectItem key={status} value={status}>{status}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="space-y-2">
+                  <h4 className="font-medium">Notes</h4>
+                  <Textarea 
+                    placeholder="Add notes about this application"
+                    defaultValue={currentApplication.notes || ""}
+                    className="min-h-[100px]"
+                    id="application-notes"
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <h4 className="font-medium">Next Step</h4>
+                  <Input 
+                    placeholder="e.g., Schedule interview, Check references"
+                    defaultValue={currentApplication.nextStep || ""}
+                    id="next-step"
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <h4 className="font-medium">Due Date for Next Step</h4>
+                  <DatePicker 
+                    date={currentApplication.nextStepDueDate ? new Date(currentApplication.nextStepDueDate) : undefined}
+                    setDate={(date) => {
+                      // This will be handled in the save function
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+            
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowDetailsDialog(false)}>
+                Cancel
+              </Button>
+              <Button 
+                onClick={() => {
+                  const notesElement = document.getElementById('application-notes') as HTMLTextAreaElement;
+                  const nextStepElement = document.getElementById('next-step') as HTMLInputElement;
+                  
+                  updateApplicationMutation.mutate({
+                    applicationId: currentApplication.id,
+                    notes: notesElement?.value,
+                    nextStep: nextStepElement?.value,
+                    // You would need to get the date from your DatePicker component
+                    // This is a placeholder - implement based on how your DatePicker works
+                    nextStepDueDate: document.querySelector('.date-picker-value')?.getAttribute('data-value') || null
+                  });
+                }}
+                disabled={updateApplicationMutation.isPending}
+              >
+                {updateApplicationMutation.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : "Save Changes"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       )}
     </Card>
   );

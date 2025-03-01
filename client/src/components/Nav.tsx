@@ -7,10 +7,11 @@ import { useAuth } from "@/hooks/use-auth";
 
 const Nav = () => {
   const router = useRouter();
-  const { user, logoutMutation } = useAuth();
+  const { user, logout } = useAuth();
 
   const handleLogout = () => {
-    logoutMutation.mutate();
+    logout();
+    router.push('/');
   };
 
   const navStyles = {
@@ -38,14 +39,14 @@ const Nav = () => {
           </Link>
           {user && (
             <>
-              <Link href="/dashboard" className={navStyles.navLink}>
+              <Link href="/applications" className={navStyles.navLink}>
                 Applications
               </Link>
               <Link href="/profile" className={navStyles.navLink}>
                 Profile
               </Link>
               {user.isAdmin && (
-                <Link href="/admin-dashboard" className={navStyles.navLink}>
+                <Link href="/admin" className={navStyles.navLink}>
                   Admin
                 </Link>
               )}
@@ -61,7 +62,6 @@ const Nav = () => {
                 variant="ghost" 
                 className={navStyles.authButton}
                 onClick={handleLogout}
-                disabled={logoutMutation.isPending}
               >
                 Logout
               </Button>
