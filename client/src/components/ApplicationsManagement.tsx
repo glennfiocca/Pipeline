@@ -34,7 +34,7 @@ export function ApplicationsManagement() {
     companyName: string;
   } | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = useState<string>("all"); // Updated
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
   const [currentApplication, setCurrentApplication] = useState<(Application & { job: Job, user: User }) | null>(null);
 
@@ -159,9 +159,9 @@ export function ApplicationsManagement() {
       app.user.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
       app.job.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       app.job.company.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesStatus = statusFilter === null || app.status === statusFilter;
-    
+
+    const matchesStatus = statusFilter === "all" || app.status === statusFilter; // Updated
+
     return matchesSearch && matchesStatus;
   });
 
@@ -276,12 +276,12 @@ export function ApplicationsManagement() {
           </div>
           <div className="flex items-center gap-2">
             <Filter className="h-4 w-4 text-muted-foreground" />
-            <Select value={statusFilter || ""} onValueChange={(value) => setStatusFilter(value || null)}>
+            <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value)}> {/* Updated */}
               <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="Filter by status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Statuses</SelectItem>
+                <SelectItem value="all">All Statuses</SelectItem>
                 {APPLICATION_STATUSES.map((status) => (
                   <SelectItem 
                     key={status} 
