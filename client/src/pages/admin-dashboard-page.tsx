@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Application, Job, Profile, User } from "@shared/schema";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
@@ -17,25 +17,33 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { NewJobForm } from "@/components/NewJobForm";
 import { NewUserForm } from "@/components/NewUserForm";
-import type { z } from 'zod';
-import { insertJobSchema, insertUserSchema } from "@shared/schema";
 import { ApplicationsManagement } from "@/components/ApplicationsManagement";
 import { FeedbackManagement } from "@/components/FeedbackManagement";
 import { ManageCreditsDialog } from "@/components/ManageCreditsDialog";
+import type { z } from 'zod';
+import { insertJobSchema, insertUserSchema } from "@shared/schema";
+
 type NewJobForm = z.infer<typeof insertJobSchema>;
 type NewUserForm = z.infer<typeof insertUserSchema>;
 type SelectedUserCredits = {
   user: User;
   action: 'manage_credits';
 } | null;
+
 export default function AdminDashboardPage() {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+
+  useEffect(() => {
+    console.log("Auth state:", { user, isAdmin: user?.isAdmin });
+  }, [user]);
+
+  // Don't redirect immediately, let's see what's happening
   if (!user?.isAdmin) {
-    setLocation("/");
-    return null;
+    console.log("User is not admin, current auth state:", { user });
   }
+
   const [showNewJobDialog, setShowNewJobDialog] = useState(false);
   const [showNewUserDialog, setShowNewUserDialog] = useState(false);
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
@@ -43,9 +51,13 @@ export default function AdminDashboardPage() {
   const [showEditJobDialog, setShowEditJobDialog] = useState(false);
   const [showEditUserDialog, setShowEditUserDialog] = useState(false);
   const [selectedUserCredits, setSelectedUserCredits] = useState<SelectedUserCredits>(null);
-  const { data: jobs = [], isLoading: isLoadingJobs } = useQuery<Job[]>({
+
+  const { data: jobs = [], isLoading: isLoadingJobs, error: jobsError } = useQuery<Job[]>({
     queryKey: ["/api/jobs"],
     enabled: true,
+    onError: (error) => {
+      console.error("Failed to fetch jobs:", error);
+    },
     select: (data) => data.sort((a, b) => {
       if (a.isActive === b.isActive) {
         return new Date(b.lastCheckedAt).getTime() - new Date(a.lastCheckedAt).getTime();
@@ -53,10 +65,15 @@ export default function AdminDashboardPage() {
       return a.isActive ? -1 : 1;
     })
   });
-  const { data: users = [], isLoading: isLoadingUsers } = useQuery<User[]>({
+
+  const { data: users = [], isLoading: isLoadingUsers, error: usersError } = useQuery<User[]>({
     queryKey: ["/api/admin/users"],
-    enabled: true
+    enabled: true,
+    onError: (error) => {
+      console.error("Failed to fetch users:", error);
+    }
   });
+
   const createJobMutation = useMutation({
     mutationFn: async (formInput: NewJobForm) => {
       try {
@@ -264,345 +281,361 @@ export default function AdminDashboardPage() {
   }
   return (
     <div className="container mx-auto px-4 py-10 max-w-7xl">
-      <div className="flex items-center justify-between mb-8">
-        <h1 className="text-3xl font-bold">Admin Dashboard</h1>
-      </div>
-      <Tabs defaultValue="active-jobs" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="active-jobs">Active Jobs</TabsTrigger>
-          <TabsTrigger value="archived-jobs">Archived Jobs</TabsTrigger>
-          <TabsTrigger value="users">Users</TabsTrigger>
-          <TabsTrigger value="applications">Applications</TabsTrigger>
-          <TabsTrigger value="feedback">Feedback</TabsTrigger>
-        </TabsList>
-        <TabsContent value="active-jobs">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0">
-              <CardTitle>Active Jobs Management</CardTitle>
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => setShowNewJobDialog(true)}
-              >
-                <Plus className="h-4 w-4" />
-              </Button>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {jobs.filter(job => job.isActive).map((job) => (
-                  <div
-                    key={job.id}
-                    className="flex items-center justify-between p-4 rounded-lg border"
+      {!user?.isAdmin ? (
+        <div className="text-center py-8">
+          <h2 className="text-2xl font-bold mb-4">Access Denied</h2>
+          <p className="text-muted-foreground mb-4">You need admin privileges to view this page.</p>
+          <Button onClick={() => setLocation("/")}>Return to Home</Button>
+        </div>
+      ) : (
+        <>
+          <div className="flex items-center justify-between mb-8">
+            <h1 className="text-3xl font-bold">Admin Dashboard</h1>
+          </div>
+          {(jobsError || usersError) && (
+            <div className="bg-destructive/10 text-destructive p-4 rounded-lg mb-4">
+              <h3 className="font-semibold">Error Loading Data</h3>
+              <p>{jobsError?.message || usersError?.message}</p>
+            </div>
+          )}
+          <Tabs defaultValue="active-jobs" className="space-y-4">
+            <TabsList>
+              <TabsTrigger value="active-jobs">Active Jobs</TabsTrigger>
+              <TabsTrigger value="archived-jobs">Archived Jobs</TabsTrigger>
+              <TabsTrigger value="users">Users</TabsTrigger>
+              <TabsTrigger value="applications">Applications</TabsTrigger>
+              <TabsTrigger value="feedback">Feedback</TabsTrigger>
+            </TabsList>
+            <TabsContent value="active-jobs">
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0">
+                  <CardTitle>Active Jobs Management</CardTitle>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => setShowNewJobDialog(true)}
                   >
-                    <div>
-                      <h3 className="font-medium">
-                        {job.title}
-                        <span className="ml-2 text-sm text-muted-foreground">
-                          (ID: {job.jobIdentifier})
-                        </span>
-                      </h3>
-                      <p className="text-sm text-muted-foreground">
-                        {job.company} - {job.location}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => editJobMutation.mutate({ id: job.id, isActive: false })}
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {jobs.filter(job => job.isActive).map((job) => (
+                      <div
+                        key={job.id}
+                        className="flex items-center justify-between p-4 rounded-lg border"
                       >
-                        Archive
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={() => handleEditJob(job)}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button variant="destructive" size="icon">
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Delete Job</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Are you sure you want to delete this job? This action cannot be undone.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction
-                              onClick={() => deleteJobMutation.mutate(job.id)}
-                            >
-                              Delete
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-        <TabsContent value="archived-jobs">
-          <Card>
-            <CardHeader>
-              <CardTitle>Archived Jobs</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {jobs.filter(job => !job.isActive).map((job) => (
-                  <div
-                    key={job.id}
-                    className="flex items-center justify-between p-4 rounded-lg border"
-                  >
-                    <div>
-                      <h3 className="font-medium">
-                        {job.title}
-                        <span className="ml-2 text-sm text-muted-foreground">
-                          (ID: {job.jobIdentifier})
-                        </span>
-                      </h3>
-                      <p className="text-sm text-muted-foreground">
-                        {job.company} - {job.location}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        Archived on: {job.deactivatedAt ? format(new Date(job.deactivatedAt), "MMM d, yyyy") : "Unknown"}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => editJobMutation.mutate({ id: job.id, isActive: true })}
-                      >
-                        Restore
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={() => handleEditJob(job)}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button variant="destructive" size="icon">
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Delete Job</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Are you sure you want to delete this archived job? This action cannot be undone.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction
-                              onClick={() => deleteJobMutation.mutate(job.id)}
-                            >
-                              Delete
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </div>
-                  </div>
-                ))}
-                {jobs.filter(job => !job.isActive).length === 0 && (
-                  <div className="text-center py-8 text-muted-foreground">
-                    No archived jobs found
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-        <TabsContent value="users">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0">
-              <CardTitle>Users Management</CardTitle>
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => setShowNewUserDialog(true)}
-              >
-                <Plus className="h-4 w-4" />
-              </Button>
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {users.map((user) => (
-                  <div key={user.id} className="p-4 rounded-lg border space-y-2">
-                    <div className="flex items-start justify-between">
-                      <div className="space-y-1">
-                        <div className="font-medium flex items-center gap-2">
-                          <UserIcon className="h-4 w-4 text-muted-foreground" />
-                          {user.username}
-                          {user.isAdmin && (
-                            <Badge variant="secondary" className="ml-2">
-                              Admin
-                            </Badge>
-                          )}
+                        <div>
+                          <h3 className="font-medium">
+                            {job.title}
+                            <span className="ml-2 text-sm text-muted-foreground">
+                              (ID: {job.jobIdentifier})
+                            </span>
+                          </h3>
+                          <p className="text-sm text-muted-foreground">
+                            {job.company} - {job.location}
+                          </p>
                         </div>
-                        <div className="text-sm text-muted-foreground flex items-center gap-2">
-                          <Mail className="h-4 w-4" />
-                          {user.email}
-                        </div>
-                        <div className="text-sm text-muted-foreground flex items-center gap-2">
-                          <CreditCard className="h-4 w-4" />
-                          {user.bankedCredits || 0} banked credits
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => editJobMutation.mutate({ id: job.id, isActive: false })}
+                          >
+                            Archive
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={() => handleEditJob(job)}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="destructive" size="icon">
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Delete Job</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Are you sure you want to delete this job? This action cannot be undone.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => deleteJobMutation.mutate(job.id)}
+                                >
+                                  Delete
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          onClick={() => setSelectedUserCredits({ user, action: 'manage_credits' })}
-                        >
-                          <CreditCard className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          onClick={() => handleEditUser(user)}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button variant="destructive" size="icon">
-                              <Trash2 className="h-4 w-4" />
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+            <TabsContent value="archived-jobs">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Archived Jobs</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {jobs.filter(job => !job.isActive).map((job) => (
+                      <div
+                        key={job.id}
+                        className="flex items-center justify-between p-4 rounded-lg border"
+                      >
+                        <div>
+                          <h3 className="font-medium">
+                            {job.title}
+                            <span className="ml-2 text-sm text-muted-foreground">
+                              (ID: {job.jobIdentifier})
+                            </span>
+                          </h3>
+                          <p className="text-sm text-muted-foreground">
+                            {job.company} - {job.location}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            Archived on: {job.deactivatedAt ? format(new Date(job.deactivatedAt), "MMM d, yyyy") : "Unknown"}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => editJobMutation.mutate({ id: job.id, isActive: true })}
+                          >
+                            Restore
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={() => handleEditJob(job)}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="destructive" size="icon">
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Delete Job</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Are you sure you want to delete this archived job? This action cannot be undone.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => deleteJobMutation.mutate(job.id)}
+                                >
+                                  Delete
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
+                      </div>
+                    ))}
+                    {jobs.filter(job => !job.isActive).length === 0 && (
+                      <div className="text-center py-8 text-muted-foreground">
+                        No archived jobs found
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+            <TabsContent value="users">
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0">
+                  <CardTitle>Users Management</CardTitle>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => setShowNewUserDialog(true)}
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                    {users.map((user) => (
+                      <div key={user.id} className="p-4 rounded-lg border space-y-2">
+                        <div className="flex items-start justify-between">
+                          <div className="space-y-1">
+                            <div className="font-medium flex items-center gap-2">
+                              <UserIcon className="h-4 w-4 text-muted-foreground" />
+                              {user.username}
+                              {user.isAdmin && (
+                                <Badge variant="secondary" className="ml-2">
+                                  Admin
+                                </Badge>
+                              )}
+                            </div>
+                            <div className="text-sm text-muted-foreground flex items-center gap-2">
+                              <Mail className="h-4 w-4" />
+                              {user.email}
+                            </div>
+                            <div className="text-sm text-muted-foreground flex items-center gap-2">
+                              <CreditCard className="h-4 w-4" />
+                              {user.bankedCredits || 0} banked credits
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              onClick={() => setSelectedUserCredits({ user, action: 'manage_credits' })}
+                            >
+                              <CreditCard className="h-4 w-4" />
                             </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Delete User</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                Are you sure you want to delete this user? This action cannot be undone.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancel</AlertDialogCancel>
-                              <AlertDialogAction
-                                onClick={() => deleteUserMutation.mutate(user.id)}
-                              >
-                                Delete
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              onClick={() => handleEditUser(user)}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button variant="destructive" size="icon">
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Delete User</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Are you sure you want to delete this user? This action cannot be undone.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  <AlertDialogAction
+                                    onClick={() => deleteUserMutation.mutate(user.id)}
+                                  >
+                                    Delete
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          </div>
+                        </div>
                       </div>
-                    </div>
+                    ))}
                   </div>
-                ))}
+                </CardContent>
+              </Card>
+            </TabsContent>
+            <TabsContent value="applications">
+              <ApplicationsManagement />
+            </TabsContent>
+            <TabsContent value="feedback">
+              <FeedbackManagement />
+            </TabsContent>
+          </Tabs>
+          <Dialog open={showNewJobDialog} onOpenChange={setShowNewJobDialog}>
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Create New Job</DialogTitle>
+                <DialogDescription>
+                  Add a new job listing to the platform.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="py-4">
+                <NewJobForm
+                  onSubmit={async (data) => {
+                    createJobMutation.mutate(data);
+                  }}
+                  onCancel={() => setShowNewJobDialog(false)}
+                />
               </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-        <TabsContent value="applications">
-          <ApplicationsManagement />
-        </TabsContent>
-        <TabsContent value="feedback">
-          <FeedbackManagement />
-        </TabsContent>
-      </Tabs>
-      <Dialog open={showNewJobDialog} onOpenChange={setShowNewJobDialog}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Create New Job</DialogTitle>
-            <DialogDescription>
-              Add a new job listing to the platform.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-4">
-            <NewJobForm
-              onSubmit={async (data) => {
-                createJobMutation.mutate(data);
+            </DialogContent>
+          </Dialog>
+          <Dialog open={showNewUserDialog} onOpenChange={setShowNewUserDialog}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Create New User</DialogTitle>
+                <DialogDescription>
+                  Add a new user to the platform.
+                </DialogDescription>
+              </DialogHeader>
+              <NewUserForm
+                onSubmit={(data) => {
+                  createUserMutation.mutate(data);
+                }}
+                onCancel={() => setShowNewUserDialog(false)}
+              />
+            </DialogContent>
+          </Dialog>
+          <Dialog open={showEditJobDialog} onOpenChange={setShowEditJobDialog}>
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Edit Job</DialogTitle>
+                <DialogDescription>
+                  Update job listing information.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="py-4">
+                <NewJobForm
+                  initialData={selectedJob}
+                  onSubmit={(data) => {
+                    editJobMutation.mutate(data);
+                  }}
+                  onCancel={() => {
+                    setShowEditJobDialog(false);
+                    setSelectedJob(null);
+                  }}
+                />
+              </div>
+            </DialogContent>
+          </Dialog>
+          <Dialog open={showEditUserDialog} onOpenChange={setShowEditUserDialog}>
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Edit User</DialogTitle>
+                <DialogDescription>
+                  Update user information.
+                </DialogDescription>
+              </DialogHeader>
+              <NewUserForm
+                initialData={selectedUser}
+                onSubmit={(data) => {
+                  editUserMutation.mutate(data);
+                }}
+                onCancel={() => {
+                  setShowEditUserDialog(false);
+                  setSelectedUser(null);
+                }}
+              />
+            </DialogContent>
+          </Dialog>
+          {selectedUserCredits && (
+            <ManageCreditsDialog
+              isOpen={true}
+              onClose={() => setSelectedUserCredits(null)}
+              user={selectedUserCredits.user}
+              onConfirm={(amount) => {
+                manageUserCreditsMutation.mutate({
+                  userId: selectedUserCredits.user.id,
+                  amount
+                });
               }}
-              onCancel={() => setShowNewJobDialog(false)}
             />
-          </div>
-        </DialogContent>
-      </Dialog>
-      <Dialog open={showNewUserDialog} onOpenChange={setShowNewUserDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Create New User</DialogTitle>
-            <DialogDescription>
-              Add a new user to the platform.
-            </DialogDescription>
-          </DialogHeader>
-          <NewUserForm
-            onSubmit={(data) => {
-              createUserMutation.mutate(data);
-            }}
-            onCancel={() => setShowNewUserDialog(false)}
-          />
-        </DialogContent>
-      </Dialog>
-      <Dialog open={showEditJobDialog} onOpenChange={setShowEditJobDialog}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Edit Job</DialogTitle>
-            <DialogDescription>
-              Update job listing information.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-4">
-            <NewJobForm
-              initialData={selectedJob}
-              onSubmit={(data) => {
-                editJobMutation.mutate(data);
-              }}
-              onCancel={() => {
-                setShowEditJobDialog(false);
-                setSelectedJob(null);
-              }}
-            />
-          </div>
-        </DialogContent>
-      </Dialog>
-      <Dialog open={showEditUserDialog} onOpenChange={setShowEditUserDialog}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Edit User</DialogTitle>
-            <DialogDescription>
-              Update user information.
-            </DialogDescription>
-          </DialogHeader>
-          <NewUserForm
-            initialData={selectedUser}
-            onSubmit={(data) => {
-              editUserMutation.mutate(data);
-            }}
-            onCancel={() => {
-              setShowEditUserDialog(false);
-              setSelectedUser(null);
-            }}
-          />
-        </DialogContent>
-      </Dialog>
-      {selectedUserCredits && (
-        <ManageCreditsDialog
-          isOpen={true}
-          onClose={() => setSelectedUserCredits(null)}
-          user={selectedUserCredits.user}
-          onConfirm={(amount) => {
-            manageUserCreditsMutation.mutate({
-              userId: selectedUserCredits.user.id,
-              amount
-            });
-          }}
-        />
+          )}
+        </>
       )}
     </div>
   );
