@@ -103,11 +103,11 @@ export function JobModal({
               </div>
             </div>
 
-            {job.benefits && (
+            {(job as any).benefits && (
               <div>
                 <h3 className="text-lg font-semibold mb-2">Benefits</h3>
                 <div className="text-muted-foreground whitespace-pre-wrap">
-                  {job.benefits}
+                  {(job as any).benefits}
                 </div>
               </div>
             )}

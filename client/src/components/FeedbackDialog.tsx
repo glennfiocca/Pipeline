@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import {
   Dialog,
   DialogContent,
@@ -27,7 +27,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Star, MessageSquarePlus } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { z } from "zod";
@@ -40,20 +40,55 @@ const feedbackSchema = z.object({
 
 type FeedbackFormData = z.infer<typeof feedbackSchema>;
 
-export function FeedbackDialog() {
-  const [isOpen, setIsOpen] = useState(false);
+interface FeedbackDialogProps {
+  feedbackId?: number;
+  readOnly?: boolean;
+  open?: boolean;
+  onClose?: () => void;
+}
+
+export function FeedbackDialog({ feedbackId, readOnly = false, open, onClose }: FeedbackDialogProps) {
+  const [isOpen, setIsOpen] = useState(open || false);
   const { toast } = useToast();
   const { user } = useAuth();
   const [hoveredStar, setHoveredStar] = useState(0);
 
+  // Update isOpen when the open prop changes
+  useEffect(() => {
+    if (open !== undefined) {
+      setIsOpen(open);
+    }
+  }, [open]);
+
+  // Fetch feedback data if feedbackId is provided
+  const { data: feedbackData } = useQuery({
+    queryKey: ["/api/feedback", feedbackId],
+    enabled: !!feedbackId,
+    queryFn: async () => {
+      const response = await apiRequest("GET", `/api/feedback/${feedbackId}`);
+      if (!response.ok) {
+        throw new Error("Failed to fetch feedback");
+      }
+      return response.json();
+    },
+  });
+
   const form = useForm<FeedbackFormData>({
     resolver: zodResolver(feedbackSchema),
     defaultValues: {
-      rating: 0,
-      category: "general",
-      comment: "",
+      rating: feedbackData?.rating || 0,
+      category: feedbackData?.category || "general",
+      comment: feedbackData?.comment || "",
     },
+    values: feedbackData,
   });
+
+  // Update form values when feedbackData changes
+  useEffect(() => {
+    if (feedbackData) {
+      form.reset(feedbackData);
+    }
+  }, [feedbackData, form]);
 
   const createFeedbackMutation = useMutation({
     mutationFn: async (values: FeedbackFormData) => {
@@ -81,6 +116,7 @@ export function FeedbackDialog() {
       });
       form.reset();
       setIsOpen(false);
+      if (onClose) onClose();
     },
     onError: (error: Error) => {
       toast({
@@ -95,20 +131,30 @@ export function FeedbackDialog() {
     createFeedbackMutation.mutate(values);
   };
 
+  const handleClose = () => {
+    setIsOpen(false);
+    if (onClose) onClose();
+  };
+
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogTrigger asChild>
-        <Button
-          variant="default"
-          className="fixed right-0 top-1/2 -translate-y-1/2 -rotate-90 origin-right translate-x-[-32px] transition-transform hover:translate-x-[-40px] shadow-md flex gap-2 items-center z-50 rounded-t-lg rounded-b-none"
-        >
-          <MessageSquarePlus className="h-4 w-4 rotate-90" />
-          Feedback
-        </Button>
-      </DialogTrigger>
+    <Dialog open={isOpen} onOpenChange={(open) => {
+      setIsOpen(open);
+      if (!open && onClose) onClose();
+    }}>
+      {!feedbackId && (
+        <DialogTrigger asChild>
+          <Button
+            variant="default"
+            className="fixed right-0 top-1/2 -translate-y-1/2 -rotate-90 origin-right translate-x-[-32px] transition-transform hover:translate-x-[-40px] shadow-md flex gap-2 items-center z-50 rounded-t-lg rounded-b-none"
+          >
+            <MessageSquarePlus className="h-4 w-4 rotate-90" />
+            Feedback
+          </Button>
+        </DialogTrigger>
+      )}
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Share your feedback</DialogTitle>
+          <DialogTitle>{feedbackId ? "Feedback Details" : "Share your feedback"}</DialogTitle>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -124,9 +170,9 @@ export function FeedbackDialog() {
                         <div
                           key={star}
                           className="text-2xl"
-                          onMouseEnter={() => setHoveredStar(star)}
-                          onMouseLeave={() => setHoveredStar(0)}
-                          onClick={() => field.onChange(star)}
+                          onMouseEnter={() => !readOnly && setHoveredStar(star)}
+                          onMouseLeave={() => !readOnly && setHoveredStar(0)}
+                          onClick={() => !readOnly && field.onChange(star)}
                         >
                           <Star
                             className={`h-6 w-6 ${
@@ -152,6 +198,7 @@ export function FeedbackDialog() {
                   <Select
                     onValueChange={field.onChange}
                     defaultValue={field.value}
+                    disabled={readOnly}
                   >
                     <FormControl>
                       <SelectTrigger>
@@ -180,22 +227,34 @@ export function FeedbackDialog() {
                     <Textarea
                       placeholder="Tell us more about your experience..."
                       {...field}
+                      disabled={readOnly}
                     />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
-            <Button
-              type="submit"
-              className="w-full"
-              disabled={createFeedbackMutation.isPending}
-            >
-              {createFeedbackMutation.isPending && (
-                <div className="h-4 w-4 animate-spin rounded-full border-2 border-background border-t-foreground mr-2" />
-              )}
-              Submit Feedback
-            </Button>
+            {!readOnly && (
+              <Button
+                type="submit"
+                className="w-full"
+                disabled={createFeedbackMutation.isPending}
+              >
+                {createFeedbackMutation.isPending && (
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-background border-t-foreground mr-2" />
+                )}
+                Submit Feedback
+              </Button>
+            )}
+            {readOnly && (
+              <Button
+                type="button"
+                className="w-full"
+                onClick={handleClose}
+              >
+                Close
+              </Button>
+            )}
           </form>
         </Form>
       </DialogContent>

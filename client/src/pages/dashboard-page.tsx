@@ -272,7 +272,7 @@ export default function DashboardPage() {
                                   <span className="mr-2 text-xs">
                                     {format(new Date(history.date), "MMM d, yyyy")}:
                                   </span>
-                                  <Badge variant="outline" size="sm" className={getStatusColor(!job.isActive && index === statusHistory.length - 1 ? "inactive" : history.status)}>
+                                  <Badge variant="outline" className={getStatusColor(!job.isActive && index === statusHistory.length - 1 ? "inactive" : history.status)}>
                                     {!job.isActive && index === statusHistory.length - 1 ? "Inactive" : history.status}
                                   </Badge>
                                 </div>
@@ -329,8 +329,8 @@ export default function DashboardPage() {
 
       {activeFeedbackId && (
         <FeedbackDialog
-          id={activeFeedbackId}
-          readOnly={isReadOnly}
+          feedbackId={activeFeedbackId}
+          readOnly={isReadOnly} 
           open={true}
           onClose={() => {
             setActiveFeedbackId(null);
