@@ -1,5 +1,5 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { useParams, useRouter } from "next/navigation";
+import { useLocation } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Application, Job, User } from "@shared/schema";
 import { Badge } from "@/components/ui/badge";
@@ -19,12 +19,11 @@ import { useAuth } from "@/hooks/use-auth";
 const APPLICATION_STATUSES = ["Applied", "Interviewing", "Accepted", "Rejected", "Withdrawn"];
 
 export default function UserApplicationsPage() {
-  const params = useParams();
-  const router = useRouter();
+  const [location, setLocation] = useLocation();
   const { user: currentUser } = useAuth();
   const { toast } = useToast();
-  const username = params?.username as string;
-  
+  const username = location.split('/').pop() as string;
+
   const [selectedApplication, setSelectedApplication] = useState<{
     id: number;
     username: string;
@@ -34,9 +33,9 @@ export default function UserApplicationsPage() {
   // Redirect non-admin users
   useEffect(() => {
     if (currentUser && !currentUser.isAdmin) {
-      router.push('/');
+      setLocation('/');
     }
-  }, [currentUser, router]);
+  }, [currentUser, setLocation]);
 
   const { data: applications = [], isLoading: isLoadingApps } = useQuery<Application[]>({
     queryKey: ["/api/admin/applications"],
@@ -138,7 +137,7 @@ export default function UserApplicationsPage() {
               <Button 
                 variant="outline" 
                 className="mt-4"
-                onClick={() => router.back()}
+                onClick={() => setLocation('/admin')}
               >
                 <ChevronLeft className="mr-2 h-4 w-4" />
                 Go Back
@@ -185,7 +184,7 @@ export default function UserApplicationsPage() {
               variant="ghost" 
               size="sm" 
               className="mb-2"
-              onClick={() => router.back()}
+              onClick={() => setLocation('/admin')}
             >
               <ChevronLeft className="mr-2 h-4 w-4" />
               Back to All Users
@@ -297,4 +296,4 @@ export default function UserApplicationsPage() {
       )}
     </div>
   );
-} 
+}

@@ -14,7 +14,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { AdminMessageDialog } from "./AdminMessageDialog";
-import { useRouter } from "next/navigation";
+import { useLocation } from "wouter";
 
 const APPLICATION_STATUSES = ["Applied", "Interviewing", "Accepted", "Rejected", "Withdrawn"];
 
@@ -24,7 +24,7 @@ interface ApplicationsByUser {
 
 export function ApplicationsManagement() {
   const { toast } = useToast();
-  const router = useRouter();
+  const [, setLocation] = useLocation();
   const [selectedApplication, setSelectedApplication] = useState<{
     id: number;
     username: string;
@@ -150,9 +150,9 @@ export function ApplicationsManagement() {
     }
   };
 
-  // Add a function to navigate to user applications page
+  // Navigate to user applications page using wouter
   const navigateToUserApplications = (username: string) => {
-    router.push(`/admin/user-applications/${username}`);
+    setLocation(`/admin/user-applications/${username}`);
   };
 
   return (
