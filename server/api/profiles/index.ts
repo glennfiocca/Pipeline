@@ -1,3 +1,11 @@
+import express from 'express';
+import multer from 'multer';
+import { fileURLToPath } from 'url';
+import path from 'path';
+import fs from 'fs';
+
+const app = express.Router();
+
 // GET handler for fetching a profile by userId
 app.get("/api/profiles/:userId", async (req, res) => {
   try {
@@ -7,11 +15,11 @@ app.get("/api/profiles/:userId", async (req, res) => {
     }
 
     const profile = await storage.getProfileByUserId(userId);
-    
+
     if (!profile) {
       return res.status(404).json({ message: "Profile not found" });
     }
-    
+
     return res.status(200).json(profile);
   } catch (error) {
     console.error("Error fetching profile:", error);
@@ -29,10 +37,10 @@ app.post("/api/profiles", async (req, res) => {
 
     const profileData = req.body;
     console.log("Received profile data:", JSON.stringify(profileData));
-    
+
     // Ensure userId is set
     profileData.userId = userId;
-    
+
     // Ensure all array fields are properly initialized and sanitized
     const sanitizeArrayField = (field: any[]) => {
       return Array.isArray(field) ? field.map(item => {
@@ -47,16 +55,16 @@ app.post("/api/profiles", async (req, res) => {
             sanitized[key] = "";
           }
         });
-        
+
         // If isPresent is true, ensure endDate is empty
         if (sanitized.isPresent === true) {
           sanitized.endDate = "";
         }
-        
+
         return sanitized;
       }) : [];
     };
-    
+
     profileData.education = sanitizeArrayField(profileData.education || []);
     profileData.experience = sanitizeArrayField(profileData.experience || []);
     profileData.skills = sanitizeArrayField(profileData.skills || []);
@@ -64,11 +72,11 @@ app.post("/api/profiles", async (req, res) => {
     profileData.languages = sanitizeArrayField(profileData.languages || []);
     profileData.publications = sanitizeArrayField(profileData.publications || []);
     profileData.projects = sanitizeArrayField(profileData.projects || []);
-    
+
     // Ensure boolean fields are properly set
     profileData.visaSponsorship = profileData.visaSponsorship === true || profileData.visaSponsorship === "true";
     profileData.willingToRelocate = profileData.willingToRelocate === true || profileData.willingToRelocate === "true";
-    
+
     // Ensure all required string fields have at least empty string values
     profileData.name = profileData.name || "";
     profileData.email = profileData.email || "";
@@ -84,12 +92,12 @@ app.post("/api/profiles", async (req, res) => {
     profileData.workAuthorization = profileData.workAuthorization || "US Citizen";
     profileData.availability = profileData.availability || "2 Weeks";
     profileData.citizenshipStatus = profileData.citizenshipStatus || "US Citizen";
-    
+
     console.log("Processing sanitized profile data:", JSON.stringify(profileData));
-    
+
     // Check if profile exists
     const existingProfile = await storage.getProfileByUserId(userId);
-    
+
     let result;
     try {
       if (existingProfile) {
@@ -99,7 +107,7 @@ app.post("/api/profiles", async (req, res) => {
         console.log("Creating new profile");
         result = await storage.createProfile(profileData);
       }
-      
+
       console.log("Profile saved successfully:", result);
       return res.status(200).json(result);
     } catch (dbError) {
@@ -114,4 +122,58 @@ app.post("/api/profiles", async (req, res) => {
     console.error("Error saving profile:", error);
     return res.status(500).json({ message: "Failed to save profile", error: error.message });
   }
-}); 
+});
+
+// Configure multer for file uploads
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    const uploadDir = path.join(process.cwd(), 'uploads');
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    cb(null, uploadDir);
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
+  }
+});
+
+const upload = multer({ 
+  storage: storage,
+  limits: {
+    fileSize: 5 * 1024 * 1024 // 5MB limit
+  },
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+    if (allowedTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Invalid file type. Only PDF and Word documents are allowed.'));
+    }
+  }
+});
+
+// Add file upload endpoint
+app.post("/api/profiles/upload", upload.single('file'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: "No file uploaded" });
+    }
+
+    // Return the file path that can be stored in the profile
+    const filePath = `/uploads/${req.file.filename}`;
+    return res.status(200).json({ 
+      message: "File uploaded successfully",
+      url: filePath
+    });
+  } catch (error) {
+    console.error("Error uploading file:", error);
+    return res.status(500).json({ 
+      message: "Failed to upload file",
+      error: error instanceof Error ? error.message : "Unknown error occurred"
+    });
+  }
+});
+
+export default app;

@@ -1,13 +1,15 @@
 import type { Express } from "express";
+import express from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertJobSchema, insertApplicationSchema, insertProfileSchema, insertMessageSchema, insertUserSchema, insertFeedbackSchema } from "@shared/schema";
 import { ScraperManager } from './services/scraper/manager';
 import { db } from './db';
 import { users } from '@shared/schema';
-import { hashPassword } from './utils/password'; // Assuming this function exists
-import multer from 'multer';
+import { hashPassword } from './utils/password';
 import path from 'path';
+import profilesRouter from './api/profiles';
+import multer from 'multer';
 import fs from 'fs';
 
 // Enhanced admin middleware with specific user check
@@ -25,7 +27,7 @@ const isAdmin = (req: any, res: any, next: any) => {
 };
 
 // Set up multer storage configuration
-const storage = multer.diskStorage({
+const multerStorage = multer.diskStorage({
   destination: function (req, file, cb) {
     const uploadDir = path.join(__dirname, '../uploads');
     // Create directory if it doesn't exist
@@ -43,11 +45,17 @@ const storage = multer.diskStorage({
 });
 
 const upload = multer({ 
-  storage: storage,
+  storage: multerStorage,
   limits: { fileSize: 5 * 1024 * 1024 } // 5MB limit
 });
 
 export function registerRoutes(app: Express): Server {
+  // Mount the profiles router
+  app.use('/api/profiles', profilesRouter);
+
+  // Configure static file serving for uploads
+  app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
+
   // Add POST endpoint for job creation
   app.post("/api/jobs", async (req: any, res) => {
     try {
@@ -406,6 +414,7 @@ export function registerRoutes(app: Express): Server {
       // First try to get profile by ID
       let profile = await storage.getProfile(profileId);
       
+
       // If no profile found, try to get profile by user ID
       if (!profile) {
         profile = await storage.getProfileByUserId(req.user.id);
@@ -892,9 +901,11 @@ export function registerRoutes(app: Express): Server {
       // Permanently delete the feedback
       await storage.deleteFeedback(feedbackId);
       
+
       // Log the deletion for debugging
       console.log(`Feedback ID ${feedbackId} deleted successfully`);
       
+
       res.json({ message: "Feedback deleted successfully" });
     } catch (error) {
       console.error('Error deleting feedback:', error);
@@ -1034,10 +1045,12 @@ export function registerRoutes(app: Express): Server {
       return res.status(401).json({ error: "Authentication required" });
     }
     
+
     if (!req.file) {
       return res.status(400).json({ error: 'No file uploaded' });
     }
     
+
     // Return the file path that can be stored in the database
     const filePath = `/uploads/${req.file.filename}`;
     res.json({ filePath });

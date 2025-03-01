@@ -428,6 +428,55 @@ export default function ProfilePage() {
     return cleaned;
   };
 
+  const handleFileUpload = async (file: File, field: 'resumeUrl' | 'transcriptUrl') => {
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await fetch('/api/profiles/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to upload file');
+      }
+
+      const data = await response.json();
+      form.setValue(field, data.url);
+
+      toast({
+        title: "File uploaded successfully",
+        description: "Your file has been uploaded and attached to your profile.",
+        variant: "success"
+      });
+    } catch (error) {
+      console.error('File upload error:', error);
+      toast({
+        title: "Upload failed",
+        description: error instanceof Error ? error.message : "Failed to upload file",
+        variant: "destructive"
+      });
+    }
+  };
+
+  // Resume upload handler
+  const handleResumeChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      handleFileUpload(file, 'resumeUrl');
+    }
+  };
+
+  // Transcript upload handler
+  const handleTranscriptChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      handleFileUpload(file, 'transcriptUrl');
+    }
+  };
+
   if (isLoading) {
     return <div className="flex justify-center items-center h-screen"><Loader2 className="animate-spin" /></div>;
   }
@@ -437,8 +486,8 @@ export default function ProfilePage() {
       <h1 className="text-3xl font-bold mb-6">Profile</h1>
       
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)}>
-          <Tabs defaultValue="personal">
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <Tabs defaultValue="personal" className="w-full">
             <TabsList className="mb-4">
               <TabsTrigger value="personal">Personal Info</TabsTrigger>
               <TabsTrigger value="education">Education</TabsTrigger>
@@ -970,7 +1019,7 @@ export default function ProfilePage() {
                       />
                       <Button type="button" onClick={handleAddSkill}>Add</Button>
                     </div>
-                  </div>
+                  </</div>
 
                   <div className="mt-6">
                     <div className="flex items-center justify-between mb-4">
@@ -1100,7 +1149,7 @@ export default function ProfilePage() {
                             </FormItem>
                           )}
                         />
-
+                        
                         <FormField
                           control={form.control}
                           name={`certifications.${index}.issuer`}
@@ -1114,7 +1163,7 @@ export default function ProfilePage() {
                             </FormItem>
                           )}
                         />
-
+                        
                         <FormField
                           control={form.control}
                           name={`certifications.${index}.credentialId`}
@@ -1128,7 +1177,7 @@ export default function ProfilePage() {
                             </FormItem>
                           )}
                         />
-
+                        
                         <FormField
                           control={form.control}
                           name={`certifications.${index}.credentialUrl`}
@@ -1142,7 +1191,7 @@ export default function ProfilePage() {
                             </FormItem>
                           )}
                         />
-
+                        
                         <FormField
                           control={form.control}
                           name={`certifications.${index}.issueDate`}
@@ -1156,7 +1205,7 @@ export default function ProfilePage() {
                             </FormItem>
                           )}
                         />
-
+                        
                         <FormField
                           control={form.control}
                           name={`certifications.${index}.expiryDate`}
@@ -1320,12 +1369,10 @@ export default function ProfilePage() {
               <Card>
                 <CardHeader>
                   <CardTitle>Documents</CardTitle>
-                  <CardDescription>
-                    Upload your resume, transcript, and other documents
-                  </CardDescription>
+                  <CardDescription>Upload your resume and other documents</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="grid grid-cols-1 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <FormField
                       control={form.control}
                       name="resumeUrl"
@@ -1333,59 +1380,26 @@ export default function ProfilePage() {
                         <FormItem>
                           <FormLabel>Resume</FormLabel>
                           <FormControl>
-                            <div className="flex gap-4 items-center">
+                            <div className="flex flex-col space-y-2">
                               <Input
                                 type="file"
                                 accept=".pdf,.doc,.docx"
-                                onChange={async (e) => {
-                                  const file = e.target.files?.[0];
-                                  if (file) {
-                                    try {
-                                      const formData = new FormData();
-                                      formData.append('file', file);
-                                      
-                                      const response = await fetch('/api/upload', {
-                                        method: 'POST',
-                                        body: formData,
-                                      });
-                                      
-                                      if (!response.ok) {
-                                        throw new Error('Upload failed');
-                                      }
-                                      
-                                      const data = await response.json();
-                                      field.onChange(data.filePath);
-                                      
-                                      toast({
-                                        title: "Resume uploaded successfully",
-                                        variant: "success",
-                                      });
-                                    } catch (error) {
-                                      console.error('Error uploading file:', error);
-                                      toast({
-                                        title: "Failed to upload resume",
-                                        description: error instanceof Error ? error.message : "Unknown error",
-                                        variant: "destructive",
-                                      });
-                                    }
-                                  }
-                                }}
+                                onChange={handleResumeChange}
+                                className="cursor-pointer"
                               />
                               {field.value && (
-                                <a
+                                <a 
                                   href={field.value}
                                   target="_blank"
                                   rel="noopener noreferrer"
                                   className="text-sm text-blue-500 hover:underline"
                                 >
-                                  View Current Resume
+                                  View uploaded resume
                                 </a>
                               )}
                             </div>
                           </FormControl>
-                          <FormDescription>
-                            Upload your resume in PDF, DOC, or DOCX format (max 5MB)
-                          </FormDescription>
+                          <FormDescription>Upload your resume (PDF or Word document)</FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -1396,61 +1410,28 @@ export default function ProfilePage() {
                       name="transcriptUrl"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Academic Transcript</FormLabel>
+                          <FormLabel>Transcript</FormLabel>
                           <FormControl>
-                            <div className="flex gap-4 items-center">
+                            <div className="flex flex-col space-y-2">
                               <Input
                                 type="file"
-                                accept=".pdf"
-                                onChange={async (e) => {
-                                  const file = e.target.files?.[0];
-                                  if (file) {
-                                    try {
-                                      const formData = new FormData();
-                                      formData.append('file', file);
-                                      
-                                      const response = await fetch('/api/upload', {
-                                        method: 'POST',
-                                        body: formData,
-                                      });
-                                      
-                                      if (!response.ok) {
-                                        throw new Error('Upload failed');
-                                      }
-                                      
-                                      const data = await response.json();
-                                      field.onChange(data.filePath);
-                                      
-                                      toast({
-                                        title: "Transcript uploaded successfully",
-                                        variant: "success",
-                                      });
-                                    } catch (error) {
-                                      console.error('Error uploading file:', error);
-                                      toast({
-                                        title: "Failed to upload transcript",
-                                        description: error instanceof Error ? error.message : "Unknown error",
-                                        variant: "destructive",
-                                      });
-                                    }
-                                  }
-                                }}
+                                accept=".pdf,.doc,.docx"
+                                onChange={handleTranscriptChange}
+                                className="cursor-pointer"
                               />
                               {field.value && (
-                                <a
+                                <a 
                                   href={field.value}
                                   target="_blank"
                                   rel="noopener noreferrer"
                                   className="text-sm text-blue-500 hover:underline"
                                 >
-                                  View Current Transcript
+                                  View uploaded transcript
                                 </a>
                               )}
                             </div>
                           </FormControl>
-                          <FormDescription>
-                            Upload your academic transcript in PDF format (max 5MB)
-                          </FormDescription>
+                          <FormDescription>Upload your academic transcript (PDF or Word document)</FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}
