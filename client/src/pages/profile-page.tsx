@@ -1183,7 +1183,7 @@ export default function ProfilePage() {
                 <CardHeader>
                   <CardTitle>Documents</CardTitle>
                   <CardDescription>
-                    Upload your resume and other documents
+                    Upload your resume and transcript (PDF only)
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -1205,6 +1205,18 @@ export default function ProfilePage() {
                       <FormDescription>
                         Upload your current resume (max 5MB)
                       </FormDescription>
+                      {profile?.resumeUrl && (
+                        <div className="mt-2">
+                          <a
+                            href={profile.resumeUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-sm text-blue-600 hover:underline flex items-center gap-2"
+                          >
+                            View Current Resume
+                          </a>
+                        </div>
+                      )}
                     </FormItem>
 
                     <FormItem>
@@ -1224,39 +1236,20 @@ export default function ProfilePage() {
                       <FormDescription>
                         Upload your academic transcript (max 5MB)
                       </FormDescription>
-                    </FormItem>
-                  </div>
-
-                  {/* Display current documents if they exist */}
-                  {(profile?.resumeUrl || profile?.transcriptUrl) && (
-                    <div className="mt-4 space-y-2">
-                      <h4 className="text-sm font-medium">Current Documents:</h4>
-                      {profile.resumeUrl && (
-                        <div className="flex items-center gap-2">
-                          <a
-                            href={profile.resumeUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-sm text-blue-600 hover:underline"
-                          >
-                            View Resume
-                          </a>
-                        </div>
-                      )}
-                      {profile.transcriptUrl && (
-                        <div className="flex items-center gap-2">
+                      {profile?.transcriptUrl && (
+                        <div className="mt-2">
                           <a
                             href={profile.transcriptUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-sm text-blue-600 hover:underline"
+                            className="text-sm text-blue-600 hover:underline flex items-center gap-2"
                           >
-                            View Transcript
+                            View Current Transcript
                           </a>
                         </div>
                       )}
-                    </div>
-                  )}
+                    </FormItem>
+                  </div>
                 </CardContent>
               </Card>
             </TabsContent>

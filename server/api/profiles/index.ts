@@ -85,32 +85,36 @@ router.post("/api/profiles", upload.fields([
 
     // Handle file uploads
     const files = req.files as { [fieldname: string]: Express.Multer.File[] };
+
+    // Clean up old files and set new URLs
+    const existingProfile = await storage.getProfileByUserId(userId);
+
     if (files.resume?.[0]) {
-      profileData.resumeUrl = `/uploads/${files.resume[0].filename}`;
-    }
-    if (files.transcript?.[0]) {
-      profileData.transcriptUrl = `/uploads/${files.transcript[0].filename}`;
-    }
-
-    // Remove old files if new ones are uploaded
-    if (profileData.resumeUrl) {
-      const existingProfile = await storage.getProfileByUserId(userId);
+      // Remove old resume if it exists
       if (existingProfile?.resumeUrl) {
-        const oldFilePath = path.join(uploadsDir, path.basename(existingProfile.resumeUrl));
-        if (fs.existsSync(oldFilePath)) {
-          fs.unlinkSync(oldFilePath);
+        const oldPath = path.join(uploadsDir, path.basename(existingProfile.resumeUrl));
+        if (fs.existsSync(oldPath)) {
+          fs.unlinkSync(oldPath);
         }
       }
+      profileData.resumeUrl = `/uploads/${files.resume[0].filename}`;
+    } else if (existingProfile?.resumeUrl) {
+      // Keep existing resume URL if no new file uploaded
+      profileData.resumeUrl = existingProfile.resumeUrl;
     }
 
-    if (profileData.transcriptUrl) {
-      const existingProfile = await storage.getProfileByUserId(userId);
+    if (files.transcript?.[0]) {
+      // Remove old transcript if it exists
       if (existingProfile?.transcriptUrl) {
-        const oldFilePath = path.join(uploadsDir, path.basename(existingProfile.transcriptUrl));
-        if (fs.existsSync(oldFilePath)) {
-          fs.unlinkSync(oldFilePath);
+        const oldPath = path.join(uploadsDir, path.basename(existingProfile.transcriptUrl));
+        if (fs.existsSync(oldPath)) {
+          fs.unlinkSync(oldPath);
         }
       }
+      profileData.transcriptUrl = `/uploads/${files.transcript[0].filename}`;
+    } else if (existingProfile?.transcriptUrl) {
+      // Keep existing transcript URL if no new file uploaded
+      profileData.transcriptUrl = existingProfile.transcriptUrl;
     }
 
     profileData.userId = userId;
@@ -163,13 +167,13 @@ router.post("/api/profiles", upload.fields([
     console.log("Processing sanitized profile data:", JSON.stringify(profileData));
 
     // Check if profile exists and update/create accordingly
-    const existingProfile = await storage.getProfileByUserId(userId);
+    const existingProfile2 = await storage.getProfileByUserId(userId);
 
     let result;
     try {
-      if (existingProfile) {
-        console.log(`Updating existing profile with ID ${existingProfile.id}`);
-        result = await storage.updateProfile(existingProfile.id, profileData);
+      if (existingProfile2) {
+        console.log(`Updating existing profile with ID ${existingProfile2.id}`);
+        result = await storage.updateProfile(existingProfile2.id, profileData);
       } else {
         console.log("Creating new profile");
         result = await storage.createProfile(profileData);
@@ -179,8 +183,8 @@ router.post("/api/profiles", upload.fields([
       return res.status(200).json(result);
     } catch (dbError) {
       console.error("Database error:", dbError);
-      return res.status(400).json({ 
-        message: "Invalid profile data", 
+      return res.status(400).json({
+        message: "Invalid profile data",
         error: dbError.message,
         details: "Check the console for more information about the error"
       });
@@ -195,7 +199,13 @@ router.post("/api/profiles", upload.fields([
 router.get('/uploads/:filename', (req, res) => {
   const filename = req.params.filename;
   const filePath = path.join(uploadsDir, filename);
+
+  if (!fs.existsSync(filePath)) {
+    return res.status(404).json({ message: "File not found" });
+  }
+
   res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Content-Disposition', 'inline; filename=' + filename);
   res.sendFile(filePath);
 });
 
