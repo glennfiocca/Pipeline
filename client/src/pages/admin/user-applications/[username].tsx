@@ -184,7 +184,7 @@ export default function UserApplicationsPage() {
               variant="ghost" 
               size="sm" 
               className="mb-2"
-              onClick={() => setLocation('/admin')}
+              onClick={() => setLocation('/admin-dashboard')}
             >
               <ChevronLeft className="mr-2 h-4 w-4" />
               Back to All Users
