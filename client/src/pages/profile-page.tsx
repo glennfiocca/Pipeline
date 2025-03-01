@@ -1337,37 +1337,10 @@ export default function ProfilePage() {
                               <Input
                                 type="file"
                                 accept=".pdf,.doc,.docx"
-                                onChange={async (e) => {
+                                onChange={(e) => {
                                   const file = e.target.files?.[0];
                                   if (file) {
-                                    try {
-                                      const formData = new FormData();
-                                      formData.append('file', file);
-                                      
-                                      const response = await fetch('/api/upload', {
-                                        method: 'POST',
-                                        body: formData,
-                                      });
-                                      
-                                      if (!response.ok) {
-                                        throw new Error('Upload failed');
-                                      }
-                                      
-                                      const data = await response.json();
-                                      field.onChange(data.filePath);
-                                      
-                                      toast({
-                                        title: "Resume uploaded successfully",
-                                        variant: "success",
-                                      });
-                                    } catch (error) {
-                                      console.error('Error uploading file:', error);
-                                      toast({
-                                        title: "Failed to upload resume",
-                                        description: error instanceof Error ? error.message : "Unknown error",
-                                        variant: "destructive",
-                                      });
-                                    }
+                                    field.onChange(URL.createObjectURL(file));
                                   }
                                 }}
                               />
@@ -1402,37 +1375,10 @@ export default function ProfilePage() {
                               <Input
                                 type="file"
                                 accept=".pdf"
-                                onChange={async (e) => {
+                                onChange={(e) => {
                                   const file = e.target.files?.[0];
                                   if (file) {
-                                    try {
-                                      const formData = new FormData();
-                                      formData.append('file', file);
-                                      
-                                      const response = await fetch('/api/upload', {
-                                        method: 'POST',
-                                        body: formData,
-                                      });
-                                      
-                                      if (!response.ok) {
-                                        throw new Error('Upload failed');
-                                      }
-                                      
-                                      const data = await response.json();
-                                      field.onChange(data.filePath);
-                                      
-                                      toast({
-                                        title: "Transcript uploaded successfully",
-                                        variant: "success",
-                                      });
-                                    } catch (error) {
-                                      console.error('Error uploading file:', error);
-                                      toast({
-                                        title: "Failed to upload transcript",
-                                        description: error instanceof Error ? error.message : "Unknown error",
-                                        variant: "destructive",
-                                      });
-                                    }
+                                    field.onChange(URL.createObjectURL(file));
                                   }
                                 }}
                               />

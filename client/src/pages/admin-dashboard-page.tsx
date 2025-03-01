@@ -891,7 +891,12 @@ export default function AdminDashboardPage() {
         <TabsContent value="users">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0">
-              <CardTitle>Users Management</CardTitle>
+              <CardTitle>
+                Users Management 
+                <span className="ml-2 text-sm font-normal text-muted-foreground">
+                  ({users.length} users)
+                </span>
+              </CardTitle>
               <Button
                 variant="outline"
                 size="icon"
@@ -901,55 +906,54 @@ export default function AdminDashboardPage() {
               </Button>
             </CardHeader>
             <CardContent>
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                 {users.map((user) => (
-                  <div key={user.id} className="p-4 rounded-lg border space-y-2">
-                    <div className="flex items-start justify-between">
-                      <div className="space-y-1">
-                        <div className="font-medium flex items-center gap-2">
-                          <UserIcon className="h-4 w-4 text-muted-foreground" />
-                          {user.username}
-                          {user.isAdmin && (
-                            <Badge variant="secondary" className="ml-2">
-                              Admin
-                            </Badge>
-                          )}
+                  <Card key={user.id} className="overflow-hidden w-auto">
+                    <CardContent className="p-3">
+                      <div className="flex items-center mb-1.5">
+                        <UserIcon className="h-5 w-5 text-muted-foreground mr-2" />
+                        <span className="font-medium text-base">{user.username}</span>
+                        {user.isAdmin && (
+                          <Badge variant="outline" className="ml-2 text-xs py-0">
+                            Admin
+                          </Badge>
+                        )}
+                      </div>
+                      
+                      <div className="text-sm text-muted-foreground mb-2">
+                        <div className="flex items-center mb-1">
+                          <Mail className="h-4 w-4 mr-2" />
+                          <span className="truncate">{user.email}</span>
                         </div>
-                        <div className="text-sm text-muted-foreground flex items-center gap-2">
-                          <Mail className="h-4 w-4" />
-                          {user.email}
-                        </div>
-                        <div className="text-sm text-muted-foreground flex items-center gap-2">
-                          <CreditCard className="h-4 w-4" />
-                          {user.bankedCredits || 0} banked credits
+                        <div className="flex items-center">
+                          <CreditCard className="h-4 w-4 mr-2" />
+                          <span>{user.bankedCredits} banked credits</span>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
+                      
+                      <div className="flex items-center justify-start mt-1.5 border-t pt-1.5">
                         <Button
                           variant="outline"
-                          size="icon"
-                          onClick={() => handleExportProfile(user.id)}
-                          title="Export Profile as PDF"
-                        >
-                          <FileDown className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="icon"
+                          size="sm"
+                          className="h-8 w-8 p-0 mr-1.5"
                           onClick={() => setSelectedUserCredits({ user, action: 'manage_credits' })}
+                          title="Manage Credits"
                         >
                           <CreditCard className="h-4 w-4" />
                         </Button>
                         <Button
                           variant="outline"
-                          size="icon"
+                          size="sm"
+                          className="h-8 w-8 p-0 mr-1.5"
                           onClick={() => handleEditUser(user)}
+                          title="Edit User"
                         >
                           <Edit className="h-4 w-4" />
                         </Button>
                         <Button
                           variant="outline"
-                          size="icon"
+                          size="sm"
+                          className="h-8 w-8 p-0 mr-1.5"
                           onClick={async () => {
                             try {
                               const profileResponse = await apiRequest("GET", `/api/admin/profiles/${user.id}`);
@@ -972,21 +976,26 @@ export default function AdminDashboardPage() {
                               });
                             }
                           }}
-                          title="View Documents"
+                          title="View Documents & Export Profile"
                         >
                           <Eye className="h-4 w-4" />
                         </Button>
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
-                            <Button variant="destructive" size="icon">
+                            <Button 
+                              variant="destructive" 
+                              size="sm"
+                              className="h-8 w-8 p-0"
+                              title="Delete User"
+                            >
                               <Trash2 className="h-4 w-4" />
                             </Button>
                           </AlertDialogTrigger>
                           <AlertDialogContent>
                             <AlertDialogHeader>
-                              <AlertDialogTitle>Delete User</AlertDialogTitle>
+                              <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                               <AlertDialogDescription>
-                                Are you sure you want to delete this user? This action cannot be undone.
+                                This will permanently delete the user and all associated data.
                               </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
@@ -1000,8 +1009,8 @@ export default function AdminDashboardPage() {
                           </AlertDialogContent>
                         </AlertDialog>
                       </div>
-                    </div>
-                  </div>
+                    </CardContent>
+                  </Card>
                 ))}
               </div>
             </CardContent>
@@ -1131,13 +1140,11 @@ export default function AdminDashboardPage() {
                       </a>
                     </div>
                     <div className="aspect-[16/9] w-full bg-muted rounded-md overflow-hidden">
-                      <object 
-                        data={selectedUserDocuments.profile.resumeUrl} 
-                        type="application/pdf"
+                      <iframe 
+                        src={selectedUserDocuments.profile.resumeUrl} 
                         className="w-full h-full" 
-                      >
-                        <p>Unable to display PDF. <a href={selectedUserDocuments.profile.resumeUrl} target="_blank" rel="noopener noreferrer">Download instead</a></p>
-                      </object>
+                        title="Resume"
+                      />
                     </div>
                   </div>
                 ) : (
@@ -1162,13 +1169,11 @@ export default function AdminDashboardPage() {
                       </a>
                     </div>
                     <div className="aspect-[16/9] w-full bg-muted rounded-md overflow-hidden">
-                      <object 
-                        data={selectedUserDocuments.profile.transcriptUrl} 
-                        type="application/pdf"
+                      <iframe 
+                        src={selectedUserDocuments.profile.transcriptUrl} 
                         className="w-full h-full" 
-                      >
-                        <p>Unable to display PDF. <a href={selectedUserDocuments.profile.transcriptUrl} target="_blank" rel="noopener noreferrer">Download instead</a></p>
-                      </object>
+                        title="Academic Transcript"
+                      />
                     </div>
                   </div>
                 ) : (
