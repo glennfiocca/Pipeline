@@ -1103,7 +1103,7 @@ export default function ProfilePage() {
                   <CardDescription>Add your projects</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  {projectFields.map((field, index) =>(
+                  {projectFields.map((field, index) => (
                     <div key={field.id} className="space-y-4 p-4 border rounded-lg relative">
                       <Button
                         type="button"
@@ -1205,10 +1205,10 @@ export default function ProfilePage() {
                       <FormDescription>
                         Upload your current resume (max 5MB)
                       </FormDescription>
-                      {profile?.resumeUrl && (
+                      {profile?.resumeUrl && !profile.resumeUrl.startsWith('blob:') && (
                         <div className="mt-2">
                           <a
-                            href={profile.resumeUrl}
+                            href={`/api${profile.resumeUrl}`}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="text-sm text-blue-600 hover:underline flex items-center gap-2"
@@ -1236,10 +1236,10 @@ export default function ProfilePage() {
                       <FormDescription>
                         Upload your academic transcript (max 5MB)
                       </FormDescription>
-                      {profile?.transcriptUrl && (
+                      {profile?.transcriptUrl && !profile.transcriptUrl.startsWith('blob:') && (
                         <div className="mt-2">
                           <a
-                            href={profile.transcriptUrl}
+                            href={`/api${profile.transcriptUrl}`}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="text-sm text-blue-600 hover:underline flex items-center gap-2"

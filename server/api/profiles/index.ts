@@ -56,7 +56,7 @@ router.get("/api/profiles/:userId", async (req, res) => {
     }
 
     return res.status(200).json(profile);
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error fetching profile:", error);
     return res.status(500).json({ message: "Failed to fetch profile", error: error.message });
   }
@@ -83,13 +83,11 @@ router.post("/api/profiles", upload.fields([
       return res.status(400).json({ message: "Invalid profile data format" });
     }
 
-    // Handle file uploads
-    const files = req.files as { [fieldname: string]: Express.Multer.File[] };
-
     // Clean up old files and set new URLs
     const existingProfile = await storage.getProfileByUserId(userId);
 
-    if (files.resume?.[0]) {
+    // Handle resume file
+    if ((req.files as any)?.resume?.[0]) {
       // Remove old resume if it exists
       if (existingProfile?.resumeUrl) {
         const oldPath = path.join(uploadsDir, path.basename(existingProfile.resumeUrl));
@@ -97,13 +95,18 @@ router.post("/api/profiles", upload.fields([
           fs.unlinkSync(oldPath);
         }
       }
-      profileData.resumeUrl = `/uploads/${files.resume[0].filename}`;
-    } else if (existingProfile?.resumeUrl) {
-      // Keep existing resume URL if no new file uploaded
-      profileData.resumeUrl = existingProfile.resumeUrl;
+      profileData.resumeUrl = `/uploads/${(req.files as any).resume[0].filename}`;
+    } else {
+      // Keep existing resume URL if no new file uploaded and it's not a blob URL
+      if (existingProfile?.resumeUrl && !existingProfile.resumeUrl.startsWith('blob:')) {
+        profileData.resumeUrl = existingProfile.resumeUrl;
+      } else {
+        profileData.resumeUrl = null;
+      }
     }
 
-    if (files.transcript?.[0]) {
+    // Handle transcript file
+    if ((req.files as any)?.transcript?.[0]) {
       // Remove old transcript if it exists
       if (existingProfile?.transcriptUrl) {
         const oldPath = path.join(uploadsDir, path.basename(existingProfile.transcriptUrl));
@@ -111,10 +114,14 @@ router.post("/api/profiles", upload.fields([
           fs.unlinkSync(oldPath);
         }
       }
-      profileData.transcriptUrl = `/uploads/${files.transcript[0].filename}`;
-    } else if (existingProfile?.transcriptUrl) {
-      // Keep existing transcript URL if no new file uploaded
-      profileData.transcriptUrl = existingProfile.transcriptUrl;
+      profileData.transcriptUrl = `/uploads/${(req.files as any).transcript[0].filename}`;
+    } else {
+      // Keep existing transcript URL if no new file uploaded and it's not a blob URL
+      if (existingProfile?.transcriptUrl && !existingProfile.transcriptUrl.startsWith('blob:')) {
+        profileData.transcriptUrl = existingProfile.transcriptUrl;
+      } else {
+        profileData.transcriptUrl = null;
+      }
     }
 
     profileData.userId = userId;
@@ -167,13 +174,11 @@ router.post("/api/profiles", upload.fields([
     console.log("Processing sanitized profile data:", JSON.stringify(profileData));
 
     // Check if profile exists and update/create accordingly
-    const existingProfile2 = await storage.getProfileByUserId(userId);
-
     let result;
     try {
-      if (existingProfile2) {
-        console.log(`Updating existing profile with ID ${existingProfile2.id}`);
-        result = await storage.updateProfile(existingProfile2.id, profileData);
+      if (existingProfile) {
+        console.log(`Updating existing profile with ID ${existingProfile.id}`);
+        result = await storage.updateProfile(existingProfile.id, profileData);
       } else {
         console.log("Creating new profile");
         result = await storage.createProfile(profileData);
@@ -181,7 +186,7 @@ router.post("/api/profiles", upload.fields([
 
       console.log("Profile saved successfully:", result);
       return res.status(200).json(result);
-    } catch (dbError) {
+    } catch (dbError: any) {
       console.error("Database error:", dbError);
       return res.status(400).json({
         message: "Invalid profile data",
@@ -189,7 +194,7 @@ router.post("/api/profiles", upload.fields([
         details: "Check the console for more information about the error"
       });
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error saving profile:", error);
     return res.status(500).json({ message: "Failed to save profile", error: error.message });
   }
@@ -204,6 +209,7 @@ router.get('/uploads/:filename', (req, res) => {
     return res.status(404).json({ message: "File not found" });
   }
 
+  // Set proper headers for PDF files
   res.setHeader('Content-Type', 'application/pdf');
   res.setHeader('Content-Disposition', 'inline; filename=' + filename);
   res.sendFile(filePath);
