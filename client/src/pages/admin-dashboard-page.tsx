@@ -11,7 +11,7 @@ import { queryClient } from "@/lib/queryClient";
 import { apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
 import { useLocation } from "wouter";
-import { Users, Mail, User as UserIcon, Edit, Trash2, Plus, CreditCard, FileDown } from "lucide-react";
+import { Users, Mail, User as UserIcon, Edit, Trash2, Plus, CreditCard, FileDown, Eye, FileText } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -45,6 +45,7 @@ export default function AdminDashboardPage() {
   const [showEditJobDialog, setShowEditJobDialog] = useState(false);
   const [showEditUserDialog, setShowEditUserDialog] = useState(false);
   const [selectedUserCredits, setSelectedUserCredits] = useState<SelectedUserCredits>(null);
+  const [selectedUserDocuments, setSelectedUserDocuments] = useState<{ user: User; profile: any } | null>(null);
   const { data: jobs = [], isLoading: isLoadingJobs } = useQuery<Job[]>({
     queryKey: ["/api/jobs"],
     enabled: true,
@@ -265,7 +266,7 @@ export default function AdminDashboardPage() {
       });
       
       // Fetch the user's profile
-      const response = await apiRequest("GET", `/api/profiles/${userId}`);
+      const response = await apiRequest("GET", `/api/admin/profiles/${userId}`);
       
       if (!response.ok) {
         throw new Error("Failed to fetch profile");
@@ -312,6 +313,12 @@ export default function AdminDashboardPage() {
       if (profile.phone) doc.text(`Phone: ${profile.phone}`, 14, yPos); yPos += 6;
       if (profile.title) doc.text(`Title: ${profile.title}`, 14, yPos); yPos += 6;
       if (profile.location) doc.text(`Location: ${profile.location}`, 14, yPos); yPos += 6;
+      if (profile.bio) {
+        doc.text("Bio:", 14, yPos); yPos += 6;
+        const bioLines = doc.splitTextToSize(profile.bio, 180);
+        doc.text(bioLines, 14, yPos);
+        yPos += bioLines.length * 6 + 4;
+      }
       
       // Address
       yPos += 4;
@@ -343,6 +350,79 @@ export default function AdminDashboardPage() {
       if (profile.workAuthorization) doc.text(`Work Authorization: ${profile.workAuthorization}`, 14, yPos); yPos += 6;
       if (profile.availability) doc.text(`Availability: ${profile.availability}`, 14, yPos); yPos += 6;
       if (profile.citizenshipStatus) doc.text(`Citizenship Status: ${profile.citizenshipStatus}`, 14, yPos); yPos += 6;
+      if (profile.visaSponsorship !== undefined) doc.text(`Visa Sponsorship: ${profile.visaSponsorship ? 'Yes' : 'No'}`, 14, yPos); yPos += 6;
+      if (profile.willingToRelocate !== undefined) doc.text(`Willing to Relocate: ${profile.willingToRelocate ? 'Yes' : 'No'}`, 14, yPos); yPos += 6;
+      if (profile.salaryExpectation) doc.text(`Salary Expectation: ${profile.salaryExpectation}`, 14, yPos); yPos += 6;
+      
+      if (profile.preferredLocations && profile.preferredLocations.length > 0) {
+        doc.text(`Preferred Locations: ${profile.preferredLocations.join(", ")}`, 14, yPos);
+        yPos += 6;
+      }
+      
+      // Document Links
+      yPos += 4;
+      doc.setFontSize(14);
+      doc.text("Documents", 14, yPos);
+      yPos += 8;
+      
+      doc.setFontSize(12);
+      if (profile.resumeUrl) {
+        doc.text("Resume: Available in user profile", 14, yPos);
+        yPos += 6;
+      } else {
+        doc.text("Resume: Not provided", 14, yPos);
+        yPos += 6;
+      }
+      
+      if (profile.transcriptUrl) {
+        doc.text("Academic Transcript: Available in user profile", 14, yPos);
+        yPos += 6;
+      } else {
+        doc.text("Academic Transcript: Not provided", 14, yPos);
+        yPos += 6;
+      }
+      
+      // Add instructions for accessing documents
+      yPos += 4;
+      doc.setFontSize(10);
+      doc.setTextColor(100, 100, 100);
+      doc.text("To view documents: Click the 'eye' icon on the user's card in the admin dashboard", 14, yPos);
+      yPos += 5;
+      doc.text("to open the document viewer and access the resume and transcript files.", 14, yPos);
+      doc.setTextColor(0, 0, 0);
+      doc.setFontSize(12);
+      yPos += 8;
+      
+      // Online Profiles
+      yPos += 4;
+      doc.setFontSize(14);
+      doc.text("Online Profiles", 14, yPos);
+      yPos += 8;
+      
+      doc.setFontSize(12);
+      if (profile.linkedinUrl) {
+        doc.text("LinkedIn: ", 14, yPos);
+        doc.setTextColor(0, 0, 255);
+        doc.text(profile.linkedinUrl, 50, yPos);
+        doc.setTextColor(0, 0, 0);
+        yPos += 6;
+      }
+      
+      if (profile.portfolioUrl) {
+        doc.text("Portfolio: ", 14, yPos);
+        doc.setTextColor(0, 0, 255);
+        doc.text(profile.portfolioUrl, 50, yPos);
+        doc.setTextColor(0, 0, 0);
+        yPos += 6;
+      }
+      
+      if (profile.githubUrl) {
+        doc.text("GitHub: ", 14, yPos);
+        doc.setTextColor(0, 0, 255);
+        doc.text(profile.githubUrl, 50, yPos);
+        doc.setTextColor(0, 0, 0);
+        yPos += 6;
+      }
       
       // Skills
       if (profile.skills && profile.skills.length > 0) {
@@ -365,6 +445,28 @@ export default function AdminDashboardPage() {
         }
       }
       
+      // Languages
+      if (profile.languages && profile.languages.length > 0) {
+        yPos += 4;
+        doc.setFontSize(14);
+        doc.text("Languages", 14, yPos);
+        yPos += 8;
+        
+        doc.setFontSize(12);
+        profile.languages.forEach((lang: any) => {
+          const langText = `${lang.language} (${lang.proficiency})`;
+          doc.text(langText, 14, yPos);
+          yPos += 6;
+        });
+        yPos += 4;
+      }
+      
+      // Check if we need a new page for education
+      if (yPos > 250 && profile.education && profile.education.length > 0) {
+        doc.addPage();
+        yPos = 20;
+      }
+      
       // Education
       if (profile.education && profile.education.length > 0) {
         yPos += 4;
@@ -380,6 +482,12 @@ export default function AdminDashboardPage() {
           if (edu.startDate) doc.text(`Start Date: ${edu.startDate}`, 14, yPos); yPos += 6;
           if (edu.endDate) doc.text(`End Date: ${edu.endDate}`, 14, yPos); yPos += 6;
           if (edu.isPresent) doc.text(`Current: Yes`, 14, yPos); yPos += 6;
+          if (edu.gpa) doc.text(`GPA: ${edu.gpa}`, 14, yPos); yPos += 6;
+          if (edu.description) {
+            const splitDesc = doc.splitTextToSize(`Description: ${edu.description}`, 180);
+            doc.text(splitDesc, 14, yPos);
+            yPos += splitDesc.length * 6;
+          }
           yPos += 4;
         });
       }
@@ -413,6 +521,172 @@ export default function AdminDashboardPage() {
         });
       }
       
+      // Check if we need a new page for certifications
+      if (yPos > 250 && profile.certifications && profile.certifications.length > 0) {
+        doc.addPage();
+        yPos = 20;
+      }
+      
+      // Certifications
+      if (profile.certifications && profile.certifications.length > 0) {
+        yPos += 4;
+        doc.setFontSize(14);
+        doc.text("Certifications", 14, yPos);
+        yPos += 8;
+        
+        doc.setFontSize(12);
+        profile.certifications.forEach((cert: any) => {
+          if (cert.name) doc.text(`Name: ${cert.name}`, 14, yPos); yPos += 6;
+          if (cert.issuer) doc.text(`Issuer: ${cert.issuer}`, 14, yPos); yPos += 6;
+          if (cert.issueDate) doc.text(`Issue Date: ${cert.issueDate}`, 14, yPos); yPos += 6;
+          if (cert.expiryDate) doc.text(`Expiry Date: ${cert.expiryDate}`, 14, yPos); yPos += 6;
+          if (cert.credentialId) doc.text(`Credential ID: ${cert.credentialId}`, 14, yPos); yPos += 6;
+          if (cert.credentialUrl) {
+            doc.text(`Credential URL: `, 14, yPos);
+            doc.setTextColor(0, 0, 255);
+            doc.text(cert.credentialUrl, 80, yPos);
+            doc.setTextColor(0, 0, 0);
+            yPos += 6;
+          }
+          yPos += 4;
+        });
+      }
+      
+      // Check if we need a new page for publications
+      if (yPos > 250 && profile.publications && profile.publications.length > 0) {
+        doc.addPage();
+        yPos = 20;
+      }
+      
+      // Publications
+      if (profile.publications && profile.publications.length > 0) {
+        yPos += 4;
+        doc.setFontSize(14);
+        doc.text("Publications", 14, yPos);
+        yPos += 8;
+        
+        doc.setFontSize(12);
+        profile.publications.forEach((pub: any) => {
+          if (pub.title) doc.text(`Title: ${pub.title}`, 14, yPos); yPos += 6;
+          if (pub.publisher) doc.text(`Publisher: ${pub.publisher}`, 14, yPos); yPos += 6;
+          if (pub.publicationDate) doc.text(`Publication Date: ${pub.publicationDate}`, 14, yPos); yPos += 6;
+          if (pub.authors) doc.text(`Authors: ${pub.authors}`, 14, yPos); yPos += 6;
+          if (pub.description) {
+            const splitDesc = doc.splitTextToSize(`Description: ${pub.description}`, 180);
+            doc.text(splitDesc, 14, yPos);
+            yPos += splitDesc.length * 6;
+          }
+          if (pub.url) {
+            doc.text(`URL: `, 14, yPos);
+            doc.setTextColor(0, 0, 255);
+            doc.text(pub.url, 40, yPos);
+            doc.setTextColor(0, 0, 0);
+            yPos += 6;
+          }
+          yPos += 4;
+        });
+      }
+      
+      // Check if we need a new page for projects
+      if (yPos > 250 && profile.projects && profile.projects.length > 0) {
+        doc.addPage();
+        yPos = 20;
+      }
+      
+      // Projects
+      if (profile.projects && profile.projects.length > 0) {
+        yPos += 4;
+        doc.setFontSize(14);
+        doc.text("Projects", 14, yPos);
+        yPos += 8;
+        
+        doc.setFontSize(12);
+        profile.projects.forEach((proj: any) => {
+          if (proj.name) doc.text(`Name: ${proj.name}`, 14, yPos); yPos += 6;
+          if (proj.role) doc.text(`Role: ${proj.role}`, 14, yPos); yPos += 6;
+          if (proj.startDate) doc.text(`Start Date: ${proj.startDate}`, 14, yPos); yPos += 6;
+          if (proj.endDate) doc.text(`End Date: ${proj.endDate}`, 14, yPos); yPos += 6;
+          if (proj.description) {
+            const splitDesc = doc.splitTextToSize(`Description: ${proj.description}`, 180);
+            doc.text(splitDesc, 14, yPos);
+            yPos += splitDesc.length * 6;
+          }
+          if (proj.url) {
+            doc.text(`URL: `, 14, yPos);
+            doc.setTextColor(0, 0, 255);
+            doc.text(proj.url, 40, yPos);
+            doc.setTextColor(0, 0, 0);
+            yPos += 6;
+          }
+          if (proj.technologies && proj.technologies.length > 0) {
+            doc.text(`Technologies: ${proj.technologies.join(", ")}`, 14, yPos); 
+            yPos += 6;
+          }
+          if (proj.achievements && proj.achievements.length > 0) {
+            doc.text(`Achievements: ${proj.achievements.join(", ")}`, 14, yPos); 
+            yPos += 6;
+          }
+          yPos += 4;
+        });
+      }
+      
+      // Check if we need a new page for military info
+      if (yPos > 250 && (profile.veteranStatus || profile.militaryBranch || profile.militaryServiceDates)) {
+        doc.addPage();
+        yPos = 20;
+      }
+      
+      // Military Information
+      if (profile.veteranStatus || profile.militaryBranch || profile.militaryServiceDates) {
+        yPos += 4;
+        doc.setFontSize(14);
+        doc.text("Military Information", 14, yPos);
+        yPos += 8;
+        
+        doc.setFontSize(12);
+        if (profile.veteranStatus) doc.text(`Veteran Status: ${profile.veteranStatus}`, 14, yPos); yPos += 6;
+        if (profile.militaryBranch) doc.text(`Military Branch: ${profile.militaryBranch}`, 14, yPos); yPos += 6;
+        if (profile.militaryServiceDates) doc.text(`Service Dates: ${profile.militaryServiceDates}`, 14, yPos); yPos += 6;
+      }
+      
+      // Security Clearance
+      if (profile.securityClearance || profile.clearanceType || profile.clearanceExpiry) {
+        yPos += 4;
+        doc.setFontSize(14);
+        doc.text("Security Clearance", 14, yPos);
+        yPos += 8;
+        
+        doc.setFontSize(12);
+        if (profile.securityClearance) doc.text(`Security Clearance: ${profile.securityClearance}`, 14, yPos); yPos += 6;
+        if (profile.clearanceType) doc.text(`Clearance Type: ${profile.clearanceType}`, 14, yPos); yPos += 6;
+        if (profile.clearanceExpiry) doc.text(`Clearance Expiry: ${profile.clearanceExpiry}`, 14, yPos); yPos += 6;
+      }
+      
+      // Check if we need a new page for references
+      if (yPos > 250 && profile.referenceList && profile.referenceList.length > 0) {
+        doc.addPage();
+        yPos = 20;
+      }
+      
+      // References
+      if (profile.referenceList && profile.referenceList.length > 0) {
+        yPos += 4;
+        doc.setFontSize(14);
+        doc.text("References", 14, yPos);
+        yPos += 8;
+        
+        doc.setFontSize(12);
+        profile.referenceList.forEach((ref: any) => {
+          if (ref.name) doc.text(`Name: ${ref.name}`, 14, yPos); yPos += 6;
+          if (ref.title) doc.text(`Title: ${ref.title}`, 14, yPos); yPos += 6;
+          if (ref.company) doc.text(`Company: ${ref.company}`, 14, yPos); yPos += 6;
+          if (ref.email) doc.text(`Email: ${ref.email}`, 14, yPos); yPos += 6;
+          if (ref.phone) doc.text(`Phone: ${ref.phone}`, 14, yPos); yPos += 6;
+          if (ref.relationship) doc.text(`Relationship: ${ref.relationship}`, 14, yPos); yPos += 6;
+          yPos += 4;
+        });
+      }
+      
       // Save the PDF
       const fileName = `${user.username}_profile_${format(new Date(), "yyyyMMdd_HHmmss")}.pdf`;
       doc.save(fileName);
@@ -431,6 +705,18 @@ export default function AdminDashboardPage() {
       });
     }
   };
+
+  // Helper function to convert PDF data to a data URI
+  const getDataUri = async (pdfData: Uint8Array): Promise<string> => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        resolve(reader.result as string);
+      };
+      reader.readAsDataURL(new Blob([pdfData], { type: 'application/pdf' }));
+    });
+  };
+
   if (isLoadingJobs || isLoadingUsers) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -661,6 +947,35 @@ export default function AdminDashboardPage() {
                         >
                           <Edit className="h-4 w-4" />
                         </Button>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={async () => {
+                            try {
+                              const profileResponse = await apiRequest("GET", `/api/admin/profiles/${user.id}`);
+                              if (profileResponse.ok) {
+                                const profile = await profileResponse.json();
+                                setSelectedUserDocuments({ user, profile });
+                              } else {
+                                toast({
+                                  title: "Error",
+                                  description: "Could not fetch user documents",
+                                  variant: "destructive",
+                                });
+                              }
+                            } catch (error) {
+                              console.error("Error fetching user documents:", error);
+                              toast({
+                                title: "Error",
+                                description: "Could not fetch user documents",
+                                variant: "destructive",
+                              });
+                            }
+                          }}
+                          title="View Documents"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
                             <Button variant="destructive" size="icon">
@@ -787,6 +1102,98 @@ export default function AdminDashboardPage() {
             });
           }}
         />
+      )}
+      {selectedUserDocuments && (
+        <Dialog open={!!selectedUserDocuments} onOpenChange={() => setSelectedUserDocuments(null)}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Documents for {selectedUserDocuments.user.username}</DialogTitle>
+              <DialogDescription>
+                View and download user documents
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="space-y-6 py-4">
+              <div className="space-y-2">
+                <h3 className="text-lg font-medium">Resume</h3>
+                {selectedUserDocuments.profile.resumeUrl ? (
+                  <div className="border rounded-md p-4">
+                    <div className="flex justify-between items-center mb-4">
+                      <span className="text-sm text-muted-foreground">Resume document</span>
+                      <a 
+                        href={selectedUserDocuments.profile.resumeUrl} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2 text-sm text-blue-500 hover:underline"
+                      >
+                        <FileText className="h-4 w-4" />
+                        Open in new tab
+                      </a>
+                    </div>
+                    <div className="aspect-[16/9] w-full bg-muted rounded-md overflow-hidden">
+                      <object 
+                        data={selectedUserDocuments.profile.resumeUrl} 
+                        type="application/pdf"
+                        className="w-full h-full" 
+                      >
+                        <p>Unable to display PDF. <a href={selectedUserDocuments.profile.resumeUrl} target="_blank" rel="noopener noreferrer">Download instead</a></p>
+                      </object>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">No resume uploaded</p>
+                )}
+              </div>
+              
+              <div className="space-y-2">
+                <h3 className="text-lg font-medium">Academic Transcript</h3>
+                {selectedUserDocuments.profile.transcriptUrl ? (
+                  <div className="border rounded-md p-4">
+                    <div className="flex justify-between items-center mb-4">
+                      <span className="text-sm text-muted-foreground">Transcript document</span>
+                      <a 
+                        href={selectedUserDocuments.profile.transcriptUrl} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2 text-sm text-blue-500 hover:underline"
+                      >
+                        <FileText className="h-4 w-4" />
+                        Open in new tab
+                      </a>
+                    </div>
+                    <div className="aspect-[16/9] w-full bg-muted rounded-md overflow-hidden">
+                      <object 
+                        data={selectedUserDocuments.profile.transcriptUrl} 
+                        type="application/pdf"
+                        className="w-full h-full" 
+                      >
+                        <p>Unable to display PDF. <a href={selectedUserDocuments.profile.transcriptUrl} target="_blank" rel="noopener noreferrer">Download instead</a></p>
+                      </object>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">No transcript uploaded</p>
+                )}
+              </div>
+              
+              {/* Additional documents could be added here */}
+              
+              <div className="flex justify-end gap-2 mt-4">
+                <Button 
+                  variant="outline" 
+                  onClick={() => setSelectedUserDocuments(null)}
+                >
+                  Close
+                </Button>
+                <Button 
+                  onClick={() => handleExportProfile(selectedUserDocuments.user.id)}
+                >
+                  Export Profile PDF
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       )}
     </div>
   );
