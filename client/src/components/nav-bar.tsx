@@ -1,6 +1,6 @@
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { BriefcaseIcon, HomeIcon, UserCircleIcon, BarChartIcon, LogOutIcon, ShieldIcon, Menu } from "lucide-react";
+import { BriefcaseIcon, HomeIcon, UserCircleIcon, BarChartIcon, LogOutIcon, ShieldIcon, Menu, InfoIcon } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { NotificationsDialog } from "@/components/NotificationsDialog";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -49,6 +49,12 @@ export function NavBar() {
           )}
         </>
       )}
+      <Link href="/how-it-works">
+        <Button variant="ghost" size="sm" className="w-full md:w-auto justify-start md:justify-center">
+          <InfoIcon className="h-4 w-4 mr-2" />
+          How It Works
+        </Button>
+      </Link>
     </div>
   );
 

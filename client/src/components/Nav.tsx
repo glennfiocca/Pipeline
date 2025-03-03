@@ -37,6 +37,9 @@ const Nav = () => {
           <Link href="/jobs" className={navStyles.navLink}>
             Jobs
           </Link>
+          <Link href="/how-it-works" className={navStyles.navLink}>
+            How It Works
+          </Link>
           {user && (
             <>
               <Link href="/applications" className={navStyles.navLink}>
