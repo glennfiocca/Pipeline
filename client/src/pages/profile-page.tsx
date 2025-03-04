@@ -1410,27 +1410,25 @@ export default function ProfilePage() {
                     />
                   </div>
                 </CardContent>
+                <CardFooter className="flex justify-end gap-4">
+                  <Button
+                    type="submit"
+                    onClick={form.handleSubmit(onSubmit)}
+                    disabled={!form.formState.isDirty}
+                  >
+                    {form.formState.isSubmitting ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      'Save Profile'
+                    )}
+                  </Button>
+                </CardFooter>
               </Card>
             </TabsContent>
           </Tabs>
-
-          {/* Single submit button for the entire form */}
-          <div className="flex justify-end mt-6">
-            <Button
-              type="submit"
-              disabled={form.formState.isSubmitting}
-              className="min-w-[120px]" // Ensure button maintains size during loading state
-            >
-              {form.formState.isSubmitting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                "Save Profile"
-              )}
-            </Button>
-          </div>
         </form>
       </Form>
     </div>
