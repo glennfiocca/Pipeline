@@ -133,15 +133,15 @@ export default function ProfilePage() {
     }
   });
 
-  const { data: profile, isLoading } = useQuery<Profile>({
+  // Update the useQuery implementation for profile data
+  const { data: profile, isLoading } = useQuery({
     queryKey: ["profile", user?.id],
     queryFn: () => {
       if (!user?.id) throw new Error("No user ID");
       return fetchOrCreateProfile(user.id);
     },
     enabled: !!user?.id,
-    staleTime: 5 * 60 * 1000, // Consider data fresh for 5 minutes
-    cacheTime: 10 * 60 * 1000, // Cache for 10 minutes
+    // Removed cacheTime and staleTime
   });
 
   const formRef = useRef<HTMLFormElement>(null);
@@ -149,7 +149,7 @@ export default function ProfilePage() {
 
   useEffect(() => {
     if (profile) {
-      console.log("Resetting form with profile:", profile); // Debug log
+      console.log("Resetting form with profile:", profile);
 
       // Ensure all array fields are properly initialized
       const formattedProfile = {
@@ -161,12 +161,12 @@ export default function ProfilePage() {
         languages: profile.languages || [],
         publications: profile.publications || [],
         projects: profile.projects || [],
-        // Ensure boolean fields are properly initialized
         visaSponsorship: profile.visaSponsorship === true,
         willingToRelocate: profile.willingToRelocate === true
       };
 
-      form.reset(formattedProfile);
+      // Use reset with keepValues to preserve form state
+      form.reset(formattedProfile, { keepValues: true });
     }
   }, [profile, form]);
 
@@ -237,62 +237,62 @@ export default function ProfilePage() {
     }
   }, [form.formState.isDirty]);
 
-  // Replace your onSubmit function with this improved version
+  // Update the onSubmit function implementation
   const onSubmit = async (data: InsertProfile) => {
     try {
       console.log("Submitting profile data:", data);
-      
+
       // Create FormData for file uploads
       const formData = new FormData();
-      
+
       // Add all profile data as JSON
       formData.append('profile', JSON.stringify({
         ...data,
         userId: user?.id
       }));
-      
+
       // Add files if they exist
       if (fileState.resume) {
         formData.append('resume', fileState.resume);
       }
-      
+
       if (fileState.transcript) {
         formData.append('transcript', fileState.transcript);
       }
-      
+
       // Send the request
       const response = await fetch('/api/profiles', {
         method: 'POST',
         body: formData,
         credentials: 'include'
       });
-      
-      const responseData = await response.json();
-      
+
       if (!response.ok) {
-        throw new Error(responseData.message || `Failed to save profile: ${response.status}`);
+        const errorData = await response.json();
+        throw new Error(errorData.message || `Failed to save profile: ${response.status}`);
       }
-      
+
+      const responseData = await response.json();
       console.log("Profile saved successfully:", responseData);
-      
-      // IMPORTANT: Update the cache with the new data
+
+      // Update the query cache with the new data
       queryClient.setQueryData(["profile", user?.id], responseData);
-      
-      // Mark form as pristine to prevent navigation warnings
+
+      // Mark form as pristine after successful save
       form.reset(responseData);
-      
+
       if (formRef.current) {
         formRef.current.dataset.isDirty = 'false';
       }
-      
+
       toast({
         title: "Profile Updated",
         description: "Your profile has been successfully updated.",
       });
-      
-      // Force a refetch to ensure we have the latest data
-      queryClient.invalidateQueries({ queryKey: ["profile", user?.id] });
-      
+
+      // Wait for the cache update to complete
+      await queryClient.invalidateQueries({ queryKey: ["profile", user?.id] });
+
     } catch (error: any) {
       console.error("Error saving profile:", error);
       toast({
@@ -305,15 +305,15 @@ export default function ProfilePage() {
 
   const handleDirectSave = () => {
     console.log("Direct save button clicked");
-    
+
     // Get current form values
     const formData = form.getValues();
-    
+
     // Log validation errors but proceed anyway
     if (Object.keys(form.formState.errors).length > 0) {
       console.warn("Form has validation errors:", form.formState.errors);
     }
-    
+
     // Bypass the form validation and submit directly
     onSubmit(formData).then(() => {
       // Force a refetch of the profile data to ensure UI is in sync
@@ -1117,7 +1117,7 @@ export default function ProfilePage() {
                       >
                         <X className="h-4 w-4" />
                       </Button>
-                      
+
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                         <FormField
                           control={form.control}
