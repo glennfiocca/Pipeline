@@ -2,7 +2,6 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertJobSchema, insertApplicationSchema, insertProfileSchema, insertMessageSchema, insertUserSchema, insertFeedbackSchema } from "@shared/schema";
-import { ScraperManager } from './services/scraper/manager';
 import { db } from './db';
 import { users } from '@shared/schema';
 import { hashPassword } from './utils/password'; // Assuming this function exists
@@ -343,23 +342,6 @@ export function registerRoutes(app: Express): Server {
 
 
   // Regular routes continue...
-  app.post("/api/jobs/scrape", async (_req, res) => {
-    try {
-      console.log('Starting job scraping process...');
-      const manager = new ScraperManager();
-      const jobs = await manager.runScrapers();
-      console.log('Scraping completed, found jobs:', jobs?.length || 0);
-      res.json({
-        message: "Job scraping completed successfully",
-        jobCount: jobs?.length || 0,
-        jobs: jobs
-      });
-    } catch (error) {
-      console.error('Error running scrapers:', error);
-      res.status(500).json({ error: "Failed to scrape jobs", details: (error as Error).message });
-    }
-  });
-
   // Profiles
   app.get("/api/profiles", async (_req, res) => {
     const profiles = await storage.getProfiles();
