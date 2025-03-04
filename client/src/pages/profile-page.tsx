@@ -237,62 +237,67 @@ export default function ProfilePage() {
     }
   }, [form.formState.isDirty]);
 
-  // Update the onSubmit function implementation
+  // Add this onSubmit function definition after the form declaration but before any useEffect hooks
+  // Around line 150, after the queryClient declaration
+
   const onSubmit = async (data: InsertProfile) => {
     try {
-      console.log("Submitting profile data:", data);
+      console.log("Form submission triggered with data:", data);
 
       // Create FormData for file uploads
       const formData = new FormData();
 
       // Add all profile data as JSON
-      formData.append('profile', JSON.stringify({
+      const profileData = {
         ...data,
         userId: user?.id
-      }));
+      };
+
+      console.log("Preparing to submit profile data:", profileData);
+      formData.append('profile', JSON.stringify(profileData));
 
       // Add files if they exist
       if (fileState.resume) {
+        console.log("Adding resume file to form data");
         formData.append('resume', fileState.resume);
       }
 
       if (fileState.transcript) {
+        console.log("Adding transcript file to form data");
         formData.append('transcript', fileState.transcript);
       }
+
+      console.log("Sending profile data to server...");
 
       // Send the request
       const response = await fetch('/api/profiles', {
         method: 'POST',
-        body: formData,
-        credentials: 'include'
+        body: formData
       });
+
+      console.log("Server response status:", response.status);
 
       if (!response.ok) {
         const errorData = await response.json();
+        console.error("Server returned error:", errorData);
         throw new Error(errorData.message || `Failed to save profile: ${response.status}`);
       }
 
-      const responseData = await response.json();
-      console.log("Profile saved successfully:", responseData);
+      const savedProfile = await response.json();
+      console.log("Profile saved successfully:", savedProfile);
 
-      // Update the query cache with the new data
-      queryClient.setQueryData(["profile", user?.id], responseData);
+      // Update the query cache
+      queryClient.setQueryData(["profile", user?.id], savedProfile);
 
-      // Mark form as pristine after successful save
-      form.reset(responseData);
-
+      // Reset form state to mark as pristine
       if (formRef.current) {
         formRef.current.dataset.isDirty = 'false';
       }
 
       toast({
-        title: "Profile Updated",
-        description: "Your profile has been successfully updated.",
+        title: "Success",
+        description: "Your profile has been saved successfully.",
       });
-
-      // Wait for the cache update to complete
-      await queryClient.invalidateQueries({ queryKey: ["profile", user?.id] });
-
     } catch (error: any) {
       console.error("Error saving profile:", error);
       toast({
@@ -357,7 +362,25 @@ export default function ProfilePage() {
       <h1 className="text-3xl font-bold mb-6">Profile</h1>
 
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} ref={formRef} data-is-dirty="false">
+        <form
+          ref={formRef}
+          data-is-dirty="false"
+          onSubmit={(e) => {
+            e.preventDefault();
+            console.log("Form submit triggered");
+            const formData = form.getValues();
+            console.log("Form data:", formData);
+            onSubmit(formData).catch(error => {
+              console.error("Error submitting form:", error);
+              toast({
+                title: "Error",
+                description: error.message || "Failed to save profile",
+                variant: "destructive"
+              });
+            });
+          }}
+          className="space-y-8"
+        >
           <Tabs defaultValue="personal">
             <TabsList className="mb-4">
               <TabsTrigger value="personal">Personal Info</TabsTrigger>
@@ -1107,7 +1130,7 @@ export default function ProfilePage() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {projectFields.map((field, index) => (
-                    <div key={field.id} className="border p4 rounded-md relative">
+                    <div key={field.id} className="border p-4 rounded-md relative">
                       <Button
                         type="button"
                         variant="ghost"
@@ -1410,23 +1433,6 @@ export default function ProfilePage() {
                     />
                   </div>
                 </CardContent>
-                {/*This line was removed because the save button is moved outside the tabs*/}
-                {/*<CardFooter className="flex justify-end gap-4">
-                  <Button
-                    type="submit"
-                    onClick={form.handleSubmit(onSubmit)}
-                    disabled={!form.formState.isDirty}
-                  >
-                    {form.formState.isSubmitting ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Saving...
-                      </>
-                    ) : (
-                      'Save Profile'
-                    )}
-                  </Button>
-                </CardFooter>*/}
               </Card>
             </TabsContent>
           </Tabs>
@@ -1437,7 +1443,6 @@ export default function ProfilePage() {
               type="submit"
               disabled={form.formState.isSubmitting}
               className="min-w-[120px]"
-              onClick={form.handleSubmit(onSubmit)}
             >
               {form.formState.isSubmitting ? (
                 <>
