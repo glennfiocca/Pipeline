@@ -1107,7 +1107,7 @@ export default function ProfilePage() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {projectFields.map((field, index) => (
-                    <div key={field.id} className="border p-4 rounded-md relative">
+                    <div key={field.id} className="border p4 rounded-md relative">
                       <Button
                         type="button"
                         variant="ghost"
@@ -1410,7 +1410,8 @@ export default function ProfilePage() {
                     />
                   </div>
                 </CardContent>
-                <CardFooter className="flex justify-end gap-4">
+                {/*This line was removed because the save button is moved outside the tabs*/}
+                {/*<CardFooter className="flex justify-end gap-4">
                   <Button
                     type="submit"
                     onClick={form.handleSubmit(onSubmit)}
@@ -1425,10 +1426,29 @@ export default function ProfilePage() {
                       'Save Profile'
                     )}
                   </Button>
-                </CardFooter>
+                </CardFooter>*/}
               </Card>
             </TabsContent>
           </Tabs>
+
+          {/* Single submit button for the entire form */}
+          <div className="flex justify-end mt-6 pb-6">
+            <Button
+              type="submit"
+              disabled={form.formState.isSubmitting}
+              className="min-w-[120px]"
+              onClick={form.handleSubmit(onSubmit)}
+            >
+              {form.formState.isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                "Save Profile"
+              )}
+            </Button>
+          </div>
         </form>
       </Form>
     </div>
