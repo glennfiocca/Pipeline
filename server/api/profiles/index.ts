@@ -50,6 +50,7 @@ router.get("/api/profiles/:userId", async (req, res) => {
     }
 
     const profile = await storage.getProfileByUserId(userId);
+    console.log("Retrieved profile for userId:", userId, profile);
 
     if (!profile) {
       return res.status(404).json({ message: "Profile not found" });
@@ -96,13 +97,9 @@ router.post("/api/profiles", upload.fields([
         }
       }
       profileData.resumeUrl = `/public/uploads/${(req.files as any).resume[0].filename}`;
-    } else {
-      // Keep existing resume URL if no new file uploaded and it's not a blob URL
-      if (existingProfile?.resumeUrl && !existingProfile.resumeUrl.startsWith('blob:')) {
-        profileData.resumeUrl = existingProfile.resumeUrl;
-      } else {
-        profileData.resumeUrl = null;
-      }
+    } else if (existingProfile?.resumeUrl) {
+      // Keep existing resume URL if no new file uploaded
+      profileData.resumeUrl = existingProfile.resumeUrl;
     }
 
     // Handle transcript file
@@ -115,63 +112,24 @@ router.post("/api/profiles", upload.fields([
         }
       }
       profileData.transcriptUrl = `/public/uploads/${(req.files as any).transcript[0].filename}`;
-    } else {
-      // Keep existing transcript URL if no new file uploaded and it's not a blob URL
-      if (existingProfile?.transcriptUrl && !existingProfile.transcriptUrl.startsWith('blob:')) {
-        profileData.transcriptUrl = existingProfile.transcriptUrl;
-      } else {
-        profileData.transcriptUrl = null;
-      }
+    } else if (existingProfile?.transcriptUrl) {
+      // Keep existing transcript URL if no new file uploaded
+      profileData.transcriptUrl = existingProfile.transcriptUrl;
     }
 
     profileData.userId = userId;
 
-    // Sanitize array fields
-    const sanitizeArrayField = (field: any[]) => {
-      return Array.isArray(field) ? field.map(item => {
-        const sanitized: any = {};
-        Object.entries(item).forEach(([key, value]) => {
-          if (key === 'isPresent') {
-            sanitized[key] = value === true || value === "true";
-          } else if (value !== undefined && value !== null) {
-            sanitized[key] = value;
-          } else if (typeof value === 'string') {
-            sanitized[key] = "";
-          }
-        });
-
-        if (sanitized.isPresent === true) {
-          sanitized.endDate = "";
-        }
-
-        return sanitized;
-      }) : [];
-    };
-
-    profileData.education = sanitizeArrayField(profileData.education || []);
-    profileData.experience = sanitizeArrayField(profileData.experience || []);
-    profileData.skills = sanitizeArrayField(profileData.skills || []);
-    profileData.certifications = sanitizeArrayField(profileData.certifications || []);
-    profileData.languages = sanitizeArrayField(profileData.languages || []);
-    profileData.publications = sanitizeArrayField(profileData.publications || []);
-    profileData.projects = sanitizeArrayField(profileData.projects || []);
+    // Ensure all array fields are properly initialized
+    const arrayFields = ['education', 'experience', 'skills', 'certifications', 'languages', 'publications', 'projects'];
+    arrayFields.forEach(field => {
+      profileData[field] = Array.isArray(profileData[field]) ? profileData[field] : [];
+    });
 
     // Ensure boolean fields are properly set
     profileData.visaSponsorship = profileData.visaSponsorship === true || profileData.visaSponsorship === "true";
     profileData.willingToRelocate = profileData.willingToRelocate === true || profileData.willingToRelocate === "true";
 
-    // Ensure all required string fields have values
-    const requiredStringFields = [
-      'name', 'email', 'phone', 'title', 'bio', 'location',
-      'address', 'city', 'state', 'zipCode', 'country',
-      'workAuthorization', 'availability', 'citizenshipStatus'
-    ];
-
-    requiredStringFields.forEach(field => {
-      profileData[field] = profileData[field] || "";
-    });
-
-    console.log("Processing sanitized profile data:", JSON.stringify(profileData));
+    console.log("Processing profile data:", JSON.stringify(profileData));
 
     // Check if profile exists and update/create accordingly
     let result;

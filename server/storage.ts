@@ -225,17 +225,49 @@ export class DatabaseStorage implements IStorage {
       console.log("Creating profile with data:", JSON.stringify(profile));
 
       // Ensure all array fields are properly initialized
-      const dataToCreate: InsertProfile = {
-        ...profile,
+      const dataToCreate = {
+        userId: profile.userId,
+        name: profile.name || '',
+        email: profile.email || '',
+        phone: profile.phone || '',
+        title: profile.title || '',
+        bio: profile.bio || '',
+        location: profile.location || '',
+        address: profile.address || '',
+        city: profile.city || '',
+        state: profile.state || '',
+        zipCode: profile.zipCode || '',
+        country: profile.country || '',
         education: Array.isArray(profile.education) ? profile.education : [],
         experience: Array.isArray(profile.experience) ? profile.experience : [],
-        skills: Array.isArray(profile.skills) ? profile.skills : [],
+        skills: Array.isArray(profile.skills) ? profile.skills.map(skill => 
+          typeof skill === 'string' ? skill : 
+          typeof skill === 'object' ? Object.values(skill).join('') : 
+          String(skill)
+        ) : [],
         certifications: Array.isArray(profile.certifications) ? profile.certifications : [],
         languages: Array.isArray(profile.languages) ? profile.languages : [],
         publications: Array.isArray(profile.publications) ? profile.publications : [],
         projects: Array.isArray(profile.projects) ? profile.projects : [],
+        preferredLocations: Array.isArray(profile.preferredLocations) ? profile.preferredLocations : [],
+        workAuthorization: profile.workAuthorization || '',
+        availability: profile.availability || '',
+        citizenshipStatus: profile.citizenshipStatus || '',
         visaSponsorship: profile.visaSponsorship === true,
-        willingToRelocate: profile.willingToRelocate === true
+        willingToRelocate: profile.willingToRelocate === true,
+        resumeUrl: profile.resumeUrl || null,
+        transcriptUrl: profile.transcriptUrl || null,
+        linkedinUrl: profile.linkedinUrl || '',
+        portfolioUrl: profile.portfolioUrl || '',
+        githubUrl: profile.githubUrl || '',
+        salaryExpectation: profile.salaryExpectation || '',
+        veteranStatus: profile.veteranStatus || '',
+        militaryBranch: profile.militaryBranch || '',
+        militaryServiceDates: profile.militaryServiceDates || '',
+        securityClearance: profile.securityClearance || '',
+        clearanceType: profile.clearanceType || '',
+        clearanceExpiry: profile.clearanceExpiry || '',
+        referenceList: Array.isArray(profile.referenceList) ? profile.referenceList : []
       };
 
       const [newProfile] = await db
@@ -255,39 +287,60 @@ export class DatabaseStorage implements IStorage {
     try {
       console.log(`Updating profile with ID ${id} with data:`, JSON.stringify(profile));
 
-      // Create a sanitized copy of the profile data
-      const sanitizedProfile: any = { ...profile };
+      // Create an object with only the fields that are being updated
+      const updateData: Record<string, any> = {};
 
-      // Process skills array - ensure it's an array of strings
-      if (profile.skills) {
-        sanitizedProfile.skills = profile.skills.map(skill =>
-          typeof skill === 'string' ? skill :
-            typeof skill === 'object' ? Object.values(skill).join('') :
-              String(skill)
-        );
-      }
+      // Handle standard string/number fields
+      const stringFields = [
+        'name', 'email', 'phone', 'title', 'bio', 'location',
+        'address', 'city', 'state', 'zipCode', 'country',
+        'workAuthorization', 'availability', 'citizenshipStatus',
+        'resumeUrl', 'transcriptUrl', 'linkedinUrl', 'portfolioUrl',
+        'githubUrl', 'salaryExpectation', 'veteranStatus',
+        'militaryBranch', 'militaryServiceDates', 'securityClearance',
+        'clearanceType', 'clearanceExpiry'
+      ];
 
-      // Ensure boolean fields are properly typed
-      if ('visaSponsorship' in profile) {
-        sanitizedProfile.visaSponsorship = Boolean(profile.visaSponsorship);
-      }
-      if ('willingToRelocate' in profile) {
-        sanitizedProfile.willingToRelocate = Boolean(profile.willingToRelocate);
-      }
-
-      // Ensure all array fields are arrays
-      const arrayFields = ['education', 'experience', 'certifications', 'languages', 'publications', 'projects', 'referenceList'];
-      arrayFields.forEach(field => {
+      stringFields.forEach(field => {
         if (field in profile) {
-          sanitizedProfile[field] = Array.isArray(profile[field]) ? profile[field] : [];
+          updateData[field] = profile[field] || '';
         }
       });
 
-      console.log("Sanitized profile data:", JSON.stringify(sanitizedProfile));
+      // Handle boolean fields
+      if ('visaSponsorship' in profile) {
+        updateData.visaSponsorship = Boolean(profile.visaSponsorship);
+      }
+      if ('willingToRelocate' in profile) {
+        updateData.willingToRelocate = Boolean(profile.willingToRelocate);
+      }
+
+      // Handle array fields
+      const arrayFields = [
+        'education', 'experience', 'skills', 'certifications',
+        'languages', 'publications', 'projects', 'preferredLocations',
+        'referenceList'
+      ];
+
+      arrayFields.forEach(field => {
+        if (field in profile) {
+          let value = profile[field as keyof typeof profile];
+          if (field === 'skills' && Array.isArray(value)) {
+            value = value.map(skill =>
+              typeof skill === 'string' ? skill :
+              typeof skill === 'object' ? Object.values(skill).join('') :
+              String(skill)
+            );
+          }
+          updateData[field] = Array.isArray(value) ? value : [];
+        }
+      });
+
+      console.log("Sanitized update data:", JSON.stringify(updateData));
 
       const [updatedProfile] = await db
         .update(profiles)
-        .set(sanitizedProfile)
+        .set(updateData)
         .where(eq(profiles.id, id))
         .returning();
 
