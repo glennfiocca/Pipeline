@@ -141,7 +141,10 @@ export default function ProfilePage() {
       return fetchOrCreateProfile(user.id);
     },
     enabled: !!user?.id,
-    // Removed cacheTime and staleTime
+    staleTime: Infinity, // Keep the data forever until explicitly invalidated
+    gcTime: Infinity, // Never remove this data from the cache (replaces cacheTime)
+    refetchOnWindowFocus: false, // Don't refetch when window gets focus
+    refetchOnMount: false, // Don't refetch when component mounts
   });
 
   const formRef = useRef<HTMLFormElement>(null);
@@ -149,26 +152,54 @@ export default function ProfilePage() {
 
   useEffect(() => {
     if (profile) {
-      console.log("Resetting form with profile:", profile);
-
-      // Ensure all array fields are properly initialized
-      const formattedProfile = {
-        ...profile,
-        education: profile.education || [],
-        experience: profile.experience || [],
-        skills: profile.skills || [],
-        certifications: profile.certifications || [],
-        languages: profile.languages || [],
-        publications: profile.publications || [],
-        projects: profile.projects || [],
-        visaSponsorship: profile.visaSponsorship === true,
-        willingToRelocate: profile.willingToRelocate === true
-      };
-
-      // Use reset with keepValues to preserve form state
-      form.reset(formattedProfile, { keepValues: true });
+      console.log("Setting form values from profile:", profile);
+      
+      // We need to safely handle each field type to prevent errors
+      form.setValue("name", profile.name || "", { shouldDirty: false });
+      form.setValue("email", profile.email || "", { shouldDirty: false });
+      form.setValue("phone", profile.phone || "", { shouldDirty: false });
+      form.setValue("title", profile.title || "", { shouldDirty: false });
+      form.setValue("bio", profile.bio || "", { shouldDirty: false });
+      form.setValue("location", profile.location || "", { shouldDirty: false });
+      
+      // Address fields
+      form.setValue("address", profile.address || "", { shouldDirty: false });
+      form.setValue("city", profile.city || "", { shouldDirty: false });
+      form.setValue("state", profile.state || "", { shouldDirty: false });
+      form.setValue("zipCode", profile.zipCode || "", { shouldDirty: false });
+      form.setValue("country", profile.country || "", { shouldDirty: false });
+      
+      // Work fields
+      form.setValue("workAuthorization", profile.workAuthorization || "", { shouldDirty: false });
+      form.setValue("availability", profile.availability || "", { shouldDirty: false });
+      form.setValue("citizenshipStatus", profile.citizenshipStatus || "", { shouldDirty: false });
+      form.setValue("visaSponsorship", profile.visaSponsorship || false, { shouldDirty: false });
+      form.setValue("willingToRelocate", profile.willingToRelocate || false, { shouldDirty: false });
+      form.setValue("salaryExpectation", profile.salaryExpectation || "", { shouldDirty: false });
+      
+      // Array fields
+      if (Array.isArray(profile.education)) form.setValue("education", profile.education, { shouldDirty: false });
+      if (Array.isArray(profile.experience)) form.setValue("experience", profile.experience, { shouldDirty: false });
+      if (Array.isArray(profile.skills)) form.setValue("skills", profile.skills, { shouldDirty: false });
+      if (Array.isArray(profile.certifications)) form.setValue("certifications", profile.certifications, { shouldDirty: false });
+      if (Array.isArray(profile.languages)) form.setValue("languages", profile.languages, { shouldDirty: false });
+      if (Array.isArray(profile.publications)) form.setValue("publications", profile.publications, { shouldDirty: false });
+      if (Array.isArray(profile.projects)) form.setValue("projects", profile.projects, { shouldDirty: false });
+      if (Array.isArray(profile.preferredLocations)) form.setValue("preferredLocations", profile.preferredLocations, { shouldDirty: false });
+      
+      // URL fields
+      form.setValue("resumeUrl", profile.resumeUrl || "", { shouldDirty: false });
+      form.setValue("transcriptUrl", profile.transcriptUrl || "", { shouldDirty: false });
+      form.setValue("linkedinUrl", profile.linkedinUrl || "", { shouldDirty: false });
+      form.setValue("portfolioUrl", profile.portfolioUrl || "", { shouldDirty: false });
+      form.setValue("githubUrl", profile.githubUrl || "", { shouldDirty: false });
+      
+      // Reset form's dirty state
+      if (formRef.current) {
+        formRef.current.dataset.isDirty = 'false';
+      }
     }
-  }, [profile, form]);
+  }, [profile]);
 
   const { fields: educationFields, append: appendEducation, remove: removeEducation } =
     useFieldArray({
@@ -213,9 +244,9 @@ export default function ProfilePage() {
   }, [skillInput, form]);
 
   // Handle removing skills
-  const handleRemoveSkill = useCallback((skill: string) => {
+  const handleRemoveSkill = useCallback((skillToRemove: string) => {
     const currentSkills = form.getValues("skills") || [];
-    form.setValue("skills", currentSkills.filter(s => s !== skill));
+    form.setValue("skills", currentSkills.filter(s => typeof s === 'string' && s !== skillToRemove));
   }, [form]);
 
   // Handle adding language
@@ -237,67 +268,55 @@ export default function ProfilePage() {
     }
   }, [form.formState.isDirty]);
 
-  // Add this onSubmit function definition after the form declaration but before any useEffect hooks
-  // Around line 150, after the queryClient declaration
-
+  // Completely rewrite the onSubmit function to properly persist form data
   const onSubmit = async (data: InsertProfile) => {
     try {
-      console.log("Form submission triggered with data:", data);
-
-      // Create FormData for file uploads
+      // Store the current form values
+      const currentValues = form.getValues();
+      console.log("Submitting form values:", currentValues);
+      
+      // Create FormData
       const formData = new FormData();
-
-      // Add all profile data as JSON
-      const profileData = {
-        ...data,
+      
+      // Add profile data as JSON
+      formData.append('profile', JSON.stringify({
+        ...currentValues,
         userId: user?.id
-      };
-
-      console.log("Preparing to submit profile data:", profileData);
-      formData.append('profile', JSON.stringify(profileData));
-
-      // Add files if they exist
-      if (fileState.resume) {
-        console.log("Adding resume file to form data");
-        formData.append('resume', fileState.resume);
-      }
-
-      if (fileState.transcript) {
-        console.log("Adding transcript file to form data");
-        formData.append('transcript', fileState.transcript);
-      }
-
-      console.log("Sending profile data to server...");
-
-      // Send the request
+      }));
+      
+      // Add files
+      if (fileState.resume) formData.append('resume', fileState.resume);
+      if (fileState.transcript) formData.append('transcript', fileState.transcript);
+      
+      // Submit to server
       const response = await fetch('/api/profiles', {
         method: 'POST',
         body: formData
       });
-
-      console.log("Server response status:", response.status);
-
+      
       if (!response.ok) {
         const errorData = await response.json();
-        console.error("Server returned error:", errorData);
-        throw new Error(errorData.message || `Failed to save profile: ${response.status}`);
+        throw new Error(errorData.message || 'Failed to save profile');
       }
-
+      
+      // Process the response
       const savedProfile = await response.json();
-      console.log("Profile saved successfully:", savedProfile);
-
-      // Update the query cache
+      console.log("Server returned saved profile:", savedProfile);
+      
+      // CRITICAL: Explicitly update the React Query cache with the saved data
       queryClient.setQueryData(["profile", user?.id], savedProfile);
-
-      // Reset form state to mark as pristine
+      
+      // Mark form as pristine
       if (formRef.current) {
         formRef.current.dataset.isDirty = 'false';
       }
-
+      
       toast({
         title: "Success",
         description: "Your profile has been saved successfully.",
       });
+      
+      return savedProfile;
     } catch (error: any) {
       console.error("Error saving profile:", error);
       toast({
@@ -305,6 +324,7 @@ export default function ProfilePage() {
         description: error.message || "Failed to save profile",
         variant: "destructive",
       });
+      throw error;
     }
   };
 
@@ -321,8 +341,11 @@ export default function ProfilePage() {
 
     // Bypass the form validation and submit directly
     onSubmit(formData).then(() => {
-      // Force a refetch of the profile data to ensure UI is in sync
-      queryClient.invalidateQueries({ queryKey: ["profile", user.id] });
+      // Fix the null check on user
+      if (user?.id) {
+        // Force a refetch of the profile data to ensure UI is in sync
+        queryClient.invalidateQueries({ queryKey: ["profile", user.id] });
+      }
     });
   };
 
@@ -886,13 +909,13 @@ export default function ProfilePage() {
                     <div className="flex flex-wrap gap-2 mt-2 mb-4">
                       {form.watch("skills")?.map((skill, index) => (
                         <Badge key={index} variant="secondary" className="px-3 py-1 text-sm">
-                          {skill}
+                          {typeof skill === 'string' ? skill : JSON.stringify(skill)}
                           <Button
                             type="button"
                             variant="ghost"
                             size="sm"
                             className="h-4 w-4 p-0 ml-2"
-                            onClick={() => handleRemoveSkill(skill)}
+                            onClick={() => typeof skill === 'string' && handleRemoveSkill(skill)}
                           >
                             <X className="h-3 w-3" />
                           </Button>
@@ -1425,7 +1448,11 @@ export default function ProfilePage() {
                         <FormItem>
                           <FormLabel>Salary Expectation</FormLabel>
                           <FormControl>
-                            <Input {...field} placeholder="e.g., $80,000 - $100,000" />
+                            <Input 
+                              {...field} 
+                              value={field.value || ''} 
+                              placeholder="e.g., $80,000 - $100,000" 
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
