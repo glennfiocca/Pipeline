@@ -4,15 +4,43 @@ import { Button } from "@/components/ui/button";
 import { NotificationBell } from "@/components/NotificationBell";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/use-auth";
+import { useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 
 const Nav = () => {
   const router = useRouter();
   const { user, logout } = useAuth();
+  const queryClient = useQueryClient();
 
   const handleLogout = () => {
     logout();
     router.push('/');
   };
+
+  const handleNavigation = (path: string) => {
+    // Check if we're on the profile page and there are unsaved changes
+    if (window.location.pathname === '/profile' && document.querySelector('form')?.dataset.isDirty === 'true') {
+      // Ask user to confirm navigation if there are unsaved changes
+      if (!confirm('You have unsaved changes. Are you sure you want to leave this page?')) {
+        return; // Cancel navigation if user chooses to stay
+      }
+    }
+    
+    // Add a longer delay to ensure any pending operations complete
+    setTimeout(() => {
+      router.push(path);
+    }, 300);
+  };
+
+  useEffect(() => {
+    if (user?.id) {
+      queryClient.prefetchQuery({
+        queryKey: ["profile", user.id],
+        queryFn: () => fetch(`/api/profiles/${user.id}`).then(res => res.json()),
+        staleTime: 10 * 60 * 1000,
+      });
+    }
+  }, [user, queryClient]);
 
   const navStyles = {
     wrapper: "bg-background sticky top-0 border-b z-50 shadow-sm",
@@ -42,14 +70,35 @@ const Nav = () => {
           </Link>
           {user && (
             <>
-              <Link href="/applications" className={navStyles.navLink}>
+              <Link 
+                href="/applications" 
+                className={navStyles.navLink}
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleNavigation('/applications');
+                }}
+              >
                 Applications
               </Link>
-              <Link href="/profile" className={navStyles.navLink}>
+              <Link 
+                href="/profile" 
+                className={navStyles.navLink}
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleNavigation('/profile');
+                }}
+              >
                 Profile
               </Link>
               {user.isAdmin && (
-                <Link href="/admin/dashboard" className={navStyles.navLink}>
+                <Link 
+                  href="/admin/dashboard" 
+                  className={navStyles.navLink}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    handleNavigation('/admin/dashboard');
+                  }}
+                >
                   Admin
                 </Link>
               )}
@@ -74,14 +123,14 @@ const Nav = () => {
               <Button 
                 variant="ghost" 
                 className={navStyles.authButton}
-                onClick={() => router.push('/login')}
+                onClick={() => handleNavigation('/login')}
               >
                 Login
               </Button>
               <Button 
                 variant="default"
                 className={`${navStyles.authButton} bg-primary hover:bg-primary/90`}
-                onClick={() => router.push('/signup')}
+                onClick={() => handleNavigation('/signup')}
               >
                 Sign Up
               </Button>

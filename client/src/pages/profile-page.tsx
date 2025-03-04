@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useFieldArray, useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Profile, insertProfileSchema, type InsertProfile } from "@shared/schema";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { apiRequest } from "@/lib/queryClient";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2, Plus, X } from "lucide-react";
 import { useEffect, useMemo, useCallback, useState, useRef } from 'react';
@@ -140,10 +140,12 @@ export default function ProfilePage() {
       return fetchOrCreateProfile(user.id);
     },
     enabled: !!user?.id,
-    staleTime: 0, // Always fetch fresh data
-    cacheTime: 0, // Don't cache
+    staleTime: 5 * 60 * 1000, // Consider data fresh for 5 minutes
+    cacheTime: 10 * 60 * 1000, // Cache for 10 minutes
   });
 
+  const formRef = useRef<HTMLFormElement>(null);
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     if (profile) {
@@ -227,71 +229,70 @@ export default function ProfilePage() {
     }
   }, [languageInput, appendLanguage]);
 
-  // Update the onSubmit function to handle file uploads
+  // Add this effect to track form dirty state
+  useEffect(() => {
+    // Update form dirty state for navigation warning
+    if (formRef.current) {
+      formRef.current.dataset.isDirty = form.formState.isDirty ? 'true' : 'false';
+    }
+  }, [form.formState.isDirty]);
+
+  // Replace your onSubmit function with this improved version
   const onSubmit = async (data: InsertProfile) => {
     try {
-      setDebugMsg("Submitting form...");
-      console.log("Form data being submitted:", data);
-
-      if (!user?.id) {
-        throw new Error("No user ID");
-      }
-
-      // Create FormData object
+      console.log("Submitting profile data:", data);
+      
+      // Create FormData for file uploads
       const formData = new FormData();
-
-      // Add all the profile data as JSON
-      const profileData = {
+      
+      // Add all profile data as JSON
+      formData.append('profile', JSON.stringify({
         ...data,
-        userId: user.id,
-        education: data.education || [],
-        experience: data.experience || [],
-        skills: data.skills || [],
-        certifications: data.certifications || [],
-        languages: data.languages || [],
-        publications: data.publications || [],
-        projects: data.projects || [],
-        visaSponsorship: data.visaSponsorship === true,
-        willingToRelocate: data.willingToRelocate === true,
-      };
-
-      // Add the profile data as a JSON string
-      formData.append('profile', JSON.stringify(profileData));
-
+        userId: user?.id
+      }));
+      
       // Add files if they exist
       if (fileState.resume) {
         formData.append('resume', fileState.resume);
       }
+      
       if (fileState.transcript) {
         formData.append('transcript', fileState.transcript);
       }
-
-      // Send the request with FormData
+      
+      // Send the request
       const response = await fetch('/api/profiles', {
         method: 'POST',
         body: formData,
         credentials: 'include'
       });
-
+      
       const responseData = await response.json();
-
+      
       if (!response.ok) {
         throw new Error(responseData.message || `Failed to save profile: ${response.status}`);
       }
-
-      // Invalidate the profile query to refresh data
-      queryClient.invalidateQueries({ queryKey: ["profile", user.id] });
-
+      
+      console.log("Profile saved successfully:", responseData);
+      
+      // IMPORTANT: Update the cache with the new data
+      queryClient.setQueryData(["profile", user?.id], responseData);
+      
+      // Mark form as pristine to prevent navigation warnings
+      form.reset(responseData);
+      
+      if (formRef.current) {
+        formRef.current.dataset.isDirty = 'false';
+      }
+      
       toast({
         title: "Profile Updated",
         description: "Your profile has been successfully updated.",
       });
-
-      setDebugMsg("Form submitted successfully");
-
-      // Reset form state to mark it as pristine
-      form.reset(responseData, { keepValues: true, keepDirty: false });
-
+      
+      // Force a refetch to ensure we have the latest data
+      queryClient.invalidateQueries({ queryKey: ["profile", user?.id] });
+      
     } catch (error: any) {
       console.error("Error saving profile:", error);
       toast({
@@ -299,25 +300,25 @@ export default function ProfilePage() {
         description: error.message || "Failed to save profile",
         variant: "destructive",
       });
-      setDebugMsg(`Error: ${error.message}`);
     }
   };
 
   const handleDirectSave = () => {
     console.log("Direct save button clicked");
-    console.log("Current form values:", form.getValues());
-    console.log("Form state:", form.formState);
-
+    
     // Get current form values
     const formData = form.getValues();
-
-    // Log validation errors
+    
+    // Log validation errors but proceed anyway
     if (Object.keys(form.formState.errors).length > 0) {
       console.warn("Form has validation errors:", form.formState.errors);
     }
-
+    
     // Bypass the form validation and submit directly
-    onSubmit(formData);
+    onSubmit(formData).then(() => {
+      // Force a refetch of the profile data to ensure UI is in sync
+      queryClient.invalidateQueries({ queryKey: ["profile", user.id] });
+    });
   };
 
 
@@ -352,11 +353,11 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="container mx-auto py-6">
+    <div className="container py-10">
       <h1 className="text-3xl font-bold mb-6">Profile</h1>
 
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)}>
+        <form onSubmit={form.handleSubmit(onSubmit)} ref={formRef} data-is-dirty="false">
           <Tabs defaultValue="personal">
             <TabsList className="mb-4">
               <TabsTrigger value="personal">Personal Info</TabsTrigger>
@@ -1100,11 +1101,13 @@ export default function ProfilePage() {
               <Card>
                 <CardHeader>
                   <CardTitle>Projects</CardTitle>
-                  <CardDescription>Add your projects</CardDescription>
+                  <CardDescription>
+                    Add details about your projects
+                  </CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="space-y-4">
                   {projectFields.map((field, index) => (
-                    <div key={field.id} className="space-y-4 p-4 border rounded-lg relative">
+                    <div key={field.id} className="border p-4 rounded-md relative">
                       <Button
                         type="button"
                         variant="ghost"
@@ -1114,7 +1117,7 @@ export default function ProfilePage() {
                       >
                         <X className="h-4 w-4" />
                       </Button>
-
+                      
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                         <FormField
                           control={form.control}
@@ -1166,11 +1169,17 @@ export default function ProfilePage() {
                     variant="outline"
                     size="sm"
                     className="mt-2"
-                    onClick={() => appendProject({
-                      title: "",
-                      url: "",
-                      description: ""
-                    })}
+                    onClick={() => {
+                      appendProject({
+                        title: "",
+                        url: "",
+                        description: ""
+                      });
+                      // Mark form as dirty when adding a new project
+                      if (formRef.current) {
+                        formRef.current.dataset.isDirty = 'true';
+                      }
+                    }}
                   >
                     <Plus className="mr-2 h-4 w-4" /> Add Project
                   </Button>
