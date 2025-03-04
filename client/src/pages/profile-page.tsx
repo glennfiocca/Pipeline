@@ -275,27 +275,26 @@ export default function ProfilePage() {
       const currentValues = form.getValues();
       console.log("Submitting form values:", currentValues);
       
-      // Create FormData
-      const formData = new FormData();
-      
-      // Add profile data as JSON
-      formData.append('profile', JSON.stringify({
+      // Ensure we're adding user ID to the profile data
+      const profileData = {
         ...currentValues,
         userId: user?.id
-      }));
+      };
       
-      // Add files
-      if (fileState.resume) formData.append('resume', fileState.resume);
-      if (fileState.transcript) formData.append('transcript', fileState.transcript);
+      console.log("Sending profile data to server", profileData);
       
-      // Submit to server
+      // Submit to server 
       const response = await fetch('/api/profiles', {
         method: 'POST',
-        body: formData
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(profileData),
       });
       
       if (!response.ok) {
         const errorData = await response.json();
+        console.error("Server error response:", errorData);
         throw new Error(errorData.message || 'Failed to save profile');
       }
       
@@ -303,8 +302,11 @@ export default function ProfilePage() {
       const savedProfile = await response.json();
       console.log("Server returned saved profile:", savedProfile);
       
-      // CRITICAL: Explicitly update the React Query cache with the saved data
+      // Update the React Query cache with the saved data
       queryClient.setQueryData(["profile", user?.id], savedProfile);
+      
+      // Reset form state to mark as pristine
+      form.reset(savedProfile);
       
       // Mark form as pristine
       if (formRef.current) {

@@ -3,6 +3,7 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 import { storage } from '../../storage';
+import { insertProfileSchema } from '../../validation/profile';
 
 const router = express.Router();
 
@@ -18,7 +19,7 @@ const multerStorage = multer.diskStorage({
     cb(null, uploadsDir);
   },
   filename: function (req, file, cb) {
-    const userId = req.user?.id || 'unknown';
+    const userId = (req.user as any)?.id || 'unknown';
     const timestamp = Date.now();
     const ext = path.extname(file.originalname);
     cb(null, `${userId}-${file.fieldname}-${timestamp}${ext}`);
@@ -62,98 +63,68 @@ router.get("/api/profiles/:userId", async (req, res) => {
 });
 
 // POST handler for creating/updating profiles with file upload support
-router.post("/api/profiles", upload.fields([
-  { name: 'resume', maxCount: 1 },
-  { name: 'transcript', maxCount: 1 }
-]), async (req, res) => {
+router.post("/", async (req: any, res) => {
   try {
-    const userId = req.user?.id;
-    if (!userId) {
-      return res.status(401).json({ message: "Unauthorized" });
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Authentication required" });
     }
 
-    // Parse and validate profile data
-    let profileData;
-    try {
-      profileData = typeof req.body.profile === 'string' ? JSON.parse(req.body.profile) : req.body.profile;
-      console.log("Received profile data:", JSON.stringify(profileData));
-    } catch (error) {
-      console.error("Error parsing profile data:", error);
-      return res.status(400).json({ message: "Invalid profile data format" });
-    }
+    console.log("Received profile data:", req.body);
 
-    // Handle file uploads and clean up old files
-    const existingProfile = await storage.getProfileByUserId(userId);
-    const files = req.files as { [fieldname: string]: Express.Multer.File[] };
+    // Validate incoming data with insertProfileSchema
+    const safeParse = insertProfileSchema.safeParse({
+      ...req.body,
+      userId: req.user.id // Force userId from session
+    });
 
-    // Process resume file
-    if (files?.resume?.[0]) {
-      if (existingProfile?.resumeUrl) {
-        const oldPath = path.join(uploadsDir, path.basename(existingProfile.resumeUrl));
-        if (fs.existsSync(oldPath)) {
-          fs.unlinkSync(oldPath);
-        }
-      }
-      profileData.resumeUrl = `/public/uploads/${files.resume[0].filename}`;
-    } else if (existingProfile?.resumeUrl) {
-      profileData.resumeUrl = existingProfile.resumeUrl;
-    }
-
-    // Process transcript file
-    if (files?.transcript?.[0]) {
-      if (existingProfile?.transcriptUrl) {
-        const oldPath = path.join(uploadsDir, path.basename(existingProfile.transcriptUrl));
-        if (fs.existsSync(oldPath)) {
-          fs.unlinkSync(oldPath);
-        }
-      }
-      profileData.transcriptUrl = `/public/uploads/${files.transcript[0].filename}`;
-    } else if (existingProfile?.transcriptUrl) {
-      profileData.transcriptUrl = existingProfile.transcriptUrl;
-    }
-
-    // Ensure required fields and proper data types
-    profileData.userId = userId;
-    profileData.education = Array.isArray(profileData.education) ? profileData.education : [];
-    profileData.experience = Array.isArray(profileData.experience) ? profileData.experience : [];
-    profileData.skills = Array.isArray(profileData.skills) ? profileData.skills : [];
-    profileData.certifications = Array.isArray(profileData.certifications) ? profileData.certifications : [];
-    profileData.languages = Array.isArray(profileData.languages) ? profileData.languages : [];
-    profileData.publications = Array.isArray(profileData.publications) ? profileData.publications : [];
-    profileData.projects = Array.isArray(profileData.projects) ? profileData.projects : [];
-    profileData.preferredLocations = Array.isArray(profileData.preferredLocations) ? profileData.preferredLocations : [];
-    profileData.referenceList = Array.isArray(profileData.referenceList) ? profileData.referenceList : [];
-
-    // Convert boolean fields
-    profileData.visaSponsorship = Boolean(profileData.visaSponsorship);
-    profileData.willingToRelocate = Boolean(profileData.willingToRelocate);
-
-    console.log("Processing profile data:", JSON.stringify(profileData));
-
-    // Update or create profile
-    let result;
-    try {
-      if (existingProfile) {
-        console.log(`Updating existing profile with ID ${existingProfile.id}`);
-        result = await storage.updateProfile(existingProfile.id, profileData);
-      } else {
-        console.log("Creating new profile");
-        result = await storage.createProfile(profileData);
-      }
-
-      console.log("Profile saved successfully:", result);
-      return res.status(200).json(result);
-    } catch (dbError: any) {
-      console.error("Database error:", dbError);
+    // Handle invalid data
+    if (!safeParse.success) {
+      console.error("Validation error:", safeParse.error.format());
       return res.status(400).json({
-        message: "Invalid profile data",
-        error: dbError.message,
-        details: "Check the console for more information about the error"
+        error: "Invalid profile data",
+        details: safeParse.error.format()
       });
     }
-  } catch (error: any) {
+
+    // Use the validated data for DB operations
+    const profileData = safeParse.data;
+
+    // Check if profile already exists
+    let existingProfile = await storage.getProfileByUserId(req.user.id);
+    let profile;
+
+    try {
+      if (existingProfile) {
+        // Update existing profile
+        profile = await storage.updateProfile(existingProfile.id, profileData);
+        console.log("Updated profile:", profile);
+      } else {
+        // Create new profile
+        profile = await storage.createProfile(profileData);
+        console.log("Created new profile:", profile);
+      }
+
+      if (!profile) {
+        throw new Error("Failed to save profile");
+      }
+
+      // Fetch the complete profile to return
+      const savedProfile = await storage.getProfileByUserId(req.user.id);
+      if (!savedProfile) {
+        throw new Error("Failed to fetch saved profile");
+      }
+
+      res.json(savedProfile);
+    } catch (error) {
+      console.error("Database operation failed:", error);
+      throw error; // Re-throw to be caught by outer try-catch
+    }
+  } catch (error) {
     console.error("Error saving profile:", error);
-    return res.status(500).json({ message: "Failed to save profile", error: error.message });
+    res.status(500).json({
+      error: "Failed to save profile",
+      details: error instanceof Error ? error.message : "Unknown error"
+    });
   }
 });
 

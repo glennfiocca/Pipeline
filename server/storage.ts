@@ -226,48 +226,16 @@ export class DatabaseStorage implements IStorage {
 
       // Ensure all array fields are properly initialized
       const dataToCreate = {
-        userId: profile.userId,
-        name: profile.name || '',
-        email: profile.email || '',
-        phone: profile.phone || '',
-        title: profile.title || '',
-        bio: profile.bio || '',
-        location: profile.location || '',
-        address: profile.address || '',
-        city: profile.city || '',
-        state: profile.state || '',
-        zipCode: profile.zipCode || '',
-        country: profile.country || '',
+        ...profile,
         education: Array.isArray(profile.education) ? profile.education : [],
         experience: Array.isArray(profile.experience) ? profile.experience : [],
-        skills: Array.isArray(profile.skills) ? profile.skills.map(skill => 
-          typeof skill === 'string' ? skill : 
-          typeof skill === 'object' ? Object.values(skill).join('') : 
-          String(skill)
-        ) : [],
+        skills: Array.isArray(profile.skills) ? profile.skills : [],
         certifications: Array.isArray(profile.certifications) ? profile.certifications : [],
         languages: Array.isArray(profile.languages) ? profile.languages : [],
         publications: Array.isArray(profile.publications) ? profile.publications : [],
         projects: Array.isArray(profile.projects) ? profile.projects : [],
         preferredLocations: Array.isArray(profile.preferredLocations) ? profile.preferredLocations : [],
-        workAuthorization: profile.workAuthorization || '',
-        availability: profile.availability || '',
-        citizenshipStatus: profile.citizenshipStatus || '',
-        visaSponsorship: profile.visaSponsorship === true,
-        willingToRelocate: profile.willingToRelocate === true,
-        resumeUrl: profile.resumeUrl || null,
-        transcriptUrl: profile.transcriptUrl || null,
-        linkedinUrl: profile.linkedinUrl || '',
-        portfolioUrl: profile.portfolioUrl || '',
-        githubUrl: profile.githubUrl || '',
-        salaryExpectation: profile.salaryExpectation || '',
-        veteranStatus: profile.veteranStatus || '',
-        militaryBranch: profile.militaryBranch || '',
-        militaryServiceDates: profile.militaryServiceDates || '',
-        securityClearance: profile.securityClearance || '',
-        clearanceType: profile.clearanceType || '',
-        clearanceExpiry: profile.clearanceExpiry || '',
-        referenceList: Array.isArray(profile.referenceList) ? profile.referenceList : []
+        referenceList: Array.isArray(profile.referenceList) ? profile.referenceList : [],
       };
 
       const [newProfile] = await db
@@ -299,58 +267,19 @@ export class DatabaseStorage implements IStorage {
 
       // Create an object with the fields to update, preserving existing values if not provided
       const updateData = {
-        name: profile.name ?? existingProfile.name,
-        email: profile.email ?? existingProfile.email,
-        phone: profile.phone ?? existingProfile.phone,
-        title: profile.title ?? existingProfile.title,
-        bio: profile.bio ?? existingProfile.bio,
-        location: profile.location ?? existingProfile.location,
-        address: profile.address ?? existingProfile.address,
-        city: profile.city ?? existingProfile.city,
-        state: profile.state ?? existingProfile.state,
-        zipCode: profile.zipCode ?? existingProfile.zipCode,
-        country: profile.country ?? existingProfile.country,
-        workAuthorization: profile.workAuthorization ?? existingProfile.workAuthorization,
-        availability: profile.availability ?? existingProfile.availability,
-        citizenshipStatus: profile.citizenshipStatus ?? existingProfile.citizenshipStatus,
-        resumeUrl: profile.resumeUrl ?? existingProfile.resumeUrl,
-        transcriptUrl: profile.transcriptUrl ?? existingProfile.transcriptUrl,
-        linkedinUrl: profile.linkedinUrl ?? existingProfile.linkedinUrl,
-        portfolioUrl: profile.portfolioUrl ?? existingProfile.portfolioUrl,
-        githubUrl: profile.githubUrl ?? existingProfile.githubUrl,
-        salaryExpectation: profile.salaryExpectation ?? existingProfile.salaryExpectation,
-        veteranStatus: profile.veteranStatus ?? existingProfile.veteranStatus,
-        militaryBranch: profile.militaryBranch ?? existingProfile.militaryBranch,
-        militaryServiceDates: profile.militaryServiceDates ?? existingProfile.militaryServiceDates,
-        securityClearance: profile.securityClearance ?? existingProfile.securityClearance,
-        clearanceType: profile.clearanceType ?? existingProfile.clearanceType,
-        clearanceExpiry: profile.clearanceExpiry ?? existingProfile.clearanceExpiry,
-
-        // Handle boolean fields
-        visaSponsorship: profile.visaSponsorship !== undefined ? Boolean(profile.visaSponsorship) : existingProfile.visaSponsorship,
-        willingToRelocate: profile.willingToRelocate !== undefined ? Boolean(profile.willingToRelocate) : existingProfile.willingToRelocate,
-
-        // Handle array fields, preserving existing arrays if not provided
+        ...profile,
         education: Array.isArray(profile.education) ? profile.education : existingProfile.education,
         experience: Array.isArray(profile.experience) ? profile.experience : existingProfile.experience,
-        skills: Array.isArray(profile.skills) 
-          ? profile.skills.map(skill => 
-              typeof skill === 'string' ? skill :
-              typeof skill === 'object' ? Object.values(skill).join('') :
-              String(skill)
-            )
-          : existingProfile.skills,
+        skills: Array.isArray(profile.skills) ? profile.skills : existingProfile.skills,
         certifications: Array.isArray(profile.certifications) ? profile.certifications : existingProfile.certifications,
         languages: Array.isArray(profile.languages) ? profile.languages : existingProfile.languages,
         publications: Array.isArray(profile.publications) ? profile.publications : existingProfile.publications,
         projects: Array.isArray(profile.projects) ? profile.projects : existingProfile.projects,
         preferredLocations: Array.isArray(profile.preferredLocations) ? profile.preferredLocations : existingProfile.preferredLocations,
-        referenceList: Array.isArray(profile.referenceList) ? profile.referenceList : existingProfile.referenceList
+        referenceList: Array.isArray(profile.referenceList) ? profile.referenceList : existingProfile.referenceList,
       };
 
-      console.log("Update data:", JSON.stringify(updateData));
-
-      const [updatedProfile] = await db
+      const [updatedProfile] = await db  
         .update(profiles)
         .set(updateData)
         .where(eq(profiles.id, id))
