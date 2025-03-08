@@ -3,19 +3,8 @@ import { drizzle } from 'drizzle-orm/neon-serverless';
 import { eq, desc, and, ilike } from "drizzle-orm";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
-import { 
-  messages, applications, jobs, profiles, users, feedback, notifications,
-  type Message, type InsertMessage,
-  type Job, type Profile, type Application, type User,
-  type InsertJob, type InsertProfile, type InsertApplication, type InsertUser,
-  type Feedback, type InsertFeedback,
-  type Notification, type InsertNotification
-} from "@shared/schema";
-import { db } from "./db";
-import { nanoid } from 'nanoid';
 
-const PostgresSessionStore = connectPg(session);
-
+// Update IStorage interface to include document handling methods
 export interface IStorage {
   // Jobs
   getJobs(): Promise<Job[]>;
@@ -88,6 +77,33 @@ export interface IStorage {
   createNotification(notification: InsertNotification): Promise<Notification>;
   markNotificationAsRead(id: number): Promise<Notification>;
   markAllNotificationsAsRead(userId: number): Promise<void>;
+
+  // Document handling methods
+  uploadResume(
+    profileId: number,
+    data: Buffer,
+    fileName: string,
+    contentType: string
+  ): Promise<Profile>;
+
+  uploadTranscript(
+    profileId: number,
+    data: Buffer,
+    fileName: string,
+    contentType: string
+  ): Promise<Profile>;
+
+  getResume(profileId: number): Promise<{ 
+    data: Buffer; 
+    fileName: string; 
+    contentType: string; 
+  } | undefined>;
+
+  getTranscript(profileId: number): Promise<{ 
+    data: Buffer; 
+    fileName: string; 
+    contentType: string; 
+  } | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -279,7 +295,7 @@ export class DatabaseStorage implements IStorage {
         referenceList: Array.isArray(profile.referenceList) ? profile.referenceList : existingProfile.referenceList,
       };
 
-      const [updatedProfile] = await db  
+      const [updatedProfile] = await db
         .update(profiles)
         .set(updateData)
         .where(eq(profiles.id, id))
@@ -694,6 +710,93 @@ export class DatabaseStorage implements IStorage {
       throw error;
     }
   }
+
+  async uploadResume(
+    profileId: number,
+    data: Buffer,
+    fileName: string,
+    contentType: string
+  ): Promise<Profile> {
+    const [profile] = await db
+      .update(profiles)
+      .set({
+        resumeData: data,
+        resumeFileName: fileName,
+        resumeContentType: contentType,
+        resumeUploadedAt: new Date().toISOString()
+      })
+      .where(eq(profiles.id, profileId))
+      .returning();
+    return profile;
+  }
+
+  async uploadTranscript(
+    profileId: number,
+    data: Buffer,
+    fileName: string,
+    contentType: string
+  ): Promise<Profile> {
+    const [profile] = await db
+      .update(profiles)
+      .set({
+        transcriptData: data,
+        transcriptFileName: fileName,
+        transcriptContentType: contentType,
+        transcriptUploadedAt: new Date().toISOString()
+      })
+      .where(eq(profiles.id, profileId))
+      .returning();
+    return profile;
+  }
+
+  async getResume(profileId: number): Promise<{ 
+    data: Buffer; 
+    fileName: string; 
+    contentType: string; 
+  } | undefined> {
+    const [profile] = await db
+      .select({
+        data: profiles.resumeData,
+        fileName: profiles.resumeFileName,
+        contentType: profiles.resumeContentType
+      })
+      .from(profiles)
+      .where(eq(profiles.id, profileId));
+
+    if (!profile?.data) return undefined;
+    return profile as { data: Buffer; fileName: string; contentType: string };
+  }
+
+  async getTranscript(profileId: number): Promise<{ 
+    data: Buffer; 
+    fileName: string; 
+    contentType: string; 
+  } | undefined> {
+    const [profile] = await db
+      .select({
+        data: profiles.transcriptData,
+        fileName: profiles.transcriptFileName,
+        contentType: profiles.transcriptContentType
+      })
+      .from(profiles)
+      .where(eq(profiles.id, profileId));
+
+    if (!profile?.data) return undefined;
+    return profile as { data: Buffer; fileName: string; contentType: string };
+  }
 }
 
 export const storage = new DatabaseStorage();
+
+import { 
+  messages, applications, jobs, profiles, users, feedback, notifications,
+  type Message, type InsertMessage,
+  type Job, type Profile, type Application, type User,
+  type InsertJob, type InsertProfile, type InsertApplication, type InsertUser,
+  type Feedback, type InsertFeedback,
+  type Notification, type InsertNotification
+} from "@shared/schema";
+import { db } from "./db";
+import { nanoid } from 'nanoid';
+
+const PostgresSessionStore = connectPg(session);

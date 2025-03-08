@@ -1,4 +1,4 @@
-import { pgTable, text, serial, boolean, integer, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, boolean, integer, jsonb, bytea } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { relations } from 'drizzle-orm';
@@ -92,8 +92,14 @@ export const profiles = pgTable("profiles", {
   languages: jsonb("languages").notNull().default([]),
   publications: jsonb("publications").default([]),
   projects: jsonb("projects").default([]),
-  resumeUrl: text("resume_url"),
-  transcriptUrl: text("transcript_url"),
+  resumeData: bytea("resume_data"),
+  resumeFileName: text("resume_filename"),
+  resumeContentType: text("resume_content_type"),
+  resumeUploadedAt: text("resume_uploaded_at"),
+  transcriptData: bytea("transcript_data"),
+  transcriptFileName: text("transcript_filename"),
+  transcriptContentType: text("transcript_content_type"),
+  transcriptUploadedAt: text("transcript_uploaded_at"),
   linkedinUrl: text("linkedin_url"),
   portfolioUrl: text("portfolio_url"),
   githubUrl: text("github_url"),
@@ -214,9 +220,10 @@ const referenceSchema = z.object({
 
 // Create the insert profile schema with all fields optional
 export const insertProfileSchema = createInsertSchema(profiles).omit({
-  id: true
+  id: true,
+  resumeData: true,
+  transcriptData: true,
 }).extend({
-  // Make all fields optional
   name: z.string().optional(),
   email: z.string().email("Invalid email format").optional(),
   phone: z.coerce.string().optional(),
@@ -232,7 +239,6 @@ export const insertProfileSchema = createInsertSchema(profiles).omit({
   availability: z.string().optional(),
   citizenshipStatus: z.string().optional(),
 
-  // Make array fields optional with simpler validation
   education: z.array(z.any()).optional().default([]),
   experience: z.array(z.any()).optional().default([]),
   skills: z.array(z.union([z.string(), z.record(z.string())])).optional().default([]),
@@ -241,7 +247,6 @@ export const insertProfileSchema = createInsertSchema(profiles).omit({
   publications: z.array(z.any()).optional().default([]),
   projects: z.array(z.any()).optional().default([]),
 
-  // Optional fields
   resumeUrl: z.string().optional().nullable(),
   transcriptUrl: z.string().optional().nullable(),
   linkedinUrl: z.string().optional().nullable(),
@@ -258,9 +263,13 @@ export const insertProfileSchema = createInsertSchema(profiles).omit({
   securityClearance: z.string().optional().nullable(),
   clearanceType: z.string().optional().nullable(),
   clearanceExpiry: z.string().optional().nullable(),
-
-  // If the client might send userId as a string, coerce it to number
-  userId: z.coerce.number()
+  userId: z.coerce.number(),
+  resumeFileName: z.string().optional(),
+  resumeContentType: z.string().optional(),
+  resumeUploadedAt: z.string().optional(),
+  transcriptFileName: z.string().optional(),
+  transcriptContentType: z.string().optional(),
+  transcriptUploadedAt: z.string().optional(),
 });
 
 export const insertApplicationSchema = createInsertSchema(applications).omit({ 
