@@ -430,7 +430,7 @@ export function ApplicationsManagement() {
                 Cancel
               </Button>
               <Button 
-                onClick={() => {
+                onClick={async () => {
                   const notesElement = document.getElementById('application-notes') as HTMLTextAreaElement;
                   const nextStepElement = document.getElementById('next-step') as HTMLInputElement;
                   
@@ -441,16 +441,21 @@ export function ApplicationsManagement() {
                     nextStepDueDate = dateValue || null;
                   }
                   
-                  updateApplicationMutation.mutate({
-                    applicationId: currentApplication.id,
-                    notes: notesElement?.value,
-                    nextStep: nextStepElement?.value,
-                    nextStepDueDate
-                  });
+                  try {
+                    await updateApplicationMutation.mutateAsync({
+                      applicationId: currentApplication.id,
+                      notes: notesElement?.value,
+                      nextStep: nextStepElement?.value,
+                      nextStepDueDate
+                    });
+                    setShowDetailsDialog(false);
+                  } catch (error) {
+                    console.error("Error updating application:", error);
+                  }
                 }}
-                disabled={updateApplicationMutation.isPending}
+                disabled={updateApplicationMutation.isLoading}
               >
-                {updateApplicationMutation.isPending ? (
+                {updateApplicationMutation.isLoading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Saving...
