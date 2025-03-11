@@ -79,10 +79,18 @@ export default {
             height: "0",
           },
         },
+        "gradient-shift": {
+          "0%, 100%": { backgroundPosition: "0% 50%" },
+          "50%": { backgroundPosition: "100% 50%" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
+        "gradient-slow": "gradient-shift 8s ease infinite",
+      },
+      backgroundImage: {
+        "grid-pattern": "linear-gradient(to right, #80808015 1px, transparent 1px), linear-gradient(to bottom, #80808015 1px, transparent 1px)",
       },
     },
   },
