@@ -5,9 +5,10 @@ import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { 
   Loader2, AlertCircle, ChevronRight, 
-  CalendarIcon, MapPinIcon, NotebookIcon, ArrowRightIcon, BriefcaseIcon, XCircleIcon 
+  CalendarIcon, MapPinIcon, NotebookIcon, ArrowRightIcon, BriefcaseIcon, XCircleIcon,
+  MessageSquare, Sparkles, Search, MousePointerClick
 } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
@@ -21,6 +22,8 @@ import { FeedbackDialog } from "@/components/FeedbackDialog";
 import { useLocation } from "wouter";
 import { JobModal } from "@/components/JobModal";
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
+import { motion } from "framer-motion";
+import { HoverCard, HoverCardTrigger, HoverCardContent } from "@/components/ui/hover-card";
 
 interface StatusHistoryItem {
   status: string;
@@ -33,8 +36,33 @@ export default function DashboardPage() {
   const [activeFeedbackId, setActiveFeedbackId] = useState<number | null>(null);
   const [isReadOnly, setIsReadOnly] = useState(false);
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
+  const [visibleCount, setVisibleCount] = useState(10); // Number of applications to show initially
+  const scrollRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   const [location] = useLocation();
+
+  // Animation variants for staggered animations
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1
+      }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { y: 20, opacity: 0 },
+    visible: {
+      y: 0,
+      opacity: 1,
+      transition: {
+        type: "spring",
+        stiffness: 100
+      }
+    }
+  };
 
   // Parse query parameters
   useEffect(() => {
@@ -103,6 +131,26 @@ export default function DashboardPage() {
       : applications.filter(app => app.status === selectedStatus && !isArchivedJob(app))
     : applications;
 
+  // Get the applications to display based on the visible count
+  const visibleApplications = filteredApplications.slice(0, visibleCount);
+
+  // Handle scroll to load more applications
+  const handleScroll = useCallback(() => {
+    if (scrollRef.current) {
+      const { scrollTop, scrollHeight, clientHeight } = scrollRef.current;
+      
+      // If we're near the bottom (within 200px), load more applications
+      if (scrollTop + clientHeight >= scrollHeight - 200 && visibleCount < filteredApplications.length) {
+        setVisibleCount(prev => Math.min(prev + 10, filteredApplications.length));
+      }
+    }
+  }, [visibleCount, filteredApplications.length]);
+
+  // Reset visible count when filter changes
+  useEffect(() => {
+    setVisibleCount(10);
+  }, [selectedStatus]);
+
   const withdrawMutation = useMutation({
     mutationFn: async (applicationId: number) => {
       const res = await apiRequest(
@@ -144,75 +192,168 @@ export default function DashboardPage() {
     );
   }
 
+  // Status descriptions for hover cards
+  const statusDescriptions = {
+    Applied: {
+      title: "Applied Applications",
+      description: "Jobs you've submitted your application for. The first step in your job search journey.",
+      icon: <MousePointerClick className="h-4 w-4 mr-2" />
+    },
+    Interviewing: {
+      title: "Interview Stage",
+      description: "Congratulations! These employers are interested in your profile and want to learn more about you.",
+      icon: <MessageSquare className="h-4 w-4 mr-2" />
+    },
+    Accepted: {
+      title: "Job Offers",
+      description: "Success! These employers have extended job offers to you. Time to celebrate your achievement!",
+      icon: <Sparkles className="h-4 w-4 mr-2" />
+    },
+    Rejected: {
+      title: "Rejected Applications",
+      description: "These opportunities weren't the right fit. Use this as a learning experience for future applications.",
+      icon: <AlertCircle className="h-4 w-4 mr-2" />
+    },
+    Inactive: {
+      title: "Inactive Listings",
+      description: "These job listings are no longer active. The position may have been filled or removed by the employer.",
+      icon: <XCircleIcon className="h-4 w-4 mr-2" />
+    },
+    total: {
+      title: "All Applications",
+      description: "Your complete application history across all statuses.",
+      icon: <Search className="h-4 w-4 mr-2" />
+    }
+  };
+
   return (
-    <div className="container mx-auto px-4 py-10 max-w-7xl">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-3">
-        <h1 className="text-3xl font-bold">Application Dashboard</h1>
-        <div className="flex items-center gap-2">
-          <ApplicationCreditsCard />
-          {selectedStatus && (
-            <Button variant="outline" size="sm" onClick={() => setSelectedStatus(null)} className="h-9">
-              <XCircleIcon className="h-4 w-4 mr-1" />
-              Clear Filter
-            </Button>
-          )}
+    <div className="container mx-auto px-4 py-10 max-w-7xl flex flex-col min-h-[calc(100vh-4rem)]">
+      {/* Hero section with animated gradient background */}
+      <div className="relative mb-8 p-6 rounded-2xl overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-gray-200/20 via-gray-100/10 to-gray-300/20 animate-gradient-slow dark:from-gray-800/20 dark:via-gray-900/10 dark:to-gray-700/20" />
+        <div className="absolute inset-0 bg-grid-pattern opacity-10" />
+        
+        <div className="relative flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <motion.h1 
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="text-3xl font-bold tracking-tight"
+          >
+            Application Dashboard
+          </motion.h1>
+          <motion.div 
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.2 }}
+            className="flex items-center gap-2"
+          >
+            <ApplicationCreditsCard />
+            {selectedStatus && (
+              <Button variant="outline" size="sm" onClick={() => setSelectedStatus(null)} className="h-9">
+                <XCircleIcon className="h-4 w-4 mr-1" />
+                Clear Filter
+              </Button>
+            )}
+          </motion.div>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
+      <motion.div 
+        className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 mb-6"
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+      >
         {Object.entries(stats).map(([status, count]) => (
-          <Card
-            key={status}
-            className={cn(
-              "cursor-pointer transition-all hover:shadow-md rounded-lg border-[1px]",
-              selectedStatus === status && "ring-2 ring-primary"
-            )}
-            onClick={() => setSelectedStatus(status === "total" ? null : status)}
-          >
-            <CardHeader className="p-3 pb-0">
-              <CardTitle className="text-sm font-medium">
-                {status === "total" ? "Total Applications" : status}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-3">
-              <div className={cn(
-                "text-4xl font-bold text-center py-3 rounded-md",
-                status !== "total" ? getStatusColor(status) : "bg-gray-100 dark:bg-gray-800"
-              )}>
-                {count}
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      <Card className="mt-4 rounded-lg shadow-sm">
-        <CardHeader className="p-4 border-b">
-          <CardTitle className="text-xl">
-            {selectedStatus ? `${selectedStatus} Applications` : "Your Applications"}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-0">
-          <ScrollArea className="h-[calc(100vh-300px)]">
-            <div className="space-y-3 p-4">
-              {filteredApplications.length === 0 ? (
-                <div className="text-center py-12 text-muted-foreground">
-                  <div className="mb-3">
-                    <BriefcaseIcon className="h-12 w-12 mx-auto text-muted-foreground/50" />
-                  </div>
-                  No applications {selectedStatus && `with status "${selectedStatus}"`} yet.
-                  {!selectedStatus && " Start applying to jobs to track your progress here!"}
+          <motion.div key={status} variants={itemVariants}>
+            <HoverCard>
+              <HoverCardTrigger asChild>
+                <Card
+                  className={cn(
+                    "cursor-pointer transition-all hover:shadow-md rounded-lg border-[1px] hover:scale-105 duration-300",
+                    selectedStatus === status && "ring-2 ring-primary"
+                  )}
+                  onClick={() => setSelectedStatus(status === "total" ? null : status)}
+                >
+                  <CardHeader className="p-3 pb-0">
+                    <CardTitle className="text-sm font-medium">
+                      {status === "total" ? "Total Applications" : status}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-3">
+                    <div className={cn(
+                      "text-4xl font-bold text-center py-3 rounded-md",
+                      status !== "total" ? getStatusColor(status) : "bg-gray-100 dark:bg-gray-800"
+                    )}>
+                      {count}
+                    </div>
+                  </CardContent>
+                </Card>
+              </HoverCardTrigger>
+              <HoverCardContent className="w-80">
+                <div className="space-y-2">
+                  <h4 className="text-sm font-semibold flex items-center">
+                    {statusDescriptions[status as keyof typeof statusDescriptions]?.icon}
+                    {statusDescriptions[status as keyof typeof statusDescriptions]?.title}
+                  </h4>
+                  <p className="text-sm">
+                    {statusDescriptions[status as keyof typeof statusDescriptions]?.description}
+                  </p>
                 </div>
-              ) : (
-                filteredApplications.map((application) => {
+              </HoverCardContent>
+            </HoverCard>
+          </motion.div>
+        ))}
+      </motion.div>
+
+      {/* Applications Section */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.4 }}
+        className="flex-1 flex flex-col"
+      >
+        <div className="bg-card rounded-t-lg shadow-sm border border-b-0">
+          <div className="p-4 border-b">
+            <h2 className="text-xl font-semibold">
+              {selectedStatus ? `${selectedStatus} Applications` : "Your Applications"}
+            </h2>
+          </div>
+        </div>
+        
+        <div 
+          ref={scrollRef}
+          className="flex-1 overflow-auto bg-background rounded-b-lg border border-t-0 shadow-sm" 
+          onScroll={handleScroll}
+        >
+          <motion.div 
+            className="space-y-3 p-4"
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
+          >
+            {visibleApplications.length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground">
+                <div className="mb-3">
+                  <BriefcaseIcon className="h-12 w-12 mx-auto text-muted-foreground/50" />
+                </div>
+                No applications {selectedStatus && `with status "${selectedStatus}"`} yet.
+                {!selectedStatus && " Start applying to jobs to track your progress here!"}
+              </div>
+            ) : (
+              <>
+                {visibleApplications.map((application) => {
                   const job = getJob(application.jobId);
                   if (!job) return null;
 
                   const statusHistory = application.statusHistory as StatusHistoryItem[];
 
                   return (
-                    <div
+                    <motion.div
                       key={application.id}
+                      variants={itemVariants}
+                      whileHover={{ scale: 1.01 }}
                       className={cn(
                         "p-4 rounded-lg border space-y-3 cursor-pointer hover:bg-accent/30 transition-colors",
                         !job.isActive && "bg-muted/30",
@@ -308,14 +449,19 @@ export default function DashboardPage() {
                           </p>
                         </div>
                       )}
-                    </div>
+                    </motion.div>
                   );
-                })
-              )}
-            </div>
-          </ScrollArea>
-        </CardContent>
-      </Card>
+                })}
+                {visibleCount < filteredApplications.length && (
+                  <div className="flex justify-center py-4">
+                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                  </div>
+                )}
+              </>
+            )}
+          </motion.div>
+        </div>
+      </motion.div>
 
       {activeMessageId && (
         <MessageDialog
