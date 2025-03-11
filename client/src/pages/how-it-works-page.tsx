@@ -40,7 +40,7 @@ export default function HowItWorksPage() {
     <div className="py-16 max-w-5xl mx-auto">
       {/* Hero section with animated gradient background */}
       <div className="relative mb-16 p-8 rounded-2xl overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-500/20 via-purple-500/10 to-indigo-500/20 animate-gradient-slow" />
+        <div className="absolute inset-0 bg-gradient-to-br from-gray-200/20 via-gray-100/10 to-gray-300/20 animate-gradient-slow dark:from-gray-800/20 dark:via-gray-900/10 dark:to-gray-700/20" />
         <div className="absolute inset-0 bg-grid-pattern opacity-10" />
         
         <div className="relative text-center">
@@ -48,7 +48,7 @@ export default function HowItWorksPage() {
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
-            className="text-5xl font-bold tracking-tight sm:text-6xl mb-4 bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600"
+            className="text-5xl font-bold tracking-tight sm:text-6xl mb-4 bg-clip-text text-foreground"
           >
             Pipeline in Action
           </motion.h1>
@@ -76,8 +76,8 @@ export default function HowItWorksPage() {
             variants={itemVariants}
             className="flex flex-col items-center text-center group"
           >
-            <div className="w-28 h-28 rounded-2xl bg-blue-500/10 flex items-center justify-center mb-6 relative overflow-hidden group-hover:bg-blue-500/20 transition-colors duration-300 shadow-lg">
-              <span className="text-6xl font-bold text-blue-600 group-hover:scale-110 transition-transform duration-300">1</span>
+            <div className="w-28 h-28 rounded-2xl bg-gray-200/30 flex items-center justify-center mb-6 relative overflow-hidden group-hover:bg-gray-200/50 transition-colors duration-300 shadow-lg dark:bg-gray-800/30 dark:group-hover:bg-gray-800/50">
+              <span className="text-6xl font-bold text-foreground group-hover:scale-110 transition-transform duration-300">1</span>
               <div className="absolute inset-0 bg-grid-pattern opacity-10" />
             </div>
             <h3 className="text-xl font-semibold mb-2">Create Your Profile</h3>
@@ -106,8 +106,8 @@ export default function HowItWorksPage() {
             variants={itemVariants}
             className="flex flex-col items-center text-center group"
           >
-            <div className="w-28 h-28 rounded-2xl bg-yellow-500/10 flex items-center justify-center mb-6 relative overflow-hidden group-hover:bg-yellow-500/20 transition-colors duration-300 shadow-lg">
-              <span className="text-6xl font-bold text-yellow-600 group-hover:scale-110 transition-transform duration-300">2</span>
+            <div className="w-28 h-28 rounded-2xl bg-gray-200/30 flex items-center justify-center mb-6 relative overflow-hidden group-hover:bg-gray-200/50 transition-colors duration-300 shadow-lg dark:bg-gray-800/30 dark:group-hover:bg-gray-800/50">
+              <span className="text-6xl font-bold text-foreground group-hover:scale-110 transition-transform duration-300">2</span>
               <div className="absolute inset-0 bg-grid-pattern opacity-10" />
             </div>
             <h3 className="text-xl font-semibold mb-2">Browse Jobs</h3>
@@ -136,8 +136,8 @@ export default function HowItWorksPage() {
             variants={itemVariants}
             className="flex flex-col items-center text-center group"
           >
-            <div className="w-28 h-28 rounded-2xl bg-green-500/10 flex items-center justify-center mb-6 relative overflow-hidden group-hover:bg-green-500/20 transition-colors duration-300 shadow-lg">
-              <span className="text-6xl font-bold text-green-600 group-hover:scale-110 transition-transform duration-300">3</span>
+            <div className="w-28 h-28 rounded-2xl bg-gray-200/30 flex items-center justify-center mb-6 relative overflow-hidden group-hover:bg-gray-200/50 transition-colors duration-300 shadow-lg dark:bg-gray-800/30 dark:group-hover:bg-gray-800/50">
+              <span className="text-6xl font-bold text-foreground group-hover:scale-110 transition-transform duration-300">3</span>
               <div className="absolute inset-0 bg-grid-pattern opacity-10" />
             </div>
             <h3 className="text-xl font-semibold mb-2">One-Click Apply</h3>
@@ -171,7 +171,7 @@ export default function HowItWorksPage() {
               fill="none" 
               stroke="currentColor" 
               strokeWidth="2"
-              className="text-blue-500"
+              className="text-gray-400"
               initial={{ pathLength: 0, opacity: 0 }}
               animate={{ pathLength: 1, opacity: 1 }}
               transition={{ duration: 1, delay: 0.8 }}
@@ -185,7 +185,7 @@ export default function HowItWorksPage() {
               fill="none" 
               stroke="currentColor" 
               strokeWidth="2"
-              className="text-yellow-500"
+              className="text-gray-400"
               initial={{ pathLength: 0, opacity: 0 }}
               animate={{ pathLength: 1, opacity: 1 }}
               transition={{ duration: 1, delay: 1 }}
@@ -201,19 +201,19 @@ export default function HowItWorksPage() {
         animate={{ opacity: 1 }}
         transition={{ duration: 0.5, delay: 0.3 }}
       >
-        <h2 className="text-3xl font-bold text-center mb-8 bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-blue-600">
+        <h2 className="text-3xl font-bold text-center mb-8 text-foreground">
           A smarter way to land your dream job
         </h2>
         
         <div className="grid md:grid-cols-2 gap-8">
           <motion.div 
             whileHover={{ y: -5 }}
-            className="bg-blue-500/10 backdrop-blur-sm rounded-xl p-6 border border-blue-500/20 shadow-lg"
+            className="bg-gray-100/30 backdrop-blur-sm rounded-xl p-6 border border-gray-200/30 shadow-lg dark:bg-gray-800/30 dark:border-gray-700/30"
           >
             <div className="space-y-4">
               <div className="flex items-start mb-4">
-                <div className="flex items-center justify-center w-10 h-10 rounded-full bg-blue-500/20 mr-3 flex-shrink-0">
-                  <Zap className="h-5 w-5 text-blue-600" />
+                <div className="flex items-center justify-center w-10 h-10 rounded-full bg-gray-200/30 mr-3 flex-shrink-0 dark:bg-gray-700/30">
+                  <Zap className="h-5 w-5 text-foreground" />
                 </div>
                 <div>
                   <h3 className="text-xl font-medium">Simplified Applications</h3>
@@ -223,8 +223,8 @@ export default function HowItWorksPage() {
                 </div>
               </div>
               <div className="flex items-start">
-                <div className="flex items-center justify-center w-10 h-10 rounded-full bg-blue-500/20 mr-3 flex-shrink-0">
-                  <Shield className="h-5 w-5 text-blue-600" />
+                <div className="flex items-center justify-center w-10 h-10 rounded-full bg-gray-200/30 mr-3 flex-shrink-0 dark:bg-gray-700/30">
+                  <Shield className="h-5 w-5 text-foreground" />
                 </div>
                 <div>
                   <h3 className="text-xl font-medium">Secure and Fast</h3>
@@ -238,12 +238,12 @@ export default function HowItWorksPage() {
           
           <motion.div 
             whileHover={{ y: -5 }}
-            className="bg-green-500/10 backdrop-blur-sm rounded-xl p-6 border border-green-500/20 shadow-lg"
+            className="bg-gray-100/30 backdrop-blur-sm rounded-xl p-6 border border-gray-200/30 shadow-lg dark:bg-gray-800/30 dark:border-gray-700/30"
           >
             <div className="space-y-4">
               <div className="flex items-start mb-4">
-                <div className="flex items-center justify-center w-10 h-10 rounded-full bg-green-500/20 mr-3 flex-shrink-0">
-                  <BarChart className="h-5 w-5 text-green-600" />
+                <div className="flex items-center justify-center w-10 h-10 rounded-full bg-gray-200/30 mr-3 flex-shrink-0 dark:bg-gray-700/30">
+                  <BarChart className="h-5 w-5 text-foreground" />
                 </div>
                 <div>
                   <h3 className="text-xl font-medium">Track Your Progress</h3>
@@ -253,8 +253,8 @@ export default function HowItWorksPage() {
                 </div>
               </div>
               <div className="flex items-start">
-                <div className="flex items-center justify-center w-10 h-10 rounded-full bg-green-500/20 mr-3 flex-shrink-0">
-                  <MessageSquare className="h-5 w-5 text-green-600" />
+                <div className="flex items-center justify-center w-10 h-10 rounded-full bg-gray-200/30 mr-3 flex-shrink-0 dark:bg-gray-700/30">
+                  <MessageSquare className="h-5 w-5 text-foreground" />
                 </div>
                 <div>
                   <h3 className="text-xl font-medium">Direct Communication</h3>
@@ -276,30 +276,16 @@ export default function HowItWorksPage() {
         transition={{ duration: 0.5, delay: 0.5 }}
       >
         {[
-          { label: "Companies", value: "500+", color: "blue" },
-          { label: "Jobs Posted", value: "10k+", color: "yellow" },
-          { label: "Successful Hires", value: "2.5k+", color: "green" },
-          { label: "User Satisfaction", value: "98%", color: "indigo" }
+          { label: "Companies", value: "500+" },
+          { label: "Jobs Posted", value: "10k+" },
+          { label: "Successful Hires", value: "2.5k+" },
+          { label: "User Satisfaction", value: "98%" }
         ].map((stat, index) => (
           <div 
             key={index} 
-            className={cn(
-              "rounded-xl p-6 text-center",
-              stat.color === "blue" && "bg-blue-500/10 border border-blue-500/20",
-              stat.color === "yellow" && "bg-yellow-500/10 border border-yellow-500/20",
-              stat.color === "green" && "bg-green-500/10 border border-green-500/20",
-              stat.color === "indigo" && "bg-indigo-500/10 border border-indigo-500/20"
-            )}
+            className="rounded-xl p-6 text-center bg-gray-100/30 border border-gray-200/30 dark:bg-gray-800/30 dark:border-gray-700/30"
           >
-            <div 
-              className={cn(
-                "text-3xl font-bold mb-1",
-                stat.color === "blue" && "text-blue-600",
-                stat.color === "yellow" && "text-yellow-600",
-                stat.color === "green" && "text-green-600",
-                stat.color === "indigo" && "text-indigo-600"
-              )}
-            >
+            <div className="text-3xl font-bold mb-1 text-foreground">
               {stat.value}
             </div>
             <div className="text-sm text-muted-foreground">{stat.label}</div>
