@@ -26,6 +26,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export default function AdminUserPage() {
   const { userId } = useParams<{ userId: string }>();
@@ -167,6 +168,31 @@ export default function AdminUserPage() {
       toast({
         title: "Error",
         description: error.message || "Failed to delete user",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const updateApplicationStatusMutation = useMutation({
+    mutationFn: async ({ applicationId, status }: { applicationId: number; status: string }) => {
+      const res = await apiRequest("PATCH", `/api/admin/applications/${applicationId}`, { status });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || "Failed to update application status");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/applications", userId] });
+      toast({
+        title: "Success",
+        description: "Application status updated successfully",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
         variant: "destructive",
       });
     },
@@ -385,13 +411,35 @@ export default function AdminUserPage() {
                                   </Badge>
                                 )}
                               </div>
-                              <Badge className={app.status === "Applied" ? "bg-blue-500/10 text-blue-500" : 
+                              <div className="flex flex-col items-end gap-2">
+                                <Select 
+                                  defaultValue={app.status}
+                                  onValueChange={(value) => {
+                                    updateApplicationStatusMutation.mutate({
+                                      applicationId: app.id,
+                                      status: value
+                                    });
+                                  }}
+                                >
+                                  <SelectTrigger className="w-[140px]">
+                                    <SelectValue placeholder="Status" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="Applied">Applied</SelectItem>
+                                    <SelectItem value="Interviewing">Interviewing</SelectItem>
+                                    <SelectItem value="Accepted">Accepted</SelectItem>
+                                    <SelectItem value="Rejected">Rejected</SelectItem>
+                                    <SelectItem value="Withdrawn">Withdrawn</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                                <Badge className={app.status === "Applied" ? "bg-blue-500/10 text-blue-500" : 
                                               app.status === "Interviewing" ? "bg-yellow-500/10 text-yellow-500" :
                                               app.status === "Accepted" ? "bg-green-500/10 text-green-500" :
                                               app.status === "Rejected" ? "bg-red-500/10 text-red-500" :
                                               "bg-gray-500/10 text-gray-500"}>
-                                {app.status}
-                              </Badge>
+                                  {app.status}
+                                </Badge>
+                              </div>
                             </div>
                             
                             {app.notes && (
@@ -421,6 +469,7 @@ export default function AdminUserPage() {
                   </div>
                 ) : (
                   <div className="text-center py-8 text-muted-foreground">
+                    <FileText className="h-12 w-12 mx-auto mb-3 opacity-50" />
                     <p>No applications found for this user</p>
                   </div>
                 )}
