@@ -11,7 +11,7 @@ import { queryClient } from "@/lib/queryClient";
 import { apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
 import { useLocation } from "wouter";
-import { Users, Mail, User as UserIcon, Edit, Trash2, Plus, CreditCard, FileDown, Eye, FileText } from "lucide-react";
+import { Users, Mail, User as UserIcon, Edit, Trash2, Plus, CreditCard, FileDown, Eye, FileText, ChevronRight } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -730,10 +730,11 @@ export default function AdminDashboardPage() {
         <h1 className="text-3xl font-bold">Admin Dashboard</h1>
       </div>
       <Tabs defaultValue="active-jobs" className="space-y-4">
-        <TabsList>
+        <TabsList className="mb-4">
           <TabsTrigger value="active-jobs">Active Jobs</TabsTrigger>
           <TabsTrigger value="archived-jobs">Archived Jobs</TabsTrigger>
           <TabsTrigger value="users">Users</TabsTrigger>
+          <TabsTrigger value="user-view">User View</TabsTrigger>
           <TabsTrigger value="applications">Applications</TabsTrigger>
           <TabsTrigger value="feedback">Feedback</TabsTrigger>
         </TabsList>
@@ -1008,6 +1009,65 @@ export default function AdminDashboardPage() {
                             </AlertDialogFooter>
                           </AlertDialogContent>
                         </AlertDialog>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+        <TabsContent value="user-view">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0">
+              <CardTitle>
+                User View
+                <span className="ml-2 text-sm font-normal text-muted-foreground">
+                  ({users.length} users)
+                </span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {users.map((user) => (
+                  <Card 
+                    key={user.id} 
+                    className="overflow-hidden cursor-pointer hover:shadow-md transition-all"
+                    onClick={() => {
+                      setLocation(`/admin/users/${user.id}`);
+                    }}
+                  >
+                    <CardContent className="p-4">
+                      <div className="flex items-center mb-2">
+                        <UserIcon className="h-5 w-5 text-muted-foreground mr-2" />
+                        <span className="font-medium text-base">{user.username}</span>
+                        {user.isAdmin && (
+                          <Badge variant="outline" className="ml-2 text-xs py-0">
+                            Admin
+                          </Badge>
+                        )}
+                      </div>
+                      
+                      <div className="text-sm text-muted-foreground mb-2">
+                        <div className="flex items-center mb-1">
+                          <Mail className="h-4 w-4 mr-2" />
+                          <span className="truncate">{user.email}</span>
+                        </div>
+                        <div className="flex items-center">
+                          <CreditCard className="h-4 w-4 mr-2" />
+                          <span>{user.bankedCredits} banked credits</span>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center justify-end mt-2 pt-2 border-t">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="flex items-center gap-1"
+                        >
+                          View Details
+                          <ChevronRight className="h-4 w-4" />
+                        </Button>
                       </div>
                     </CardContent>
                   </Card>

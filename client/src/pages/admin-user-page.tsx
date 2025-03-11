@@ -1,40 +1,335 @@
-import { useParams } from "react-router-dom";
+import { useParams } from "wouter";
 import { useQuery } from "@tanstack/react-query";
-import { User } from "@shared/schema";
+import { User, Profile } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
+import { format } from "date-fns";
+import { Loader2, ArrowLeft, User as UserIcon, Mail, CreditCard, Calendar, FileText } from "lucide-react";
+import { useLocation } from "wouter";
+import { Separator } from "@/components/ui/separator";
 
 export default function AdminUserPage() {
   const { userId } = useParams<{ userId: string }>();
-  const { data: user } = useQuery<User>({
+  const [, setLocation] = useLocation();
+  
+  const { data: user, isLoading: isLoadingUser } = useQuery<User>({
     queryKey: [`/api/admin/users/${userId}`],
     queryFn: async () => {
       const res = await apiRequest("GET", `/api/admin/users/${userId}`);
       if (!res.ok) {
-        throw new Error("Failed to fetch user");
+        const errorData = await res.json().catch(() => ({}));
+        console.error("Failed to fetch user:", errorData);
+        return null;
       }
       return res.json();
     },
   });
 
+  const { data: profile, isLoading: isLoadingProfile } = useQuery<Profile>({
+    queryKey: [`/api/admin/profiles/${userId}`],
+    queryFn: async () => {
+      const res = await apiRequest("GET", `/api/admin/profiles/${userId}`);
+      if (!res.ok) {
+        return null;
+      }
+      return res.json();
+    },
+    enabled: !!userId,
+  });
+
+  const { data: applications = [], isLoading: isLoadingApplications } = useQuery({
+    queryKey: ["/api/admin/applications", userId],
+    queryFn: async () => {
+      const res = await apiRequest("GET", "/api/admin/applications");
+      if (!res.ok) {
+        throw new Error("Failed to fetch applications");
+      }
+      return res.json();
+    },
+    select: (data) => {
+      return data.filter((app) => 
+        app.profileId === Number(userId) || 
+        app.userId === Number(userId)
+      );
+    },
+    enabled: !!userId,
+  });
+
+  const { data: jobs = [], isLoading: isLoadingJobs } = useQuery({
+    queryKey: ["/api/jobs"],
+    queryFn: async () => {
+      const res = await apiRequest("GET", "/api/jobs");
+      if (!res.ok) {
+        throw new Error("Failed to fetch jobs");
+      }
+      return res.json();
+    },
+    enabled: !!userId,
+  });
+
+  if (isLoadingUser || isLoadingProfile || isLoadingApplications || isLoadingJobs) {
+    return (
+      <div className="flex items-center justify-center h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
+
   if (!user) {
-    return <div>Loading...</div>;
+    return (
+      <div className="p-4">
+        <Card>
+          <CardContent className="p-8 text-center">
+            <h2 className="text-xl font-semibold mb-2">User not found</h2>
+            <p className="text-muted-foreground mb-4">The requested user could not be found.</p>
+            <Button onClick={() => setLocation("/admin/dashboard")}>
+              <ArrowLeft className="mr-2 h-4 w-4" /> Back to Dashboard
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
   return (
-    <div className="p-4 space-y-4">
-      <Card>
-        <CardHeader>
-          <CardTitle>User Details</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div>
-            <p>Username: {user.username}</p>
-            <p>Email: {user.email}</p>
-            {/* Add more user details here */}
-          </div>
-        </CardContent>
-      </Card>
+    <div className="container mx-auto px-4 py-8 max-w-6xl">
+      <div className="flex items-center mb-6">
+        <Button 
+          variant="outline" 
+          onClick={() => setLocation("/admin/dashboard")}
+          className="mr-4"
+        >
+          <ArrowLeft className="mr-2 h-4 w-4" /> Back
+        </Button>
+        <h1 className="text-3xl font-bold">User Details</h1>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <Card className="md:col-span-1">
+          <CardHeader>
+            <CardTitle>User Information</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center">
+              <UserIcon className="h-5 w-5 text-muted-foreground mr-3" />
+              <div>
+                <div className="font-medium">{user.username}</div>
+                {user.isAdmin && (
+                  <Badge variant="outline" className="mt-1">
+                    Administrator
+                  </Badge>
+                )}
+              </div>
+            </div>
+            
+            <div className="flex items-center">
+              <Mail className="h-5 w-5 text-muted-foreground mr-3" />
+              <div>
+                <div className="text-sm text-muted-foreground">Email</div>
+                <div>{user.email}</div>
+              </div>
+            </div>
+            
+            <div className="flex items-center">
+              <CreditCard className="h-5 w-5 text-muted-foreground mr-3" />
+              <div>
+                <div className="text-sm text-muted-foreground">Credits</div>
+                <div>{user.bankedCredits} banked credits</div>
+              </div>
+            </div>
+            
+            <div className="flex items-center">
+              <Calendar className="h-5 w-5 text-muted-foreground mr-3" />
+              <div>
+                <div className="text-sm text-muted-foreground">Joined</div>
+                <div>{user.createdAt ? format(new Date(user.createdAt), "MMM d, yyyy") : "Unknown"}</div>
+              </div>
+            </div>
+
+            <Separator className="my-4" />
+            
+            <div className="flex justify-between">
+              <Button variant="outline" size="sm">
+                Edit User
+              </Button>
+              <Button variant="outline" size="sm">
+                Manage Credits
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="md:col-span-2">
+          <CardHeader>
+            <CardTitle>User Activity</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Tabs defaultValue="profile">
+              <TabsList className="mb-4">
+                <TabsTrigger value="profile">Profile</TabsTrigger>
+                <TabsTrigger value="applications">Applications ({applications.length})</TabsTrigger>
+                <TabsTrigger value="documents">Documents</TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="profile">
+                {profile ? (
+                  <div className="space-y-4">
+                    <div>
+                      <h3 className="text-lg font-medium mb-2">Personal Information</h3>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <div className="text-sm text-muted-foreground">Full Name</div>
+                          <div>{profile.name || "Not provided"}</div>
+                        </div>
+                        <div>
+                          <div className="text-sm text-muted-foreground">Phone</div>
+                          <div>{profile.phone || "Not provided"}</div>
+                        </div>
+                        <div>
+                          <div className="text-sm text-muted-foreground">Location</div>
+                          <div>{profile.location || "Not provided"}</div>
+                        </div>
+                        <div>
+                          <div className="text-sm text-muted-foreground">Title</div>
+                          <div>{profile.title || "Not provided"}</div>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <Separator />
+                    
+                    <div>
+                      <h3 className="text-lg font-medium mb-2">Online Profiles</h3>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <div className="text-sm text-muted-foreground">LinkedIn</div>
+                          <div>{profile.linkedinUrl || "Not provided"}</div>
+                        </div>
+                        <div>
+                          <div className="text-sm text-muted-foreground">GitHub</div>
+                          <div>{profile.githubUrl || "Not provided"}</div>
+                        </div>
+                        <div>
+                          <div className="text-sm text-muted-foreground">Portfolio</div>
+                          <div>{profile.portfolioUrl || "Not provided"}</div>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <Separator />
+                    
+                    <div>
+                      <h3 className="text-lg font-medium mb-2">Bio</h3>
+                      <p className="text-sm">{profile.bio || "No bio provided"}</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <FileText className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                    <p>User has not created a profile yet</p>
+                  </div>
+                )}
+              </TabsContent>
+              
+              <TabsContent value="applications">
+                {applications.length > 0 ? (
+                  <div className="space-y-3">
+                    {applications.map((app) => {
+                      const job = jobs.find(j => j.id === app.jobId);
+                      return (
+                        <Card key={app.id}>
+                          <CardContent className="p-4">
+                            <div className="flex justify-between items-start">
+                              <div>
+                                <h4 className="font-medium">{job?.title || "Unknown Job"}</h4>
+                                <p className="text-sm text-muted-foreground">{job?.company || "Unknown Company"}</p>
+                                <div className="flex items-center mt-1">
+                                  <Calendar className="h-3 w-3 mr-1 text-muted-foreground" />
+                                  <span className="text-xs text-muted-foreground">
+                                    Applied on {format(new Date(app.appliedAt), "MMM d, yyyy")}
+                                  </span>
+                                </div>
+                                {job && !job.isActive && (
+                                  <Badge variant="outline" className="mt-1 text-xs">
+                                    Job Archived
+                                  </Badge>
+                                )}
+                              </div>
+                              <Badge className={app.status === "Applied" ? "bg-blue-500/10 text-blue-500" : 
+                                              app.status === "Interviewing" ? "bg-yellow-500/10 text-yellow-500" :
+                                              app.status === "Accepted" ? "bg-green-500/10 text-green-500" :
+                                              app.status === "Rejected" ? "bg-red-500/10 text-red-500" :
+                                              "bg-gray-500/10 text-gray-500"}>
+                                {app.status}
+                              </Badge>
+                            </div>
+                            
+                            {app.notes && (
+                              <div className="mt-3 text-sm bg-muted/50 p-2 rounded-md">
+                                <div className="font-medium">Notes:</div>
+                                <p className="text-muted-foreground">{app.notes}</p>
+                              </div>
+                            )}
+                            
+                            {app.nextStep && (
+                              <div className="mt-2 text-sm bg-primary/5 p-2 rounded-md">
+                                <div className="font-medium">Next Step:</div>
+                                <p className="text-muted-foreground">
+                                  {app.nextStep}
+                                  {app.nextStepDueDate && (
+                                    <span className="ml-2 text-xs bg-background px-1.5 py-0.5 rounded-full">
+                                      Due: {format(new Date(app.nextStepDueDate), "MMM d, yyyy")}
+                                    </span>
+                                  )}
+                                </p>
+                              </div>
+                            )}
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <p>No applications found for this user</p>
+                  </div>
+                )}
+              </TabsContent>
+              
+              <TabsContent value="documents">
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="text-lg font-medium mb-2">Resume</h3>
+                    {profile?.resumeUrl ? (
+                      <Button variant="outline" size="sm">
+                        View Resume
+                      </Button>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">No resume uploaded</p>
+                    )}
+                  </div>
+                  
+                  <Separator />
+                  
+                  <div>
+                    <h3 className="text-lg font-medium mb-2">Academic Transcript</h3>
+                    {profile?.transcriptUrl ? (
+                      <Button variant="outline" size="sm">
+                        View Transcript
+                      </Button>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">No transcript uploaded</p>
+                    )}
+                  </div>
+                </div>
+              </TabsContent>
+            </Tabs>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 } 

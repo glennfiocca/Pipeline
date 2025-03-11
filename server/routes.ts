@@ -6,6 +6,7 @@ import { ScraperManager } from './services/scraper/manager';
 import { db } from './db';
 import { users } from '@shared/schema';
 import { hashPassword } from './utils/password'; // Assuming this function exists
+import { eq } from 'drizzle-orm';
 
 // Enhanced admin middleware with specific user check
 const isAdmin = (req: any, res: any, next: any) => {
@@ -134,6 +135,26 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  app.get("/api/admin/users/:id", isAdmin, async (req, res) => {
+    try {
+      const userId = parseInt(req.params.id, 10);
+      if (isNaN(userId)) {
+        return res.status(400).json({ error: "Invalid user ID" });
+      }
+
+      // Example of using Drizzle-ORM:
+      const userRecord = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+
+      if (!userRecord.length) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      res.json(userRecord[0]);
+    } catch (error) {
+      console.error("Error fetching user:", error);
+      res.status(500).json({ error: "Failed to fetch user" });
+    }
+  });
 
   // Admin route for updating users
   app.patch("/api/admin/users/:id", isAdmin, async (req, res) => {
