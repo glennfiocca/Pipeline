@@ -72,6 +72,7 @@ export default function AdminUserPage() {
   const [selectedApplication, setSelectedApplication] = useState<Application | null>(null);
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [applicationDetailsDialogOpen, setApplicationDetailsDialogOpen] = useState(false);
+  const [selectedDueDate, setSelectedDueDate] = useState<Date | undefined>(undefined);
   
   const editUserMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -240,6 +241,7 @@ export default function AdminUserPage() {
         description: "Application updated successfully",
       });
       setApplicationDetailsDialogOpen(false);
+      setSelectedDueDate(undefined);
     },
     onError: (error: Error) => {
       toast({
@@ -513,6 +515,7 @@ export default function AdminUserPage() {
                                     setSelectedApplication(app);
                                     setSelectedJob(job);
                                     setApplicationDetailsDialogOpen(true);
+                                    setSelectedDueDate(undefined);
                                   }}
                                 >
                                   <NotebookIcon className="h-3 w-3" />
@@ -684,7 +687,13 @@ export default function AdminUserPage() {
 
       {/* Application Details Dialog */}
       {applicationDetailsDialogOpen && selectedApplication && selectedJob && (
-        <Dialog open={applicationDetailsDialogOpen} onOpenChange={setApplicationDetailsDialogOpen}>
+        <Dialog open={applicationDetailsDialogOpen} onOpenChange={(open) => {
+          setApplicationDetailsDialogOpen(open);
+          if (!open) {
+            // Reset the selectedDueDate when closing the dialog
+            setSelectedDueDate(undefined);
+          }
+        }}>
           <DialogContent className="max-w-md">
             <DialogHeader>
               <DialogTitle>Application Details</DialogTitle>
@@ -716,29 +725,42 @@ export default function AdminUserPage() {
               <div className="space-y-2">
                 <h4 className="text-sm font-medium">Due Date for Next Step</h4>
                 <div className="w-[280px]">
-                  <DatePicker 
-                    date={selectedApplication.nextStepDueDate ? new Date(selectedApplication.nextStepDueDate) : undefined}
-                    setDate={() => {}}
+                  <Input
+                    type="date"
+                    id="next-step-due-date"
+                    value={selectedDueDate ? 
+                      selectedDueDate.toISOString().split('T')[0] : 
+                      (selectedApplication.nextStepDueDate ? 
+                        new Date(selectedApplication.nextStepDueDate).toISOString().split('T')[0] : 
+                        '')}
+                    onChange={(e) => {
+                      if (e.target.value) {
+                        setSelectedDueDate(new Date(e.target.value + 'T00:00:00'));
+                      } else {
+                        setSelectedDueDate(undefined);
+                      }
+                    }}
                   />
                 </div>
               </div>
             </div>
             
             <DialogFooter>
-              <Button variant="outline" onClick={() => setApplicationDetailsDialogOpen(false)}>
+              <Button variant="outline" onClick={() => {
+                setApplicationDetailsDialogOpen(false);
+                setSelectedDueDate(undefined);
+              }}>
                 Cancel
               </Button>
               <Button 
                 onClick={() => {
                   const notesElement = document.getElementById('application-notes') as HTMLTextAreaElement;
                   const nextStepElement = document.getElementById('next-step') as HTMLInputElement;
+                  const nextStepDueDateElement = document.getElementById('next-step-due-date') as HTMLInputElement;
                   
-                  // Get the date from the DatePicker component
-                  let nextStepDueDate = null;
-                  if (document.querySelector('.date-picker-value')) {
-                    const dateValue = document.querySelector('.date-picker-value')?.getAttribute('data-value');
-                    nextStepDueDate = dateValue || null;
-                  }
+                  // Use the selectedDueDate state or get it from the input field
+                  const nextStepDueDate = nextStepDueDateElement.value ? 
+                    new Date(nextStepDueDateElement.value + 'T00:00:00').toISOString() : null;
                   
                   updateApplicationStatusMutation.mutate({
                     applicationId: selectedApplication.id,
@@ -831,7 +853,7 @@ function MessageThread({ applicationId, companyName, username, queryClient }: Me
       return response.json();
     },
     onSuccess: (newMessage) => {
-      queryClient.setQueryData<Message[]>(queryKey, old => [...(old || []), newMessage]);
+      queryClient.setQueryData([queryKey], (old: Message[] | undefined) => [...(old || []), newMessage]);
       setNewMessage("");
       toast({
         title: "Message sent",

@@ -84,8 +84,8 @@ export function MessageDialog({
       return res.json();
     },
     onSuccess: (newMessage) => {
-      queryClient.setQueryData<Message[]>(queryKey,
-        old => [...(old || []), newMessage]
+      queryClient.setQueryData([queryKey],
+        (old: Message[] | undefined) => [...(old || []), newMessage]
       );
       setNewMessage("");
       toast({
