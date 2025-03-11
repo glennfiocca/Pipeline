@@ -7,10 +7,10 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
-import { Loader2, ArrowLeft, User as UserIcon, Mail, CreditCard, Calendar, FileText, Trash2 } from "lucide-react";
+import { Loader2, ArrowLeft, User as UserIcon, Mail, CreditCard, Calendar, FileText, Trash2, Send } from "lucide-react";
 import { useLocation } from "wouter";
 import { Separator } from "@/components/ui/separator";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { ManageCreditsDialog } from "@/components/ManageCreditsDialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useToast } from "@/components/ui/use-toast";
@@ -27,6 +27,9 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
 
 export default function AdminUserPage() {
   const { userId } = useParams<{ userId: string }>();
@@ -36,6 +39,12 @@ export default function AdminUserPage() {
   
   const [showEditUserDialog, setShowEditUserDialog] = useState(false);
   const [showManageCreditsDialog, setShowManageCreditsDialog] = useState(false);
+  const [newMessage, setNewMessage] = useState("");
+  const scrollRef = useRef<HTMLDivElement>(null);
+  
+  const [chatDialogOpen, setChatDialogOpen] = useState(false);
+  const [selectedApplication, setSelectedApplication] = useState<any>(null);
+  const [selectedJob, setSelectedJob] = useState<any>(null);
   
   const editUserMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -325,6 +334,7 @@ export default function AdminUserPage() {
                 <TabsTrigger value="profile">Profile</TabsTrigger>
                 <TabsTrigger value="applications">Applications ({applications.length})</TabsTrigger>
                 <TabsTrigger value="documents">Documents</TabsTrigger>
+                <TabsTrigger value="messages">Messages</TabsTrigger>
               </TabsList>
               
               <TabsContent value="profile">
@@ -439,6 +449,19 @@ export default function AdminUserPage() {
                                               "bg-gray-500/10 text-gray-500"}>
                                   {app.status}
                                 </Badge>
+                                <Button 
+                                  variant="outline" 
+                                  size="sm" 
+                                  className="flex items-center gap-1 mt-1 w-full"
+                                  onClick={() => {
+                                    setSelectedApplication(app);
+                                    setSelectedJob(job);
+                                    setChatDialogOpen(true);
+                                  }}
+                                >
+                                  <Send className="h-3 w-3" />
+                                  Chat with User
+                                </Button>
                               </div>
                             </div>
                             
@@ -502,6 +525,41 @@ export default function AdminUserPage() {
                   </div>
                 </div>
               </TabsContent>
+
+              <TabsContent value="messages">
+                <div className="flex flex-col h-[500px]">
+                  <div className="flex-1 overflow-hidden" ref={scrollRef}>
+                    <ScrollArea className="h-full">
+                      <div className="space-y-4 p-4">
+                        {applications.length === 0 ? (
+                          <p className="text-center text-muted-foreground py-4">
+                            No applications found for this user. Messages are tied to applications.
+                          </p>
+                        ) : (
+                          applications.map((app) => {
+                            const job = jobs.find(j => j.id === app.jobId);
+                            if (!job) return null;
+                            
+                            return (
+                              <div key={app.id} className="mb-8">
+                                <h3 className="text-lg font-medium mb-2">
+                                  Messages for {job.title} at {job.company}
+                                </h3>
+                                <MessageThread 
+                                  applicationId={app.id} 
+                                  companyName={job.company} 
+                                  username={user.username} 
+                                  queryClient={queryClient}
+                                />
+                              </div>
+                            );
+                          })
+                        )}
+                      </div>
+                    </ScrollArea>
+                  </div>
+                </div>
+              </TabsContent>
             </Tabs>
           </CardContent>
         </Card>
@@ -539,6 +597,209 @@ export default function AdminUserPage() {
           }}
         />
       )}
+      
+      <Dialog open={chatDialogOpen} onOpenChange={setChatDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {selectedJob ? `Chat - ${selectedJob.title} at ${selectedJob.company}` : 'Chat'}
+            </DialogTitle>
+            <DialogDescription>
+              Chat with {user?.username || 'user'} about their application
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedApplication && selectedJob && (
+            <MessageThread 
+              applicationId={selectedApplication.id} 
+              companyName={selectedJob.company} 
+              username={user?.username || ''} 
+              queryClient={queryClient}
+            />
+          )}
+          
+          <div className="flex justify-end mt-4">
+            <Button variant="outline" onClick={() => setChatDialogOpen(false)}>
+              Close
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+interface Message {
+  id: number;
+  applicationId: number;
+  content: string;
+  isFromAdmin: boolean;
+  isRead: boolean;
+  createdAt: string;
+  senderUsername: string;
+}
+
+interface MessageThreadProps {
+  applicationId: number;
+  companyName: string;
+  username: string;
+  queryClient: any;
+}
+
+function MessageThread({ applicationId, companyName, username, queryClient }: MessageThreadProps) {
+  const [newMessage, setNewMessage] = useState("");
+  const { toast } = useToast();
+  const scrollRef = useRef<HTMLDivElement>(null);
+  
+  const queryKey = [`/api/applications/${applicationId}/messages`];
+
+  const { data: messages = [], isLoading } = useQuery<Message[]>({
+    queryKey,
+    queryFn: async () => {
+      const res = await apiRequest("GET", `/api/applications/${applicationId}/messages`);
+      if (!res.ok) {
+        return [];
+      }
+      return res.json();
+    },
+    refetchInterval: 10000, // Auto-refresh messages every 10 seconds
+  });
+
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [messages]);
+
+  const sendMessageMutation = useMutation({
+    mutationFn: async (content: string) => {
+      const messageData = {
+        applicationId,
+        content,
+        isFromAdmin: true,
+        senderUsername: companyName
+      };
+
+      const response = await apiRequest(
+        "POST",
+        `/api/applications/${applicationId}/messages`,
+        messageData
+      );
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || "Failed to send message");
+      }
+
+      return response.json();
+    },
+    onSuccess: (newMessage) => {
+      queryClient.setQueryData<Message[]>(queryKey, old => [...(old || []), newMessage]);
+      setNewMessage("");
+      toast({
+        title: "Message sent",
+        description: "Your message has been sent successfully.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to send message",
+        variant: "destructive",
+      });
+    }
+  });
+
+  const handleSendMessage = async () => {
+    if (!newMessage.trim()) return;
+    try {
+      await sendMessageMutation.mutateAsync(newMessage.trim());
+    } catch (error) {
+      console.error("Error in handleSendMessage:", error);
+    }
+  };
+
+  const formatMessageDate = (dateString: string) => {
+    if (!dateString) return "";
+    try {
+      const date = new Date(dateString);
+      return format(date, "MMM d, h:mm a");
+    } catch (error) {
+      console.error("Date formatting error:", error);
+      return "";
+    }
+  };
+
+  return (
+    <div className="border rounded-lg overflow-hidden">
+      <div className="h-[400px] flex flex-col">
+        <ScrollArea className="flex-1" ref={scrollRef}>
+          <div className="p-4 space-y-4">
+            {isLoading ? (
+              <div className="flex items-center justify-center h-full">
+                <Loader2 className="h-6 w-6 animate-spin" />
+              </div>
+            ) : messages.length === 0 ? (
+              <div className="text-center text-muted-foreground py-8">
+                No messages yet. Start the conversation!
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {messages.map((message) => (
+                  message.content && (
+                    <div
+                      key={message.id}
+                      className={cn(
+                        "p-4 rounded-lg",
+                        message.isFromAdmin
+                          ? "bg-primary text-primary-foreground ml-8"
+                          : "bg-muted mr-8"
+                      )}
+                    >
+                      <div className="flex justify-between items-start mb-2">
+                        <span className="font-medium">
+                          {message.isFromAdmin ? companyName : username}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          {formatMessageDate(message.createdAt)}
+                        </span>
+                      </div>
+                      <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                    </div>
+                  )
+                ))}
+              </div>
+            )}
+          </div>
+        </ScrollArea>
+        <div className="p-3 border-t">
+          <div className="flex items-end gap-2">
+            <Textarea
+              value={newMessage}
+              onChange={(e) => setNewMessage(e.target.value)}
+              placeholder="Type your message as the employer..."
+              className="min-h-[80px] flex-1"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSendMessage();
+                }
+              }}
+            />
+            <Button
+              size="icon"
+              onClick={handleSendMessage}
+              disabled={!newMessage.trim() || sendMessageMutation.isPending}
+            >
+              {sendMessageMutation.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Send className="h-4 w-4" />
+              )}
+            </Button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 } 
