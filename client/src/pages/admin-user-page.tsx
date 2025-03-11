@@ -7,12 +7,12 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
-import { Loader2, ArrowLeft, User as UserIcon, Mail, CreditCard, Calendar, FileText, Trash2, Send } from "lucide-react";
+import { Loader2, ArrowLeft, User as UserIcon, Mail, CreditCard, Calendar, FileText, Trash2, Send, NotebookIcon, ArrowRightIcon } from "lucide-react";
 import { useLocation } from "wouter";
 import { Separator } from "@/components/ui/separator";
 import { useState, useRef, useEffect } from "react";
 import { ManageCreditsDialog } from "@/components/ManageCreditsDialog";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { useToast } from "@/components/ui/use-toast";
 import { NewUserForm } from "@/components/NewUserForm";
 import {
@@ -29,7 +29,33 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { DatePicker } from "@/components/ui/date-picker";
 import { cn } from "@/lib/utils";
+
+// Add these interfaces at the top of the file, after imports
+interface Application {
+  id: number;
+  jobId: number;
+  profileId: number;
+  userId: number;
+  status: string;
+  appliedAt: string;
+  coverLetter?: string;
+  applicationData: any;
+  lastStatusUpdate: string;
+  statusHistory: Array<{ status: string; date: string }>;
+  notes?: string;
+  nextStep?: string;
+  nextStepDueDate?: string;
+}
+
+interface Job {
+  id: number;
+  title: string;
+  company: string;
+  isActive: boolean;
+}
 
 export default function AdminUserPage() {
   const { userId } = useParams<{ userId: string }>();
@@ -43,8 +69,9 @@ export default function AdminUserPage() {
   const scrollRef = useRef<HTMLDivElement>(null);
   
   const [chatDialogOpen, setChatDialogOpen] = useState(false);
-  const [selectedApplication, setSelectedApplication] = useState<any>(null);
-  const [selectedJob, setSelectedJob] = useState<any>(null);
+  const [selectedApplication, setSelectedApplication] = useState<Application | null>(null);
+  const [selectedJob, setSelectedJob] = useState<Job | null>(null);
+  const [applicationDetailsDialogOpen, setApplicationDetailsDialogOpen] = useState(false);
   
   const editUserMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -127,17 +154,15 @@ export default function AdminUserPage() {
     enabled: !!userId,
   });
 
-  const { data: applications = [], isLoading: isLoadingApplications } = useQuery({
+  const { data: applications = [] } = useQuery({
     queryKey: ["/api/admin/applications", userId],
     queryFn: async () => {
       const res = await apiRequest("GET", "/api/admin/applications");
       if (!res.ok) {
         throw new Error("Failed to fetch applications");
       }
-      return res.json();
-    },
-    select: (data) => {
-      return data.filter((app) => 
+      const data = await res.json();
+      return data.filter((app: Application) => 
         app.profileId === Number(userId) || 
         app.userId === Number(userId)
       );
@@ -183,11 +208,28 @@ export default function AdminUserPage() {
   });
 
   const updateApplicationStatusMutation = useMutation({
-    mutationFn: async ({ applicationId, status }: { applicationId: number; status: string }) => {
-      const res = await apiRequest("PATCH", `/api/admin/applications/${applicationId}`, { status });
+    mutationFn: async ({ 
+      applicationId, 
+      status,
+      notes,
+      nextStep,
+      nextStepDueDate
+    }: { 
+      applicationId: number; 
+      status?: string;
+      notes?: string;
+      nextStep?: string;
+      nextStepDueDate?: string | null;
+    }) => {
+      const res = await apiRequest("PATCH", `/api/admin/applications/${applicationId}`, { 
+        status,
+        notes,
+        nextStep,
+        nextStepDueDate
+      });
       if (!res.ok) {
         const error = await res.json();
-        throw new Error(error.message || "Failed to update application status");
+        throw new Error(error.message || "Failed to update application");
       }
       return res.json();
     },
@@ -195,8 +237,9 @@ export default function AdminUserPage() {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/applications", userId] });
       toast({
         title: "Success",
-        description: "Application status updated successfully",
+        description: "Application updated successfully",
       });
+      setApplicationDetailsDialogOpen(false);
     },
     onError: (error: Error) => {
       toast({
@@ -207,7 +250,7 @@ export default function AdminUserPage() {
     },
   });
 
-  if (isLoadingUser || isLoadingProfile || isLoadingApplications || isLoadingJobs) {
+  if (isLoadingUser || isLoadingProfile || isLoadingJobs) {
     return (
       <div className="flex items-center justify-center h-[400px]">
         <Loader2 className="h-8 w-8 animate-spin" />
@@ -400,8 +443,8 @@ export default function AdminUserPage() {
               <TabsContent value="applications">
                 {applications.length > 0 ? (
                   <div className="space-y-3">
-                    {applications.map((app) => {
-                      const job = jobs.find(j => j.id === app.jobId);
+                    {applications.map((app: Application) => {
+                      const job = jobs.find((j: Job) => j.id === app.jobId);
                       return (
                         <Card key={app.id}>
                           <CardContent className="p-4">
@@ -461,6 +504,19 @@ export default function AdminUserPage() {
                                 >
                                   <Send className="h-3 w-3" />
                                   Chat with User
+                                </Button>
+                                <Button 
+                                  variant="outline" 
+                                  size="sm" 
+                                  className="flex items-center gap-1 mt-1 w-full"
+                                  onClick={() => {
+                                    setSelectedApplication(app);
+                                    setSelectedJob(job);
+                                    setApplicationDetailsDialogOpen(true);
+                                  }}
+                                >
+                                  <NotebookIcon className="h-3 w-3" />
+                                  Edit Details
                                 </Button>
                               </div>
                             </div>
@@ -536,8 +592,8 @@ export default function AdminUserPage() {
                             No applications found for this user. Messages are tied to applications.
                           </p>
                         ) : (
-                          applications.map((app) => {
-                            const job = jobs.find(j => j.id === app.jobId);
+                          applications.map((app: Application) => {
+                            const job = jobs.find((j: Job) => j.id === app.jobId);
                             if (!job) return null;
                             
                             return (
@@ -625,6 +681,87 @@ export default function AdminUserPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Application Details Dialog */}
+      {applicationDetailsDialogOpen && selectedApplication && selectedJob && (
+        <Dialog open={applicationDetailsDialogOpen} onOpenChange={setApplicationDetailsDialogOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Application Details</DialogTitle>
+              <DialogDescription>
+                {selectedJob.title} at {selectedJob.company}
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <h4 className="text-sm font-medium">Notes</h4>
+                <Textarea 
+                  placeholder="Add notes about this application"
+                  defaultValue={selectedApplication.notes || ""}
+                  className="min-h-[100px]"
+                  id="application-notes"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <h4 className="text-sm font-medium">Next Step</h4>
+                <Input 
+                  placeholder="e.g., Schedule interview, Check references"
+                  defaultValue={selectedApplication.nextStep || ""}
+                  id="next-step"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <h4 className="text-sm font-medium">Due Date for Next Step</h4>
+                <div className="w-[280px]">
+                  <DatePicker 
+                    date={selectedApplication.nextStepDueDate ? new Date(selectedApplication.nextStepDueDate) : undefined}
+                    setDate={() => {}}
+                  />
+                </div>
+              </div>
+            </div>
+            
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setApplicationDetailsDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button 
+                onClick={() => {
+                  const notesElement = document.getElementById('application-notes') as HTMLTextAreaElement;
+                  const nextStepElement = document.getElementById('next-step') as HTMLInputElement;
+                  
+                  // Get the date from the DatePicker component
+                  let nextStepDueDate = null;
+                  if (document.querySelector('.date-picker-value')) {
+                    const dateValue = document.querySelector('.date-picker-value')?.getAttribute('data-value');
+                    nextStepDueDate = dateValue || null;
+                  }
+                  
+                  updateApplicationStatusMutation.mutate({
+                    applicationId: selectedApplication.id,
+                    notes: notesElement?.value,
+                    nextStep: nextStepElement?.value,
+                    nextStepDueDate
+                  });
+                }}
+                disabled={updateApplicationStatusMutation.isPending}
+              >
+                {updateApplicationStatusMutation.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  "Save Changes"
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }
