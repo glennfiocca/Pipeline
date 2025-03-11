@@ -1,5 +1,5 @@
 import { useParams } from "wouter";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { User, Profile } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -10,10 +10,76 @@ import { format } from "date-fns";
 import { Loader2, ArrowLeft, User as UserIcon, Mail, CreditCard, Calendar, FileText } from "lucide-react";
 import { useLocation } from "wouter";
 import { Separator } from "@/components/ui/separator";
+import { useState } from "react";
+import { ManageCreditsDialog } from "@/components/ManageCreditsDialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { useToast } from "@/components/ui/use-toast";
+import { NewUserForm } from "@/components/NewUserForm";
 
 export default function AdminUserPage() {
   const { userId } = useParams<{ userId: string }>();
   const [, setLocation] = useLocation();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  
+  const [showEditUserDialog, setShowEditUserDialog] = useState(false);
+  const [showManageCreditsDialog, setShowManageCreditsDialog] = useState(false);
+  
+  const editUserMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const res = await apiRequest("PATCH", `/api/admin/users/${userId}`, data);
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || "Failed to update user");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/admin/users/${userId}`] });
+      toast({
+        title: "Success",
+        description: "User updated successfully",
+      });
+      setShowEditUserDialog(false);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update user",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const manageUserCreditsMutation = useMutation({
+    mutationFn: async (amount: number) => {
+      const res = await apiRequest(
+        "PATCH",
+        `/api/admin/users/${userId}/credits`,
+        { amount }
+      );
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || "Failed to update user credits");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/admin/users/${userId}`] });
+      toast({
+        title: "Success",
+        description: "User credits updated successfully",
+      });
+      setShowManageCreditsDialog(false);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update user credits",
+        variant: "destructive",
+      });
+    },
+  });
   
   const { data: user, isLoading: isLoadingUser } = useQuery<User>({
     queryKey: [`/api/admin/users/${userId}`],
@@ -152,10 +218,10 @@ export default function AdminUserPage() {
             <Separator className="my-4" />
             
             <div className="flex justify-between">
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" onClick={() => setShowEditUserDialog(true)}>
                 Edit User
               </Button>
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" onClick={() => setShowManageCreditsDialog(true)}>
                 Manage Credits
               </Button>
             </div>
@@ -330,6 +396,39 @@ export default function AdminUserPage() {
           </CardContent>
         </Card>
       </div>
+      
+      <Dialog open={showEditUserDialog} onOpenChange={setShowEditUserDialog}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit User</DialogTitle>
+            <DialogDescription>
+              Update user information.
+            </DialogDescription>
+          </DialogHeader>
+          {user && (
+            <NewUserForm
+              initialData={user}
+              onSubmit={(data) => {
+                editUserMutation.mutate(data);
+              }}
+              onCancel={() => {
+                setShowEditUserDialog(false);
+              }}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+      
+      {user && (
+        <ManageCreditsDialog
+          isOpen={showManageCreditsDialog}
+          onClose={() => setShowManageCreditsDialog(false)}
+          user={user}
+          onConfirm={(amount) => {
+            manageUserCreditsMutation.mutate(amount);
+          }}
+        />
+      )}
     </div>
   );
 } 

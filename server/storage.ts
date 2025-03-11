@@ -54,6 +54,7 @@ export interface IStorage {
   updateUserPassword(id: number, hashedPassword: string): Promise<User>;
   updateUserResetToken(id: number, token: string, expiry: string): Promise<User>;
   clearUserResetToken(id: number): Promise<User>;
+  addBankedCredits(userId: number, amount: number): Promise<User>;
 
   // Session store
   sessionStore: session.Store;
@@ -693,6 +694,23 @@ export class DatabaseStorage implements IStorage {
       console.error(`Error deleting feedback with ID: ${id}:`, error);
       throw error;
     }
+  }
+
+  async addBankedCredits(userId: number, amount: number): Promise<User> {
+    const user = await this.getUser(userId);
+    if (!user) {
+      throw new Error("User not found");
+    }
+    
+    const newCreditAmount = user.bankedCredits + amount;
+    
+    const [updatedUser] = await db
+      .update(users)
+      .set({ bankedCredits: newCreditAmount })
+      .where(eq(users.id, userId))
+      .returning();
+    
+    return updatedUser;
   }
 }
 
