@@ -156,22 +156,115 @@ export function FeedbackManagement() {
 
   const activeFeedback = feedbackList.filter(f => !f.archived);
   const archivedFeedback = feedbackList.filter(f => f.archived);
+  
+  // Split active feedback into new and commented
+  const newFeedback = activeFeedback.filter(f => !f.internalNotes || f.internalNotes.trim() === '');
+  const commentedFeedback = activeFeedback.filter(f => f.internalNotes && f.internalNotes.trim() !== '');
 
   return (
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>Active Feedback</CardTitle>
+          <CardTitle>
+            New Feedback
+            <span className="ml-2 text-sm font-normal text-muted-foreground">
+              ({newFeedback.length})
+            </span>
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <ScrollArea className="h-[400px] pr-4">
             <div className="space-y-4">
-              {activeFeedback.length === 0 ? (
+              {newFeedback.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
-                  No active feedback submissions.
+                  No new feedback submissions.
                 </div>
               ) : (
-                activeFeedback.map((feedback) => (
+                newFeedback.map((feedback) => (
+                  <Card key={feedback.id} className="p-4">
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="flex gap-1">
+                            {[1, 2, 3, 4, 5].map((star) => (
+                              <Star
+                                key={star}
+                                className={`h-4 w-4 ${
+                                  star <= feedback.rating
+                                    ? "fill-primary text-primary"
+                                    : "text-muted-foreground"
+                                }`}
+                              />
+                            ))}
+                          </div>
+                          <Badge variant="outline" className={getStatusColor(feedback.status)}>
+                            {feedback.status}
+                          </Badge>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => handleAddNote(feedback)}
+                          >
+                            <MessageSquarePlus className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => handleToggleArchive(feedback)}
+                          >
+                            <Archive className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-red-500 hover:text-red-600"
+                            onClick={() => handleDelete(feedback)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                      <div>
+                        <Badge variant="outline" className="mb-2">
+                          {feedback.category}
+                        </Badge>
+                        <h3 className="text-base font-semibold mb-1">{feedback.subject || "No Subject"}</h3>
+                        <p className="text-sm text-muted-foreground mb-2">{feedback.comment}</p>
+                        <div className="text-xs text-muted-foreground mt-2">
+                          {format(new Date(feedback.createdAt), "MMM d, yyyy")}
+                        </div>
+                      </div>
+                    </div>
+                  </Card>
+                ))
+              )}
+            </div>
+          </ScrollArea>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>
+            Commented Feedback
+            <span className="ml-2 text-sm font-normal text-muted-foreground">
+              ({commentedFeedback.length})
+            </span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ScrollArea className="h-[400px] pr-4">
+            <div className="space-y-4">
+              {commentedFeedback.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  No commented feedback submissions.
+                </div>
+              ) : (
+                commentedFeedback.map((feedback) => (
                   <Card key={feedback.id} className="p-4">
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
@@ -246,7 +339,12 @@ export function FeedbackManagement() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Archived Feedback</CardTitle>
+          <CardTitle>
+            Archived Feedback
+            <span className="ml-2 text-sm font-normal text-muted-foreground">
+              ({archivedFeedback.length})
+            </span>
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <ScrollArea className="h-[300px] pr-4">
