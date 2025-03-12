@@ -25,6 +25,7 @@ import { ManageCreditsDialog } from "@/components/ManageCreditsDialog";
 import { jsPDF } from "jspdf";
 import "jspdf-autotable";
 import { Input } from "@/components/ui/input";
+import { motion, AnimatePresence } from "framer-motion";
 type NewJobForm = z.infer<typeof insertJobSchema>;
 type NewUserForm = z.infer<typeof insertUserSchema>;
 type SelectedUserCredits = {
@@ -762,338 +763,172 @@ export default function AdminDashboardPage() {
   if (isLoadingJobs || isLoadingUsers) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+        <motion.div 
+          className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.5 }}
+        />
       </div>
     );
   }
+
+  // Animation variants
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1
+      }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { y: 10, opacity: 0 },
+    visible: {
+      y: 0,
+      opacity: 1,
+      transition: {
+        type: "spring",
+        stiffness: 100,
+        damping: 15
+      }
+    }
+  };
+
+  const cardHoverVariants = {
+    hover: { 
+      y: -5, 
+      boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1)",
+      transition: { 
+        type: "spring", 
+        stiffness: 300, 
+        damping: 20 
+      }
+    }
+  };
+
   return (
     <div className="container mx-auto px-4 py-10 max-w-7xl">
-      <div className="flex items-center justify-between mb-8">
+      <motion.div 
+        className="flex items-center justify-between mb-8"
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+      >
         <h1 className="text-3xl font-bold">Admin Dashboard</h1>
-      </div>
+      </motion.div>
       <Tabs defaultValue="active-jobs" className="space-y-4">
-        <TabsList className="mb-4">
-          <TabsTrigger value="active-jobs">Active Jobs</TabsTrigger>
-          <TabsTrigger value="archived-jobs">Archived Jobs</TabsTrigger>
-          <TabsTrigger value="users">Users</TabsTrigger>
-          <TabsTrigger value="applications">All Applications</TabsTrigger>
-          <TabsTrigger value="user-view">Management</TabsTrigger>
-          <TabsTrigger value="feedback">Feedback</TabsTrigger>
-        </TabsList>
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.2 }}
+        >
+          <TabsList className="mb-4">
+            <TabsTrigger value="active-jobs">Active Jobs</TabsTrigger>
+            <TabsTrigger value="archived-jobs">Archived Jobs</TabsTrigger>
+            <TabsTrigger value="users">Users</TabsTrigger>
+            <TabsTrigger value="applications">All Applications</TabsTrigger>
+            <TabsTrigger value="user-view">Management</TabsTrigger>
+            <TabsTrigger value="feedback">Feedback</TabsTrigger>
+          </TabsList>
+        </motion.div>
         <TabsContent value="active-jobs">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0">
-              <CardTitle>
-                Active Jobs Management
-                <span className="ml-2 text-sm font-normal text-muted-foreground">
-                  ({filteredActiveJobs.length} jobs)
-                </span>
-              </CardTitle>
-              <div className="flex items-center gap-4">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Search jobs by title, ID, company..."
-                    className="w-[300px] pl-9"
-                    value={activeJobsSearch}
-                    onChange={(e) => setActiveJobsSearch(e.target.value)}
-                  />
-                </div>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => setShowNewJobDialog(true)}
-                >
-                  <Plus className="h-4 w-4" />
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {filteredActiveJobs.length > 0 ? (
-                  filteredActiveJobs.map((job) => (
-                    <div
-                      key={job.id}
-                      className="flex items-center justify-between p-4 rounded-lg border"
-                    >
-                      <div>
-                        <h3 className="font-medium">
-                          {job.title}
-                          <span className="ml-2 text-sm text-muted-foreground">
-                            (ID: {job.jobIdentifier})
-                          </span>
-                        </h3>
-                        <p className="text-sm text-muted-foreground">
-                          {job.company} - {job.location}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          onClick={() => editJobMutation.mutate({ id: job.id, isActive: false })}
-                        >
-                          Archive
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          onClick={() => handleEditJob(job)}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button variant="destructive" size="icon">
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Delete Job</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                Are you sure you want to delete this job? This action cannot be undone.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancel</AlertDialogCancel>
-                              <AlertDialogAction
-                                onClick={() => deleteJobMutation.mutate(job.id)}
-                              >
-                                Delete
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="text-center py-8 text-muted-foreground">
-                    {activeJobsSearch ? "No matching active jobs found" : "No active jobs found"}
+          <motion.div
+            initial="hidden"
+            animate="visible"
+            variants={containerVariants}
+          >
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0">
+                <CardTitle>
+                  Active Jobs Management
+                  <span className="ml-2 text-sm font-normal text-muted-foreground">
+                    ({filteredActiveJobs.length} jobs)
+                  </span>
+                </CardTitle>
+                <div className="flex items-center gap-4">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search jobs by title, ID, company..."
+                      className="w-[300px] pl-9"
+                      value={activeJobsSearch}
+                      onChange={(e) => setActiveJobsSearch(e.target.value)}
+                    />
                   </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-        <TabsContent value="archived-jobs">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0">
-              <CardTitle>
-                Archived Jobs
-                <span className="ml-2 text-sm font-normal text-muted-foreground">
-                  ({filteredArchivedJobs.length} jobs)
-                </span>
-              </CardTitle>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search archived jobs..."
-                  className="w-[300px] pl-9"
-                  value={archivedJobsSearch}
-                  onChange={(e) => setArchivedJobsSearch(e.target.value)}
-                />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {filteredArchivedJobs.length > 0 ? (
-                  filteredArchivedJobs.map((job) => (
-                    <div
-                      key={job.id}
-                      className="flex items-center justify-between p-4 rounded-lg border"
+                  <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => setShowNewJobDialog(true)}
                     >
-                      <div>
-                        <h3 className="font-medium">
-                          {job.title}
-                          <span className="ml-2 text-sm text-muted-foreground">
-                            (ID: {job.jobIdentifier})
-                          </span>
-                        </h3>
-                        <p className="text-sm text-muted-foreground">
-                          {job.company} - {job.location}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          Archived on: {job.deactivatedAt ? format(new Date(job.deactivatedAt), "MMM d, yyyy") : "Unknown"}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          onClick={() => editJobMutation.mutate({ id: job.id, isActive: true })}
-                        >
-                          Restore
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          onClick={() => handleEditJob(job)}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button variant="destructive" size="icon">
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Delete Job</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                Are you sure you want to delete this archived job? This action cannot be undone.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancel</AlertDialogCancel>
-                              <AlertDialogAction
-                                onClick={() => deleteJobMutation.mutate(job.id)}
-                              >
-                                Delete
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="text-center py-8 text-muted-foreground">
-                    {archivedJobsSearch ? "No matching archived jobs found" : "No archived jobs found"}
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-        <TabsContent value="users">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0">
-              <CardTitle>
-                Users Management 
-                <span className="ml-2 text-sm font-normal text-muted-foreground">
-                  ({filteredUsers.length} users)
-                </span>
-              </CardTitle>
-              <div className="flex items-center gap-4">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Search users by name or email..."
-                    className="w-[300px] pl-9"
-                    value={usersSearch}
-                    onChange={(e) => setUsersSearch(e.target.value)}
-                  />
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </motion.div>
                 </div>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => setShowNewUserDialog(true)}
-                >
-                  <Plus className="h-4 w-4" />
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                {filteredUsers.length > 0 ? (
-                  filteredUsers.map((user) => (
-                    <Card key={user.id} className="overflow-hidden w-auto">
-                      <CardContent className="p-3">
-                        <div className="flex items-center mb-1.5">
-                          <UserIcon className="h-5 w-5 text-muted-foreground mr-2" />
-                          <span className="font-medium text-base">{user.username}</span>
-                          {user.isAdmin && (
-                            <Badge variant="outline" className="ml-2 text-xs py-0">
-                              Admin
-                            </Badge>
-                          )}
+              </CardHeader>
+              <CardContent>
+                <motion.div className="space-y-4" variants={containerVariants}>
+                  {filteredActiveJobs.length > 0 ? (
+                    filteredActiveJobs.map((job, index) => (
+                      <motion.div
+                        key={job.id}
+                        variants={itemVariants}
+                        whileHover={{ y: -2 }}
+                        transition={{ delay: index * 0.05 }}
+                        className="flex items-center justify-between p-4 rounded-lg border hover:shadow-md transition-shadow"
+                      >
+                        <div>
+                          <h3 className="font-medium">
+                            {job.title}
+                            <span className="ml-2 text-sm text-muted-foreground">
+                              (ID: {job.jobIdentifier})
+                            </span>
+                          </h3>
+                          <p className="text-sm text-muted-foreground">
+                            {job.company} - {job.location}
+                          </p>
                         </div>
-                        
-                        <div className="text-sm text-muted-foreground mb-2">
-                          <div className="flex items-center mb-1">
-                            <Mail className="h-4 w-4 mr-2" />
-                            <span className="truncate">{user.email}</span>
-                          </div>
-                          <div className="flex items-center">
-                            <CreditCard className="h-4 w-4 mr-2" />
-                            <span>{user.bankedCredits} banked credits</span>
-                          </div>
-                        </div>
-                        
-                        <div className="flex items-center justify-start mt-1.5 border-t pt-1.5">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-8 w-8 p-0 mr-1.5"
-                            onClick={() => setSelectedUserCredits({ user, action: 'manage_credits' })}
-                            title="Manage Credits"
-                          >
-                            <CreditCard className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-8 w-8 p-0 mr-1.5"
-                            onClick={() => handleEditUser(user)}
-                            title="Edit User"
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-8 w-8 p-0 mr-1.5"
-                            onClick={async () => {
-                              try {
-                                const profileResponse = await apiRequest("GET", `/api/admin/profiles/${user.id}`);
-                                if (profileResponse.ok) {
-                                  const profile = await profileResponse.json();
-                                  setSelectedUserDocuments({ user, profile });
-                                } else {
-                                  toast({
-                                    title: "Error",
-                                    description: "Could not fetch user documents",
-                                    variant: "destructive",
-                                  });
-                                }
-                              } catch (error) {
-                                console.error("Error fetching user documents:", error);
-                                toast({
-                                  title: "Error",
-                                  description: "Could not fetch user documents",
-                                  variant: "destructive",
-                                });
-                              }
-                            }}
-                            title="View Documents & Export Profile"
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
+                        <div className="flex items-center gap-2">
+                          <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              onClick={() => editJobMutation.mutate({ id: job.id, isActive: false })}
+                            >
+                              Archive
+                            </Button>
+                          </motion.div>
+                          <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              onClick={() => handleEditJob(job)}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                          </motion.div>
                           <AlertDialog>
                             <AlertDialogTrigger asChild>
-                              <Button 
-                                variant="destructive" 
-                                size="sm"
-                                className="h-8 w-8 p-0"
-                                title="Delete User"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
+                              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                                <Button variant="destructive" size="icon">
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </motion.div>
                             </AlertDialogTrigger>
                             <AlertDialogContent>
                               <AlertDialogHeader>
-                                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                <AlertDialogTitle>Delete Job</AlertDialogTitle>
                                 <AlertDialogDescription>
-                                  This will permanently delete the user and all associated data.
+                                  Are you sure you want to delete this job? This action cannot be undone.
                                 </AlertDialogDescription>
                               </AlertDialogHeader>
                               <AlertDialogFooter>
                                 <AlertDialogCancel>Cancel</AlertDialogCancel>
                                 <AlertDialogAction
-                                  onClick={() => deleteUserMutation.mutate(user.id)}
+                                  onClick={() => deleteJobMutation.mutate(job.id)}
                                 >
                                   Delete
                                 </AlertDialogAction>
@@ -1101,276 +936,620 @@ export default function AdminDashboardPage() {
                             </AlertDialogContent>
                           </AlertDialog>
                         </div>
-                      </CardContent>
-                    </Card>
-                  ))
-                ) : (
-                  <div className="col-span-3 text-center py-8 text-muted-foreground">
-                    {usersSearch ? "No matching users found" : "No users found"}
+                      </motion.div>
+                    ))
+                  ) : (
+                    <motion.div 
+                      className="text-center py-8 text-muted-foreground"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ duration: 0.5 }}
+                    >
+                      {activeJobsSearch ? "No matching active jobs found" : "No active jobs found"}
+                    </motion.div>
+                  )}
+                </motion.div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        </TabsContent>
+        <TabsContent value="archived-jobs">
+          <motion.div
+            initial="hidden"
+            animate="visible"
+            variants={containerVariants}
+          >
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0">
+                <CardTitle>
+                  Archived Jobs
+                  <span className="ml-2 text-sm font-normal text-muted-foreground">
+                    ({filteredArchivedJobs.length} jobs)
+                  </span>
+                </CardTitle>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search archived jobs..."
+                    className="w-[300px] pl-9"
+                    value={archivedJobsSearch}
+                    onChange={(e) => setArchivedJobsSearch(e.target.value)}
+                  />
+                </div>
+              </CardHeader>
+              <CardContent>
+                <motion.div className="space-y-4" variants={containerVariants}>
+                  {filteredArchivedJobs.length > 0 ? (
+                    filteredArchivedJobs.map((job, index) => (
+                      <motion.div
+                        key={job.id}
+                        variants={itemVariants}
+                        whileHover={{ y: -2 }}
+                        transition={{ delay: index * 0.05 }}
+                        className="flex items-center justify-between p-4 rounded-lg border hover:shadow-md transition-shadow"
+                      >
+                        <div>
+                          <h3 className="font-medium">
+                            {job.title}
+                            <span className="ml-2 text-sm text-muted-foreground">
+                              (ID: {job.jobIdentifier})
+                            </span>
+                          </h3>
+                          <p className="text-sm text-muted-foreground">
+                            {job.company} - {job.location}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            Archived on: {job.deactivatedAt ? format(new Date(job.deactivatedAt), "MMM d, yyyy") : "Unknown"}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              onClick={() => editJobMutation.mutate({ id: job.id, isActive: true })}
+                            >
+                              Restore
+                            </Button>
+                          </motion.div>
+                          <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              onClick={() => handleEditJob(job)}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                          </motion.div>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                                <Button variant="destructive" size="icon">
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </motion.div>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Delete Job</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Are you sure you want to delete this archived job? This action cannot be undone.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => deleteJobMutation.mutate(job.id)}
+                                >
+                                  Delete
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
+                      </motion.div>
+                    ))
+                  ) : (
+                    <motion.div 
+                      className="text-center py-8 text-muted-foreground"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ duration: 0.5 }}
+                    >
+                      {archivedJobsSearch ? "No matching archived jobs found" : "No archived jobs found"}
+                    </motion.div>
+                  )}
+                </motion.div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        </TabsContent>
+        <TabsContent value="users">
+          <motion.div
+            initial="hidden"
+            animate="visible"
+            variants={containerVariants}
+          >
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0">
+                <CardTitle>
+                  Users Management 
+                  <span className="ml-2 text-sm font-normal text-muted-foreground">
+                    ({filteredUsers.length} users)
+                  </span>
+                </CardTitle>
+                <div className="flex items-center gap-4">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search users by name or email..."
+                      className="w-[300px] pl-9"
+                      value={usersSearch}
+                      onChange={(e) => setUsersSearch(e.target.value)}
+                    />
                   </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+                  <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => setShowNewUserDialog(true)}
+                    >
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </motion.div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <motion.div 
+                  className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3"
+                  variants={containerVariants}
+                >
+                  {filteredUsers.length > 0 ? (
+                    filteredUsers.map((user, index) => (
+                      <motion.div
+                        key={user.id}
+                        variants={itemVariants}
+                        whileHover={cardHoverVariants.hover}
+                        transition={{ delay: index * 0.05 }}
+                      >
+                        <Card className="overflow-hidden w-auto">
+                          <CardContent className="p-3">
+                            <div className="flex items-center mb-1.5">
+                              <UserIcon className="h-5 w-5 text-muted-foreground mr-2" />
+                              <span className="font-medium text-base">{user.username}</span>
+                              {user.isAdmin && (
+                                <Badge variant="outline" className="ml-2 text-xs py-0">
+                                  Admin
+                                </Badge>
+                              )}
+                            </div>
+                            
+                            <div className="text-sm text-muted-foreground mb-2">
+                              <div className="flex items-center mb-1">
+                                <Mail className="h-4 w-4 mr-2" />
+                                <span className="truncate">{user.email}</span>
+                              </div>
+                              <div className="flex items-center">
+                                <CreditCard className="h-4 w-4 mr-2" />
+                                <span>{user.bankedCredits} banked credits</span>
+                              </div>
+                            </div>
+                            
+                            <div className="flex items-center justify-start mt-1.5 border-t pt-1.5">
+                              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-8 w-8 p-0 mr-1.5"
+                                  onClick={() => setSelectedUserCredits({ user, action: 'manage_credits' })}
+                                  title="Manage Credits"
+                                >
+                                  <CreditCard className="h-4 w-4" />
+                                </Button>
+                              </motion.div>
+                              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-8 w-8 p-0 mr-1.5"
+                                  onClick={() => handleEditUser(user)}
+                                  title="Edit User"
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                              </motion.div>
+                              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-8 w-8 p-0 mr-1.5"
+                                  onClick={async () => {
+                                    try {
+                                      const profileResponse = await apiRequest("GET", `/api/admin/profiles/${user.id}`);
+                                      if (profileResponse.ok) {
+                                        const profile = await profileResponse.json();
+                                        setSelectedUserDocuments({ user, profile });
+                                      } else {
+                                        toast({
+                                          title: "Error",
+                                          description: "Could not fetch user documents",
+                                          variant: "destructive",
+                                        });
+                                      }
+                                    } catch (error) {
+                                      console.error("Error fetching user documents:", error);
+                                      toast({
+                                        title: "Error",
+                                        description: "Could not fetch user documents",
+                                        variant: "destructive",
+                                      });
+                                    }
+                                  }}
+                                  title="View Documents & Export Profile"
+                                >
+                                  <Eye className="h-4 w-4" />
+                                </Button>
+                              </motion.div>
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                                    <Button 
+                                      variant="destructive" 
+                                      size="sm"
+                                      className="h-8 w-8 p-0"
+                                      title="Delete User"
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </motion.div>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      This will permanently delete the user and all associated data.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction
+                                      onClick={() => deleteUserMutation.mutate(user.id)}
+                                    >
+                                      Delete
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </motion.div>
+                    ))
+                  ) : (
+                    <motion.div 
+                      className="col-span-3 text-center py-8 text-muted-foreground"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ duration: 0.5 }}
+                    >
+                      {usersSearch ? "No matching users found" : "No users found"}
+                    </motion.div>
+                  )}
+                </motion.div>
+              </CardContent>
+            </Card>
+          </motion.div>
         </TabsContent>
         <TabsContent value="user-view">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0">
-              <CardTitle>
-                Management
-                <span className="ml-2 text-sm font-normal text-muted-foreground">
-                  ({filteredManagementUsers.length} users)
-                </span>
-              </CardTitle>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search users by name or email..."
-                  className="w-[300px] pl-9"
-                  value={managementSearch}
-                  onChange={(e) => setManagementSearch(e.target.value)}
-                />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {filteredManagementUsers.length > 0 ? (
-                  filteredManagementUsers.map((user) => (
-                    <Card 
-                      key={user.id} 
-                      className="overflow-hidden cursor-pointer hover:shadow-md transition-all"
-                      onClick={() => {
-                        setLocation(`/admin/users/${user.id}`);
-                      }}
+          <motion.div
+            initial="hidden"
+            animate="visible"
+            variants={containerVariants}
+          >
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0">
+                <CardTitle>
+                  Management
+                  <span className="ml-2 text-sm font-normal text-muted-foreground">
+                    ({filteredManagementUsers.length} users)
+                  </span>
+                </CardTitle>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search users by name or email..."
+                    className="w-[300px] pl-9"
+                    value={managementSearch}
+                    onChange={(e) => setManagementSearch(e.target.value)}
+                  />
+                </div>
+              </CardHeader>
+              <CardContent>
+                <motion.div 
+                  className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
+                  variants={containerVariants}
+                >
+                  {filteredManagementUsers.length > 0 ? (
+                    filteredManagementUsers.map((user, index) => (
+                      <motion.div
+                        key={user.id}
+                        variants={itemVariants}
+                        whileHover={cardHoverVariants.hover}
+                        transition={{ delay: index * 0.05 }}
+                        onClick={() => {
+                          setLocation(`/admin/users/${user.id}`);
+                        }}
+                      >
+                        <Card 
+                          className="overflow-hidden cursor-pointer hover:shadow-md transition-all"
+                        >
+                          <CardContent className="p-4">
+                            <div className="flex items-center mb-2">
+                              <UserIcon className="h-5 w-5 text-muted-foreground mr-2" />
+                              <span className="font-medium text-base">{user.username}</span>
+                              {user.isAdmin && (
+                                <Badge variant="outline" className="ml-2 text-xs py-0">
+                                  Admin
+                                </Badge>
+                              )}
+                            </div>
+                            
+                            <div className="text-sm text-muted-foreground mb-2">
+                              <div className="flex items-center mb-1">
+                                <Mail className="h-4 w-4 mr-2" />
+                                <span className="truncate">{user.email}</span>
+                              </div>
+                              <div className="flex items-center">
+                                <CreditCard className="h-4 w-4 mr-2" />
+                                <span>{user.bankedCredits} banked credits</span>
+                              </div>
+                            </div>
+                            
+                            <div className="flex items-center justify-end mt-2 pt-2 border-t">
+                              <motion.div whileHover={{ x: 5 }} transition={{ type: "spring", stiffness: 300 }}>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="flex items-center gap-1"
+                                >
+                                  View Details
+                                  <ChevronRight className="h-4 w-4" />
+                                </Button>
+                              </motion.div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </motion.div>
+                    ))
+                  ) : (
+                    <motion.div 
+                      className="col-span-3 text-center py-8 text-muted-foreground"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ duration: 0.5 }}
                     >
-                      <CardContent className="p-4">
-                        <div className="flex items-center mb-2">
-                          <UserIcon className="h-5 w-5 text-muted-foreground mr-2" />
-                          <span className="font-medium text-base">{user.username}</span>
-                          {user.isAdmin && (
-                            <Badge variant="outline" className="ml-2 text-xs py-0">
-                              Admin
-                            </Badge>
-                          )}
-                        </div>
-                        
-                        <div className="text-sm text-muted-foreground mb-2">
-                          <div className="flex items-center mb-1">
-                            <Mail className="h-4 w-4 mr-2" />
-                            <span className="truncate">{user.email}</span>
-                          </div>
-                          <div className="flex items-center">
-                            <CreditCard className="h-4 w-4 mr-2" />
-                            <span>{user.bankedCredits} banked credits</span>
-                          </div>
-                        </div>
-                        
-                        <div className="flex items-center justify-end mt-2 pt-2 border-t">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="flex items-center gap-1"
-                          >
-                            View Details
-                            <ChevronRight className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))
-                ) : (
-                  <div className="col-span-3 text-center py-8 text-muted-foreground">
-                    {managementSearch ? "No matching users found" : "No users found"}
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+                      {managementSearch ? "No matching users found" : "No users found"}
+                    </motion.div>
+                  )}
+                </motion.div>
+              </CardContent>
+            </Card>
+          </motion.div>
         </TabsContent>
         <TabsContent value="applications">
-          <ApplicationsManagement />
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5 }}
+          >
+            <ApplicationsManagement />
+          </motion.div>
         </TabsContent>
         <TabsContent value="feedback">
-          <FeedbackManagement />
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5 }}
+          >
+            <FeedbackManagement />
+          </motion.div>
         </TabsContent>
       </Tabs>
-      <Dialog open={showNewJobDialog} onOpenChange={setShowNewJobDialog}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Create New Job</DialogTitle>
-            <DialogDescription>
-              Add a new job listing to the platform.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-4">
-            <NewJobForm
-              onSubmit={async (data) => {
-                createJobMutation.mutate(data);
-              }}
-              onCancel={() => setShowNewJobDialog(false)}
-            />
-          </div>
-        </DialogContent>
-      </Dialog>
-      <Dialog open={showNewUserDialog} onOpenChange={setShowNewUserDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Create New User</DialogTitle>
-            <DialogDescription>
-              Add a new user to the platform.
-            </DialogDescription>
-          </DialogHeader>
-          <NewUserForm
-            onSubmit={(data) => {
-              createUserMutation.mutate(data);
+      
+      <AnimatePresence>
+        {showNewJobDialog && (
+          <Dialog open={showNewJobDialog} onOpenChange={setShowNewJobDialog}>
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Create New Job</DialogTitle>
+                <DialogDescription>
+                  Add a new job listing to the platform.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="py-4">
+                <NewJobForm
+                  onSubmit={async (data) => {
+                    createJobMutation.mutate(data);
+                  }}
+                  onCancel={() => setShowNewJobDialog(false)}
+                />
+              </div>
+            </DialogContent>
+          </Dialog>
+        )}
+      </AnimatePresence>
+      
+      <AnimatePresence>
+        {showNewUserDialog && (
+          <Dialog open={showNewUserDialog} onOpenChange={setShowNewUserDialog}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Create New User</DialogTitle>
+                <DialogDescription>
+                  Add a new user to the platform.
+                </DialogDescription>
+              </DialogHeader>
+              <NewUserForm
+                onSubmit={(data) => {
+                  createUserMutation.mutate(data);
+                }}
+                onCancel={() => setShowNewUserDialog(false)}
+              />
+            </DialogContent>
+          </Dialog>
+        )}
+      </AnimatePresence>
+      
+      <AnimatePresence>
+        {showEditJobDialog && (
+          <Dialog open={showEditJobDialog} onOpenChange={setShowEditJobDialog}>
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Edit Job</DialogTitle>
+                <DialogDescription>
+                  Update job listing information.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="py-4">
+                <NewJobForm
+                  initialData={selectedJob}
+                  onSubmit={(data) => {
+                    editJobMutation.mutate(data);
+                  }}
+                  onCancel={() => {
+                    setShowEditJobDialog(false);
+                    setSelectedJob(null);
+                  }}
+                />
+              </div>
+            </DialogContent>
+          </Dialog>
+        )}
+      </AnimatePresence>
+      
+      <AnimatePresence>
+        {showEditUserDialog && (
+          <Dialog open={showEditUserDialog} onOpenChange={setShowEditUserDialog}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Edit User</DialogTitle>
+                <DialogDescription>
+                  Update user information.
+                </DialogDescription>
+              </DialogHeader>
+              <NewUserForm
+                initialData={selectedUser}
+                onSubmit={(data) => {
+                  editUserMutation.mutate(data);
+                }}
+                onCancel={() => {
+                  setShowEditUserDialog(false);
+                  setSelectedUser(null);
+                }}
+              />
+            </DialogContent>
+          </Dialog>
+        )}
+      </AnimatePresence>
+      
+      <AnimatePresence>
+        {selectedUserCredits && (
+          <ManageCreditsDialog
+            user={selectedUserCredits.user}
+            open={!!selectedUserCredits}
+            onOpenChange={(open) => {
+              if (!open) setSelectedUserCredits(null);
             }}
-            onCancel={() => setShowNewUserDialog(false)}
           />
-        </DialogContent>
-      </Dialog>
-      <Dialog open={showEditJobDialog} onOpenChange={setShowEditJobDialog}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Edit Job</DialogTitle>
-            <DialogDescription>
-              Update job listing information.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-4">
-            <NewJobForm
-              initialData={selectedJob}
-              onSubmit={(data) => {
-                editJobMutation.mutate(data);
-              }}
-              onCancel={() => {
-                setShowEditJobDialog(false);
-                setSelectedJob(null);
-              }}
-            />
-          </div>
-        </DialogContent>
-      </Dialog>
-      <Dialog open={showEditUserDialog} onOpenChange={setShowEditUserDialog}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Edit User</DialogTitle>
-            <DialogDescription>
-              Update user information.
-            </DialogDescription>
-          </DialogHeader>
-          <NewUserForm
-            initialData={selectedUser}
-            onSubmit={(data) => {
-              editUserMutation.mutate(data);
+        )}
+      </AnimatePresence>
+      
+      <AnimatePresence>
+        {selectedUserDocuments && (
+          <Dialog
+            open={!!selectedUserDocuments}
+            onOpenChange={(open) => {
+              if (!open) setSelectedUserDocuments(null);
             }}
-            onCancel={() => {
-              setShowEditUserDialog(false);
-              setSelectedUser(null);
-            }}
-          />
-        </DialogContent>
-      </Dialog>
-      {selectedUserCredits && (
-        <ManageCreditsDialog
-          isOpen={true}
-          onClose={() => setSelectedUserCredits(null)}
-          user={selectedUserCredits.user}
-          onConfirm={(amount) => {
-            manageUserCreditsMutation.mutate({
-              userId: selectedUserCredits.user.id,
-              amount
-            });
-          }}
-        />
-      )}
-      {selectedUserDocuments && (
-        <Dialog open={!!selectedUserDocuments} onOpenChange={() => setSelectedUserDocuments(null)}>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Documents for {selectedUserDocuments.user.username}</DialogTitle>
-              <DialogDescription>
-                View and download user documents
-              </DialogDescription>
-            </DialogHeader>
-            
-            <div className="space-y-6 py-4">
-              <div className="space-y-2">
-                <h3 className="text-lg font-medium">Resume</h3>
-                {selectedUserDocuments.profile.resumeUrl ? (
-                  <div className="border rounded-md p-4">
-                    <div className="flex justify-between items-center mb-4">
-                      <span className="text-sm text-muted-foreground">Resume document</span>
-                      <a 
-                        href={selectedUserDocuments.profile.resumeUrl} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-2 text-sm text-blue-500 hover:underline"
-                      >
-                        <FileText className="h-4 w-4" />
-                        Open in new tab
-                      </a>
-                    </div>
-                    <div className="aspect-[16/9] w-full bg-muted rounded-md overflow-hidden">
-                      <iframe 
-                        src={selectedUserDocuments.profile.resumeUrl} 
-                        className="w-full h-full" 
-                        title="Resume"
-                      />
-                    </div>
+          >
+            <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>User Documents & Profile</DialogTitle>
+                <DialogDescription>
+                  View and export user documents and profile information.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="py-4 space-y-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-lg font-medium">{selectedUserDocuments.user.username}</h3>
+                    <p className="text-sm text-muted-foreground">{selectedUserDocuments.user.email}</p>
                   </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground">No resume uploaded</p>
-                )}
-              </div>
-              
-              <div className="space-y-2">
-                <h3 className="text-lg font-medium">Academic Transcript</h3>
-                {selectedUserDocuments.profile.transcriptUrl ? (
-                  <div className="border rounded-md p-4">
-                    <div className="flex justify-between items-center mb-4">
-                      <span className="text-sm text-muted-foreground">Transcript document</span>
-                      <a 
-                        href={selectedUserDocuments.profile.transcriptUrl} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-2 text-sm text-blue-500 hover:underline"
-                      >
-                        <FileText className="h-4 w-4" />
-                        Open in new tab
-                      </a>
+                  <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex items-center gap-1"
+                      onClick={() => handleExportProfile(selectedUserDocuments.user.id)}
+                    >
+                      <FileDown className="h-4 w-4 mr-1" />
+                      Export Profile
+                    </Button>
+                  </motion.div>
+                </div>
+                
+                <div className="space-y-4">
+                  <h4 className="text-md font-medium">Resume</h4>
+                  {selectedUserDocuments.profile?.resume ? (
+                    <div className="flex items-center justify-between p-3 border rounded-md">
+                      <div className="flex items-center">
+                        <FileText className="h-5 w-5 mr-2 text-muted-foreground" />
+                        <span>Resume</span>
+                      </div>
+                      <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="flex items-center gap-1"
+                          onClick={() => handleViewDocument(selectedUserDocuments.profile.resume)}
+                        >
+                          <Eye className="h-4 w-4 mr-1" />
+                          View
+                        </Button>
+                      </motion.div>
                     </div>
-                    <div className="aspect-[16/9] w-full bg-muted rounded-md overflow-hidden">
-                      <iframe 
-                        src={selectedUserDocuments.profile.transcriptUrl} 
-                        className="w-full h-full" 
-                        title="Academic Transcript"
-                      />
+                  ) : (
+                    <p className="text-sm text-muted-foreground">No resume uploaded</p>
+                  )}
+                  
+                  <h4 className="text-md font-medium">Cover Letter</h4>
+                  {selectedUserDocuments.profile?.coverLetter ? (
+                    <div className="flex items-center justify-between p-3 border rounded-md">
+                      <div className="flex items-center">
+                        <FileText className="h-5 w-5 mr-2 text-muted-foreground" />
+                        <span>Cover Letter</span>
+                      </div>
+                      <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="flex items-center gap-1"
+                          onClick={() => handleViewDocument(selectedUserDocuments.profile.coverLetter)}
+                        >
+                          <Eye className="h-4 w-4 mr-1" />
+                          View
+                        </Button>
+                      </motion.div>
                     </div>
-                  </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground">No transcript uploaded</p>
-                )}
+                  ) : (
+                    <p className="text-sm text-muted-foreground">No cover letter uploaded</p>
+                  )}
+                </div>
               </div>
-              
-              {/* Additional documents could be added here */}
-              
-              <div className="flex justify-end gap-2 mt-4">
-                <Button 
-                  variant="outline" 
-                  onClick={() => setSelectedUserDocuments(null)}
-                >
-                  Close
-                </Button>
-                <Button 
-                  onClick={() => handleExportProfile(selectedUserDocuments.user.id)}
-                >
-                  Export Profile PDF
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
-      )}
+            </DialogContent>
+          </Dialog>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
