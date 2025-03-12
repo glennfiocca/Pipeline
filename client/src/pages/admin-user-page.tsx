@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
-import { Loader2, ArrowLeft, User as UserIcon, Mail, CreditCard, Calendar, FileText, Trash2, Send, NotebookIcon, ArrowRightIcon } from "lucide-react";
+import { Loader2, ArrowLeft, User as UserIcon, Mail, CreditCard, Calendar, FileText, Trash2, Send, NotebookIcon, ArrowRightIcon, FileDown } from "lucide-react";
 import { useLocation } from "wouter";
 import { Separator } from "@/components/ui/separator";
 import { useState, useRef, useEffect } from "react";
@@ -32,6 +32,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { DatePicker } from "@/components/ui/date-picker";
 import { cn } from "@/lib/utils";
+import { jsPDF } from "jspdf";
+import "jspdf-autotable";
 
 // Add these interfaces at the top of the file, after imports
 interface Application {
@@ -208,6 +210,179 @@ export default function AdminUserPage() {
     },
   });
 
+  const handleExportUserPdf = async () => {
+    try {
+      toast({
+        title: "Generating PDF",
+        description: "Please wait while we generate the PDF.",
+      });
+
+      if (!user || !profile) {
+        throw new Error("User or profile data not found");
+      }
+      
+      // Create a new PDF document
+      const doc = new jsPDF();
+      const timestamp = format(new Date(), "yyyy-MM-dd HH:mm:ss");
+      
+      // Add title and timestamp
+      doc.setFontSize(20);
+      doc.text("User Profile", 14, 22);
+      
+      doc.setFontSize(10);
+      doc.setTextColor(100, 100, 100);
+      doc.text(`Generated on: ${timestamp}`, 14, 30);
+      
+      // Add user info
+      doc.setFontSize(14);
+      doc.setTextColor(0, 0, 0);
+      doc.text(`${user.username} (${user.email})`, 14, 40);
+      
+      // Add profile sections
+      doc.setFontSize(12);
+      let yPos = 50;
+      
+      // User Information
+      doc.setFontSize(14);
+      doc.text("User Information", 14, yPos);
+      yPos += 8;
+      
+      doc.setFontSize(12);
+      doc.text(`Username: ${user.username}`, 14, yPos); yPos += 6;
+      doc.text(`Email: ${user.email}`, 14, yPos); yPos += 6;
+      doc.text(`Credits: ${user.bankedCredits} banked credits`, 14, yPos); yPos += 6;
+      doc.text(`Admin: ${user.isAdmin ? 'Yes' : 'No'}`, 14, yPos); yPos += 6;
+      if (user.createdAt) {
+        doc.text(`Joined: ${format(new Date(user.createdAt), "MMM d, yyyy")}`, 14, yPos); 
+        yPos += 6;
+      }
+      
+      // Personal Information
+      if (profile) {
+        yPos += 4;
+        doc.setFontSize(14);
+        doc.text("Personal Information", 14, yPos);
+        yPos += 8;
+        
+        doc.setFontSize(12);
+        if (profile.name) doc.text(`Name: ${profile.name}`, 14, yPos); yPos += 6;
+        if (profile.email) doc.text(`Email: ${profile.email}`, 14, yPos); yPos += 6;
+        if (profile.phone) doc.text(`Phone: ${profile.phone}`, 14, yPos); yPos += 6;
+        if (profile.title) doc.text(`Title: ${profile.title}`, 14, yPos); yPos += 6;
+        if (profile.location) doc.text(`Location: ${profile.location}`, 14, yPos); yPos += 6;
+        if (profile.bio) {
+          doc.text("Bio:", 14, yPos); yPos += 6;
+          const bioLines = doc.splitTextToSize(profile.bio, 180);
+          doc.text(bioLines, 14, yPos);
+          yPos += bioLines.length * 6 + 4;
+        }
+        
+        // Address
+        yPos += 4;
+        doc.setFontSize(14);
+        doc.text("Address", 14, yPos);
+        yPos += 8;
+        
+        doc.setFontSize(12);
+        const address = [
+          profile.address,
+          profile.city,
+          profile.state,
+          profile.zipCode,
+          profile.country
+        ].filter(Boolean).join(", ");
+        
+        if (address) {
+          doc.text(`Address: ${address}`, 14, yPos);
+          yPos += 6;
+        }
+        
+        // Work Information
+        yPos += 4;
+        doc.setFontSize(14);
+        doc.text("Work Information", 14, yPos);
+        yPos += 8;
+        
+        doc.setFontSize(12);
+        if (profile.workAuthorization) doc.text(`Work Authorization: ${profile.workAuthorization}`, 14, yPos); yPos += 6;
+        if (profile.availability) doc.text(`Availability: ${profile.availability}`, 14, yPos); yPos += 6;
+        if (profile.citizenshipStatus) doc.text(`Citizenship Status: ${profile.citizenshipStatus}`, 14, yPos); yPos += 6;
+        if (profile.visaSponsorship !== undefined) doc.text(`Visa Sponsorship: ${profile.visaSponsorship ? 'Yes' : 'No'}`, 14, yPos); yPos += 6;
+        if (profile.willingToRelocate !== undefined) doc.text(`Willing to Relocate: ${profile.willingToRelocate ? 'Yes' : 'No'}`, 14, yPos); yPos += 6;
+        if (profile.salaryExpectation) doc.text(`Salary Expectation: ${profile.salaryExpectation}`, 14, yPos); yPos += 6;
+        
+        if (profile.preferredLocations && Array.isArray(profile.preferredLocations) && profile.preferredLocations.length > 0) {
+          doc.text(`Preferred Locations: ${profile.preferredLocations.join(", ")}`, 14, yPos);
+          yPos += 6;
+        }
+        
+        // Skills
+        if (profile.skills && Array.isArray(profile.skills) && profile.skills.length > 0) {
+          yPos += 4;
+          doc.setFontSize(14);
+          doc.text("Skills", 14, yPos);
+          yPos += 8;
+          
+          doc.setFontSize(12);
+          const skillsText = profile.skills.join(", ");
+          
+          if (skillsText) {
+            const splitSkills = doc.splitTextToSize(skillsText, 180);
+            doc.text(splitSkills, 14, yPos);
+            yPos += splitSkills.length * 6 + 4;
+          }
+        }
+        
+        // Check if we need a new page for education
+        if (yPos > 250 && profile.education && Array.isArray(profile.education) && profile.education.length > 0) {
+          doc.addPage();
+          yPos = 20;
+        }
+        
+        // Education
+        if (profile.education && Array.isArray(profile.education) && profile.education.length > 0) {
+          yPos += 4;
+          doc.setFontSize(14);
+          doc.text("Education", 14, yPos);
+          yPos += 8;
+          
+          doc.setFontSize(12);
+          profile.education.forEach((edu) => {
+            if (edu.institution) doc.text(`Institution: ${edu.institution}`, 14, yPos); yPos += 6;
+            if (edu.degree) doc.text(`Degree: ${edu.degree}`, 14, yPos); yPos += 6;
+            if (edu.field) doc.text(`Field: ${edu.field}`, 14, yPos); yPos += 6;
+            if (edu.startDate) doc.text(`Start Date: ${edu.startDate}`, 14, yPos); yPos += 6;
+            if (edu.endDate) doc.text(`End Date: ${edu.endDate}`, 14, yPos); yPos += 6;
+            if (edu.isPresent) doc.text(`Current: Yes`, 14, yPos); yPos += 6;
+            if (edu.gpa) doc.text(`GPA: ${edu.gpa}`, 14, yPos); yPos += 6;
+            if (edu.description) {
+              const splitDesc = doc.splitTextToSize(`Description: ${edu.description}`, 180);
+              doc.text(splitDesc, 14, yPos);
+              yPos += splitDesc.length * 6;
+            }
+            yPos += 4;
+          });
+        }
+      }
+      
+      // Save the PDF
+      const fileName = `${user.username}_profile_${format(new Date(), "yyyyMMdd_HHmmss")}.pdf`;
+      doc.save(fileName);
+      
+      toast({
+        title: "Profile exported successfully",
+        description: `Saved as ${fileName}`,
+      });
+    } catch (error) {
+      console.error("Error exporting profile:", error);
+      toast({
+        title: "Failed to export profile",
+        description: error instanceof Error ? error.message : "Unknown error occurred",
+        variant: "destructive",
+      });
+    }
+  };
+
   const updateApplicationStatusMutation = useMutation({
     mutationFn: async ({ 
       applicationId, 
@@ -339,6 +514,9 @@ export default function AdminUserPage() {
               </Button>
               <Button variant="outline" size="sm" onClick={() => setShowManageCreditsDialog(true)}>
                 Manage Credits
+              </Button>
+              <Button variant="outline" size="sm" onClick={handleExportUserPdf}>
+                <FileDown className="h-4 w-4 mr-1" /> Export PDF
               </Button>
               <AlertDialog>
                 <AlertDialogTrigger asChild>
