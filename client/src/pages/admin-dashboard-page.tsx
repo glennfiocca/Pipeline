@@ -694,7 +694,7 @@ export default function AdminDashboardPage() {
       toast({
         title: "Profile exported successfully",
         description: `Saved as ${fileName}`,
-        variant: "success",
+        variant: "default",
       });
     } catch (error) {
       console.error("Error exporting profile:", error);
@@ -734,14 +734,19 @@ export default function AdminDashboardPage() {
           <TabsTrigger value="active-jobs">Active Jobs</TabsTrigger>
           <TabsTrigger value="archived-jobs">Archived Jobs</TabsTrigger>
           <TabsTrigger value="users">Users</TabsTrigger>
-          <TabsTrigger value="user-view">User View</TabsTrigger>
-          <TabsTrigger value="applications">Applications</TabsTrigger>
+          <TabsTrigger value="applications">All Applications</TabsTrigger>
+          <TabsTrigger value="user-view">Management</TabsTrigger>
           <TabsTrigger value="feedback">Feedback</TabsTrigger>
         </TabsList>
         <TabsContent value="active-jobs">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0">
-              <CardTitle>Active Jobs Management</CardTitle>
+              <CardTitle>
+                Active Jobs Management
+                <span className="ml-2 text-sm font-normal text-muted-foreground">
+                  ({jobs.filter(job => job.isActive).length} jobs)
+                </span>
+              </CardTitle>
               <Button
                 variant="outline"
                 size="icon"
@@ -816,7 +821,12 @@ export default function AdminDashboardPage() {
         <TabsContent value="archived-jobs">
           <Card>
             <CardHeader>
-              <CardTitle>Archived Jobs</CardTitle>
+              <CardTitle>
+                Archived Jobs
+                <span className="ml-2 text-sm font-normal text-muted-foreground">
+                  ({jobs.filter(job => !job.isActive).length} jobs)
+                </span>
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
@@ -1021,7 +1031,7 @@ export default function AdminDashboardPage() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0">
               <CardTitle>
-                User View
+                Management
                 <span className="ml-2 text-sm font-normal text-muted-foreground">
                   ({users.length} users)
                 </span>
