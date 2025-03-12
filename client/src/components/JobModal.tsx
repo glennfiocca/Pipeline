@@ -14,6 +14,7 @@ import { useAuth } from "@/hooks/use-auth";
 import type { Job } from "@shared/schema";
 import { useState, ReactNode } from "react";
 import { ApplicationCreditsDialog } from "./ApplicationCreditsDialog";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface JobModalProps {
   job: Job | null;
@@ -58,83 +59,148 @@ export function JobModal({
     setShowCreditsDialog(true);
   };
 
+  // Animation variants
+  const contentVariants = {
+    hidden: { opacity: 0, y: 20, scale: 0.95 },
+    visible: { 
+      opacity: 1, 
+      y: 0, 
+      scale: 1,
+      transition: {
+        type: "spring",
+        stiffness: 300,
+        damping: 30,
+        duration: 0.3,
+        staggerChildren: 0.1,
+        delayChildren: 0.2
+      }
+    },
+    exit: { 
+      opacity: 0, 
+      y: 20, 
+      scale: 0.95,
+      transition: { duration: 0.2 }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 10 },
+    visible: { 
+      opacity: 1, 
+      y: 0,
+      transition: { type: "spring", stiffness: 300 }
+    }
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>{job.title}</DialogTitle>
-        </DialogHeader>
+      <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto p-0">
+        <motion.div
+          className="p-6"
+          initial="hidden"
+          animate="visible"
+          exit="exit"
+          variants={contentVariants}
+        >
+          <DialogHeader>
+            <motion.div variants={itemVariants}>
+              <DialogTitle className="text-2xl">{job.title}</DialogTitle>
+            </motion.div>
+          </DialogHeader>
 
-        <div className="space-y-4">
-          <div className="flex flex-wrap gap-2">
-            <Badge variant="secondary" className="flex items-center">
-              <AtSign className="mr-2 h-3 w-3" />
-              {job.company}
-            </Badge>
-            <Badge variant="secondary" className="flex items-center">
-              <MapPin className="mr-2 h-3 w-3" />
-              {job.location}
-            </Badge>
-            <Badge variant="secondary" className="flex items-center">
-              <DollarSign className="mr-2 h-3 w-3" />
-              {job.salary}
-            </Badge>
-            <Badge variant="default">
-              {job.type}
-            </Badge>
-          </div>
+          <motion.div className="space-y-6 mt-4" variants={itemVariants}>
+            <motion.div className="flex flex-wrap gap-2" variants={itemVariants}>
+              <Badge variant="secondary" className="flex items-center">
+                <AtSign className="mr-2 h-3 w-3" />
+                {job.company}
+              </Badge>
+              <Badge variant="secondary" className="flex items-center">
+                <MapPin className="mr-2 h-3 w-3" />
+                {job.location}
+              </Badge>
+              <Badge variant="secondary" className="flex items-center">
+                <DollarSign className="mr-2 h-3 w-3" />
+                {job.salary}
+              </Badge>
+              <Badge variant="default">
+                {job.type}
+              </Badge>
+            </motion.div>
 
-          <div className="space-y-4">
-            <div>
-              <h3 className="text-lg font-semibold mb-2">Description</h3>
-              <div className="text-muted-foreground whitespace-pre-wrap">
-                {job.description}
-              </div>
-            </div>
-
-            <div>
-              <h3 className="text-lg font-semibold mb-2">Requirements</h3>
-              <div className="text-muted-foreground">
-                <ul className="list-disc list-inside space-y-1">
-                  {job.requirements.split(';').map((req, index) => (
-                    <li key={index}>{req.trim()}</li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-
-            {(job as any).benefits && (
-              <div>
-                <h3 className="text-lg font-semibold mb-2">Benefits</h3>
+            <div className="space-y-6">
+              <motion.div variants={itemVariants}>
+                <h3 className="text-lg font-semibold mb-2 flex items-center gap-2">
+                  <span className="inline-block w-2 h-2 rounded-full bg-primary"></span>
+                  Description
+                </h3>
                 <div className="text-muted-foreground whitespace-pre-wrap">
-                  {(job as any).benefits}
+                  {job.description}
                 </div>
-              </div>
-            )}
-          </div>
-        </div>
+              </motion.div>
 
-        <DialogFooter className="flex gap-2 mt-6">
-          {user && !applicationControls ? (
-            <Button
-              onClick={handleApplyClick}
-              disabled={isButtonDisabled}
-              className="flex-1"
-            >
-              {isApplying && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {buttonText}
+              <motion.div variants={itemVariants}>
+                <h3 className="text-lg font-semibold mb-2 flex items-center gap-2">
+                  <span className="inline-block w-2 h-2 rounded-full bg-primary"></span>
+                  Requirements
+                </h3>
+                <div className="text-muted-foreground">
+                  <ul className="list-disc list-inside space-y-1">
+                    {job.requirements.split(';').map((req, index) => (
+                      <motion.li 
+                        key={index}
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: 0.3 + (index * 0.05) }}
+                      >
+                        {req.trim()}
+                      </motion.li>
+                    ))}
+                  </ul>
+                </div>
+              </motion.div>
+
+              {(job as any).benefits && (
+                <motion.div variants={itemVariants}>
+                  <h3 className="text-lg font-semibold mb-2 flex items-center gap-2">
+                    <span className="inline-block w-2 h-2 rounded-full bg-primary"></span>
+                    Benefits
+                  </h3>
+                  <div className="text-muted-foreground whitespace-pre-wrap">
+                    {(job as any).benefits}
+                  </div>
+                </motion.div>
+              )}
+            </div>
+          </motion.div>
+
+          <motion.div 
+            className="flex gap-2 mt-8"
+            variants={itemVariants}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.5 }}
+          >
+            {user && !applicationControls ? (
+              <Button
+                onClick={handleApplyClick}
+                disabled={isButtonDisabled}
+                className="flex-1"
+              >
+                {isApplying && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {buttonText}
+              </Button>
+            ) : user && applicationControls ? (
+              applicationControls
+            ) : (
+              <Link href="/auth/login" className="flex-1">
+                <Button className="w-full">Sign in to Apply</Button>
+              </Link>
+            )}
+            <Button variant="outline" onClick={onClose} className="flex-1">
+              Close
             </Button>
-          ) : user && applicationControls ? (
-            applicationControls
-          ) : (
-            <Link href="/auth/login" className="flex-1">
-              <Button className="w-full">Sign in to Apply</Button>
-            </Link>
-          )}
-          <Button variant="outline" onClick={onClose} className="flex-1">
-            Close
-          </Button>
-        </DialogFooter>
+          </motion.div>
+        </motion.div>
       </DialogContent>
 
       <ApplicationCreditsDialog

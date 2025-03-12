@@ -13,9 +13,11 @@ import { Job, Application } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useState } from "react";
 import { JobModal } from "@/components/JobModal";
-import { Loader2 } from "lucide-react";
+import { Loader2, Search, Filter, Briefcase } from "lucide-react";
 import { ApplicationCreditsCard } from "@/components/ApplicationCreditsCard";
 import { useLocation } from "wouter";
+import { motion } from "framer-motion";
+import { cn } from "@/lib/utils";
 
 const INDUSTRY_TYPES = ["All", "STEM", "Finance", "Healthcare", "Consulting", "Legal Tech", "Clean Tech"];
 const LOCATIONS = [
@@ -40,6 +42,37 @@ export default function JobsPage() {
   const { toast } = useToast();
   const { user } = useAuth();
   const [, navigate] = useLocation();
+
+  // Animation variants
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1
+      }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { y: 20, opacity: 0 },
+    visible: {
+      y: 0,
+      opacity: 1,
+      transition: {
+        type: "spring",
+        stiffness: 100
+      }
+    }
+  };
+
+  const fadeInVariants = {
+    hidden: { opacity: 0 },
+    visible: { 
+      opacity: 1,
+      transition: { duration: 0.5 }
+    }
+  };
 
   // Always fetch jobs regardless of auth status
   const { data: jobs = [], isLoading: isLoadingJobs, error: jobsError } = useQuery<Job[]>({
@@ -146,7 +179,13 @@ export default function JobsPage() {
   if (isLoadingJobs) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="h-8 w-8 animate-spin" />
+        <motion.div
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.5 }}
+        >
+          <Loader2 className="h-12 w-12 animate-spin text-primary" />
+        </motion.div>
       </div>
     );
   }
@@ -155,146 +194,215 @@ export default function JobsPage() {
   if (jobsError) {
     return (
       <div className="container py-10">
-        <div className="flex flex-col items-center justify-center gap-4">
+        <motion.div 
+          className="flex flex-col items-center justify-center gap-4"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
           <h2 className="text-2xl font-semibold">Unable to load jobs</h2>
           <p className="text-muted-foreground">Please try again later</p>
           <Button onClick={() => window.location.reload()}>
             Refresh Page
           </Button>
-        </div>
+        </motion.div>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto px-4 py-10 max-w-7xl">
+    <motion.div 
+      className="container mx-auto px-4 py-10 max-w-7xl"
+      initial="hidden"
+      animate="visible"
+      variants={containerVariants}
+    >
       <div className="flex flex-col gap-8">
-        <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold">Jobs</h1>
+        <motion.div 
+          className="flex items-center justify-between"
+          variants={itemVariants}
+        >
+          <div className="flex items-center gap-2">
+            <Briefcase className="h-6 w-6 text-primary" />
+            <h1 className="text-3xl font-bold">Jobs</h1>
+          </div>
           <div className="flex items-center gap-4">
             {user && <ApplicationCreditsCard />}
-            <Input
-              placeholder="Search jobs..."
-              className="max-w-sm"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search jobs..."
+                className="max-w-sm pl-9"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
           </div>
-        </div>
+        </motion.div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Filters Section */}
-          <div className="space-y-6">
-            <Card>
-              <CardContent className="pt-6 space-y-4">
-                <div className="space-y-2">
-                  <Label>Industry</Label>
-                  <Select
-                    value={industryType}
-                    onValueChange={setIndustryType}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select industry" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {INDUSTRY_TYPES.map((type) => (
-                        <SelectItem key={type} value={type}>
-                          {type}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Location</Label>
-                  <Select
-                    value={location}
-                    onValueChange={setLocation}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select location" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {LOCATIONS.map((loc) => (
-                        <SelectItem key={loc} value={loc}>
-                          {loc}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Salary Range</Label>
-                  <div className="pt-2">
-                    <Slider
-                      min={80000}
-                      max={200000}
-                      step={10000}
-                      value={salaryRange}
-                      onValueChange={setSalaryRange}
-                      className="my-4"
-                    />
-                    <div className="flex justify-between text-sm text-muted-foreground">
-                      <span>${salaryRange[0].toLocaleString()}</span>
-                      <span>${salaryRange[1].toLocaleString()}</span>
+          <motion.div 
+            className="space-y-6"
+            variants={itemVariants}
+          >
+            <motion.div
+              whileHover={{ y: -5 }}
+              transition={{ type: "spring", stiffness: 300 }}
+            >
+              <Card className="overflow-hidden border border-gray-200/30 dark:border-gray-700/30">
+                <div className="relative">
+                  <div className="absolute inset-0 bg-gradient-to-br from-gray-100/20 via-gray-50/10 to-gray-200/20 dark:from-gray-800/20 dark:via-gray-900/10 dark:to-gray-700/20" />
+                  <CardContent className="pt-6 space-y-4 relative">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Filter className="h-4 w-4 text-primary" />
+                      <h2 className="font-semibold">Filters</h2>
                     </div>
-                  </div>
+                    
+                    <div className="space-y-2">
+                      <Label>Industry</Label>
+                      <Select
+                        value={industryType}
+                        onValueChange={setIndustryType}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select industry" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {INDUSTRY_TYPES.map((type) => (
+                            <SelectItem key={type} value={type}>
+                              {type}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Location</Label>
+                      <Select
+                        value={location}
+                        onValueChange={setLocation}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select location" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {LOCATIONS.map((loc) => (
+                            <SelectItem key={loc} value={loc}>
+                              {loc}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Salary Range</Label>
+                      <div className="pt-2">
+                        <Slider
+                          min={80000}
+                          max={200000}
+                          step={10000}
+                          value={salaryRange}
+                          onValueChange={setSalaryRange}
+                          className="my-4"
+                        />
+                        <div className="flex justify-between text-sm text-muted-foreground">
+                          <span>${salaryRange[0].toLocaleString()}</span>
+                          <span>${salaryRange[1].toLocaleString()}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <Button
+                      variant="outline"
+                      className="w-full"
+                      onClick={() => {
+                        setIndustryType("All");
+                        setLocation("All");
+                        setSalaryRange([80000, 200000]);
+                        setSearch("");
+                      }}
+                    >
+                      Reset Filters
+                    </Button>
+                  </CardContent>
                 </div>
+              </Card>
+            </motion.div>
 
-                <Button
-                  variant="outline"
-                  className="w-full"
-                  onClick={() => {
-                    setIndustryType("All");
-                    setLocation("All");
-                    setSalaryRange([80000, 200000]);
-                    setSearch("");
-                  }}
-                >
-                  Reset Filters
-                </Button>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="pt-6">
-                <h2 className="text-xl font-semibold mb-4">Featured Companies</h2>
-                {filteredJobs.slice(0, 3).map((job) => (
-                  <CompanyCard key={job.id} job={job} />
-                ))}
-              </CardContent>
-            </Card>
-          </div>
+            <motion.div
+              whileHover={{ y: -5 }}
+              transition={{ type: "spring", stiffness: 300 }}
+            >
+              <Card className="overflow-hidden border border-gray-200/30 dark:border-gray-700/30">
+                <div className="relative">
+                  <div className="absolute inset-0 bg-gradient-to-br from-gray-100/20 via-gray-50/10 to-gray-200/20 dark:from-gray-800/20 dark:via-gray-900/10 dark:to-gray-700/20" />
+                  <CardContent className="pt-6 relative">
+                    <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+                      <span className="inline-block w-2 h-2 rounded-full bg-primary"></span>
+                      Featured Companies
+                    </h2>
+                    <div className="space-y-4">
+                      {filteredJobs.slice(0, 3).map((job) => (
+                        <CompanyCard key={job.id} job={job} />
+                      ))}
+                    </div>
+                  </CardContent>
+                </div>
+              </Card>
+            </motion.div>
+          </motion.div>
 
           {/* Jobs List Section */}
-          <div className="md:col-span-2 space-y-6">
-            <div className="flex justify-between items-center">
+          <motion.div 
+            className="md:col-span-2 space-y-6"
+            variants={itemVariants}
+          >
+            <motion.div 
+              className="flex justify-between items-center"
+              variants={fadeInVariants}
+            >
               <p className="text-sm text-muted-foreground">
-                Found {filteredJobs.length} active jobs
+                Found <span className="font-semibold text-foreground">{filteredJobs.length}</span> active jobs
               </p>
-            </div>
+            </motion.div>
 
-            {filteredJobs.map((job) => (
-              <JobCard
-                key={job.id}
-                job={job}
-                onApply={() => applyMutation.mutate(job.id)}
-                onViewDetails={() => setSelectedJob(job)}
-                isApplying={applyMutation.isPending && selectedJob?.id === job.id}
-                isApplied={user ? applications.some((app) => app.jobId === job.id) : false}
-              />
-            ))}
+            <motion.div 
+              className="space-y-6"
+              variants={containerVariants}
+            >
+              {filteredJobs.map((job, index) => (
+                <motion.div
+                  key={job.id}
+                  variants={itemVariants}
+                  custom={index}
+                  whileHover={{ y: -5 }}
+                  transition={{ type: "spring", stiffness: 300 }}
+                >
+                  <JobCard
+                    job={job}
+                    onApply={() => applyMutation.mutate(job.id)}
+                    onViewDetails={() => setSelectedJob(job)}
+                    isApplying={applyMutation.isPending && selectedJob?.id === job.id}
+                    isApplied={user ? applications.some((app) => app.jobId === job.id) : false}
+                  />
+                </motion.div>
+              ))}
 
-            {filteredJobs.length === 0 && (
-              <div className="text-center py-8">
-                <p className="text-muted-foreground">
-                  No active jobs found matching your criteria. Try adjusting your filters.
-                </p>
-              </div>
-            )}
-          </div>
+              {filteredJobs.length === 0 && (
+                <motion.div 
+                  className="text-center py-8"
+                  variants={fadeInVariants}
+                >
+                  <p className="text-muted-foreground">
+                    No active jobs found matching your criteria. Try adjusting your filters.
+                  </p>
+                </motion.div>
+              )}
+            </motion.div>
+          </motion.div>
         </div>
       </div>
 
@@ -307,6 +415,6 @@ export default function JobsPage() {
         isApplying={applyMutation.isPending}
         previouslyApplied={selectedJob && user ? applications.some((app) => app.jobId === selectedJob.id && app.status === "Withdrawn") : false}
       />
-    </div>
+    </motion.div>
   );
 }
