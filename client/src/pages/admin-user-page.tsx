@@ -560,7 +560,6 @@ export default function AdminUserPage() {
                 <TabsTrigger value="profile">Profile</TabsTrigger>
                 <TabsTrigger value="applications">Applications ({applications.length})</TabsTrigger>
                 <TabsTrigger value="documents">Documents</TabsTrigger>
-                <TabsTrigger value="messages">Messages</TabsTrigger>
               </TabsList>
               
               <TabsContent value="profile">
@@ -786,41 +785,6 @@ export default function AdminUserPage() {
                     ) : (
                       <p className="text-sm text-muted-foreground">No transcript uploaded</p>
                     )}
-                  </div>
-                </div>
-              </TabsContent>
-
-              <TabsContent value="messages">
-                <div className="flex flex-col h-[500px]">
-                  <div className="flex-1 overflow-hidden" ref={scrollRef}>
-                    <ScrollArea className="h-full">
-                      <div className="space-y-4 p-4">
-                        {applications.length === 0 ? (
-                          <p className="text-center text-muted-foreground py-4">
-                            No applications found for this user. Messages are tied to applications.
-                          </p>
-                        ) : (
-                          applications.map((app: Application) => {
-                            const job = jobs.find((j: Job) => j.id === app.jobId);
-                            if (!job) return null;
-                            
-                            return (
-                              <div key={app.id} className="mb-8">
-                                <h3 className="text-lg font-medium mb-2">
-                                  Messages for {job.title} at {job.company}
-                                </h3>
-                                <MessageThread 
-                                  applicationId={app.id} 
-                                  companyName={job.company} 
-                                  username={user.username} 
-                                  queryClient={queryClient}
-                                />
-                              </div>
-                            );
-                          })
-                        )}
-                      </div>
-                    </ScrollArea>
                   </div>
                 </div>
               </TabsContent>
