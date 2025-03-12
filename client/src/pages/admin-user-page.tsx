@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
-import { Loader2, ArrowLeft, User as UserIcon, Mail, CreditCard, Calendar, FileText, Trash2, Send, NotebookIcon, ArrowRightIcon, FileDown } from "lucide-react";
+import { Loader2, ArrowLeft, User as UserIcon, Mail, CreditCard, Calendar, FileText, Trash2, Send, NotebookIcon, ArrowRightIcon, FileDown, Search } from "lucide-react";
 import { useLocation } from "wouter";
 import { Separator } from "@/components/ui/separator";
 import { useState, useRef, useEffect } from "react";
@@ -75,6 +75,9 @@ export default function AdminUserPage() {
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [applicationDetailsDialogOpen, setApplicationDetailsDialogOpen] = useState(false);
   const [selectedDueDate, setSelectedDueDate] = useState<Date | undefined>(undefined);
+  
+  // Add search state for applications
+  const [applicationsSearch, setApplicationsSearch] = useState("");
   
   const editUserMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -623,114 +626,138 @@ export default function AdminUserPage() {
               <TabsContent value="applications">
                 {applications.length > 0 ? (
                   <div className="space-y-3">
-                    {applications.map((app: Application) => {
-                      const job = jobs.find((j: Job) => j.id === app.jobId);
-                      return (
-                        <Card key={app.id}>
-                          <CardContent className="p-4">
-                            <div className="flex justify-between items-start">
-                              <div>
-                                <h4 className="font-medium">{job?.title || "Unknown Job"}</h4>
-                                <p className="text-sm text-muted-foreground">{job?.company || "Unknown Company"}</p>
-                                <div className="flex items-center mt-1">
-                                  <Calendar className="h-3 w-3 mr-1 text-muted-foreground" />
-                                  <span className="text-xs text-muted-foreground">
-                                    Applied on {format(new Date(app.appliedAt), "MMM d, yyyy")}
-                                  </span>
-                                </div>
-                                {job && !job.isActive && (
-                                  <Badge variant="outline" className="mt-1 text-xs">
-                                    Job Archived
-                                  </Badge>
-                                )}
-                              </div>
-                              <div className="flex flex-col items-end gap-2">
-                                <Select 
-                                  defaultValue={app.status}
-                                  onValueChange={(value) => {
-                                    updateApplicationStatusMutation.mutate({
-                                      applicationId: app.id,
-                                      status: value
-                                    });
-                                  }}
-                                >
-                                  <SelectTrigger className="w-[140px]">
-                                    <SelectValue placeholder="Status" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="Applied">Applied</SelectItem>
-                                    <SelectItem value="Interviewing">Interviewing</SelectItem>
-                                    <SelectItem value="Accepted">Accepted</SelectItem>
-                                    <SelectItem value="Rejected">Rejected</SelectItem>
-                                    <SelectItem value="Withdrawn">Withdrawn</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                                <Badge className={app.status === "Applied" ? "bg-blue-500/10 text-blue-500" : 
-                                              app.status === "Interviewing" ? "bg-yellow-500/10 text-yellow-500" :
-                                              app.status === "Accepted" ? "bg-green-500/10 text-green-500" :
-                                              app.status === "Rejected" ? "bg-red-500/10 text-red-500" :
-                                              "bg-gray-500/10 text-gray-500"}>
-                                  {app.status}
-                                </Badge>
-                                <Button 
-                                  variant="outline" 
-                                  size="sm" 
-                                  className="flex items-center gap-1 mt-1 w-full"
-                                  onClick={() => {
-                                    setSelectedApplication(app);
-                                    setSelectedJob(job);
-                                    setChatDialogOpen(true);
-                                  }}
-                                >
-                                  <Send className="h-3 w-3" />
-                                  Chat with User
-                                </Button>
-                                <Button 
-                                  variant="outline" 
-                                  size="sm" 
-                                  className="flex items-center gap-1 mt-1 w-full"
-                                  onClick={() => {
-                                    setSelectedApplication(app);
-                                    setSelectedJob(job);
-                                    setApplicationDetailsDialogOpen(true);
-                                    setSelectedDueDate(undefined);
-                                  }}
-                                >
-                                  <NotebookIcon className="h-3 w-3" />
-                                  Edit Details
-                                </Button>
-                              </div>
-                            </div>
-                            
-                            {app.notes && (
-                              <div className="mt-3 text-sm bg-muted/50 p-2 rounded-md">
-                                <div className="font-medium">Notes:</div>
-                                <p className="text-muted-foreground">{app.notes}</p>
-                              </div>
-                            )}
-                            
-                            {app.nextStep && (
-                              <div className="mt-2 text-sm bg-primary/5 p-2 rounded-md">
-                                <div className="font-medium">Next Step:</div>
-                                <p className="text-muted-foreground">
-                                  {app.nextStep}
-                                  {app.nextStepDueDate && (
-                                    <span className="ml-2 text-xs bg-background px-1.5 py-0.5 rounded-full">
-                                      Due: {format(new Date(app.nextStepDueDate), "MMM d, yyyy")}
+                    <div className="mb-4">
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          placeholder="Search applications by job title or company..."
+                          className="pl-9"
+                          value={applicationsSearch}
+                          onChange={(e) => setApplicationsSearch(e.target.value)}
+                        />
+                      </div>
+                    </div>
+                    
+                    {applications
+                      .filter((app: Application) => {
+                        const job = jobs.find((j: Job) => j.id === app.jobId);
+                        if (!job) return false;
+                        
+                        return (
+                          applicationsSearch === "" || 
+                          job.title.toLowerCase().includes(applicationsSearch.toLowerCase()) ||
+                          job.company.toLowerCase().includes(applicationsSearch.toLowerCase()) ||
+                          app.status.toLowerCase().includes(applicationsSearch.toLowerCase())
+                        );
+                      })
+                      .map((app: Application) => {
+                        const job = jobs.find((j: Job) => j.id === app.jobId);
+                        return (
+                          <Card key={app.id}>
+                            <CardContent className="p-4">
+                              <div className="flex justify-between items-start">
+                                <div>
+                                  <h4 className="font-medium">{job?.title || "Unknown Job"}</h4>
+                                  <p className="text-sm text-muted-foreground">{job?.company || "Unknown Company"}</p>
+                                  <div className="flex items-center mt-1">
+                                    <Calendar className="h-3 w-3 mr-1 text-muted-foreground" />
+                                    <span className="text-xs text-muted-foreground">
+                                      Applied on {format(new Date(app.appliedAt), "MMM d, yyyy")}
                                     </span>
+                                  </div>
+                                  {job && !job.isActive && (
+                                    <Badge variant="outline" className="mt-1 text-xs">
+                                      Job Archived
+                                    </Badge>
                                   )}
-                                </p>
+                                </div>
+                                <div className="flex flex-col items-end gap-2">
+                                  <Select 
+                                    defaultValue={app.status}
+                                    onValueChange={(value) => {
+                                      updateApplicationStatusMutation.mutate({
+                                        applicationId: app.id,
+                                        status: value
+                                      });
+                                    }}
+                                  >
+                                    <SelectTrigger className="w-[140px]">
+                                      <SelectValue placeholder="Status" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="Applied">Applied</SelectItem>
+                                      <SelectItem value="Interviewing">Interviewing</SelectItem>
+                                      <SelectItem value="Accepted">Accepted</SelectItem>
+                                      <SelectItem value="Rejected">Rejected</SelectItem>
+                                      <SelectItem value="Withdrawn">Withdrawn</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                  <Badge className={app.status === "Applied" ? "bg-blue-500/10 text-blue-500" : 
+                                                app.status === "Interviewing" ? "bg-yellow-500/10 text-yellow-500" :
+                                                app.status === "Accepted" ? "bg-green-500/10 text-green-500" :
+                                                app.status === "Rejected" ? "bg-red-500/10 text-red-500" :
+                                                "bg-gray-500/10 text-gray-500"}>
+                                    {app.status}
+                                  </Badge>
+                                  <Button 
+                                    variant="outline" 
+                                    size="sm" 
+                                    className="flex items-center gap-1 mt-1 w-full"
+                                    onClick={() => {
+                                      setSelectedApplication(app);
+                                      setSelectedJob(job);
+                                      setChatDialogOpen(true);
+                                    }}
+                                  >
+                                    <Send className="h-3 w-3" />
+                                    Chat with User
+                                  </Button>
+                                  <Button 
+                                    variant="outline" 
+                                    size="sm" 
+                                    className="flex items-center gap-1 mt-1 w-full"
+                                    onClick={() => {
+                                      setSelectedApplication(app);
+                                      setSelectedJob(job);
+                                      setApplicationDetailsDialogOpen(true);
+                                      setSelectedDueDate(undefined);
+                                    }}
+                                  >
+                                    <NotebookIcon className="h-3 w-3" />
+                                    Edit Details
+                                  </Button>
+                                </div>
                               </div>
-                            )}
-                          </CardContent>
-                        </Card>
-                      );
-                    })}
+                              
+                              {app.notes && (
+                                <div className="mt-3 text-sm bg-muted/50 p-2 rounded-md">
+                                  <div className="font-medium">Notes:</div>
+                                  <p className="text-muted-foreground">{app.notes}</p>
+                                </div>
+                              )}
+                              
+                              {app.nextStep && (
+                                <div className="mt-2 text-sm bg-primary/5 p-2 rounded-md">
+                                  <div className="font-medium">Next Step:</div>
+                                  <p className="text-muted-foreground">
+                                    {app.nextStep}
+                                    {app.nextStepDueDate && (
+                                      <span className="ml-2 text-xs bg-background px-1.5 py-0.5 rounded-full">
+                                        Due: {format(new Date(app.nextStepDueDate), "MMM d, yyyy")}
+                                      </span>
+                                    )}
+                                  </p>
+                                </div>
+                              )}
+                            </CardContent>
+                          </Card>
+                        );
+                      })}
                   </div>
                 ) : (
                   <div className="text-center py-8 text-muted-foreground">
                     <FileText className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                    <p>No applications found for this user</p>
+                    <p>No applications found</p>
                   </div>
                 )}
               </TabsContent>

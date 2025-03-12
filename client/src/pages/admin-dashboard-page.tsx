@@ -11,7 +11,7 @@ import { queryClient } from "@/lib/queryClient";
 import { apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
 import { useLocation } from "wouter";
-import { Users, Mail, User as UserIcon, Edit, Trash2, Plus, CreditCard, FileDown, Eye, FileText, ChevronRight } from "lucide-react";
+import { Users, Mail, User as UserIcon, Edit, Trash2, Plus, CreditCard, FileDown, Eye, FileText, ChevronRight, Search } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -24,6 +24,7 @@ import { FeedbackManagement } from "@/components/FeedbackManagement";
 import { ManageCreditsDialog } from "@/components/ManageCreditsDialog";
 import { jsPDF } from "jspdf";
 import "jspdf-autotable";
+import { Input } from "@/components/ui/input";
 type NewJobForm = z.infer<typeof insertJobSchema>;
 type NewUserForm = z.infer<typeof insertUserSchema>;
 type SelectedUserCredits = {
@@ -46,6 +47,13 @@ export default function AdminDashboardPage() {
   const [showEditUserDialog, setShowEditUserDialog] = useState(false);
   const [selectedUserCredits, setSelectedUserCredits] = useState<SelectedUserCredits>(null);
   const [selectedUserDocuments, setSelectedUserDocuments] = useState<{ user: User; profile: any } | null>(null);
+  
+  // Search state variables for each tab
+  const [activeJobsSearch, setActiveJobsSearch] = useState("");
+  const [archivedJobsSearch, setArchivedJobsSearch] = useState("");
+  const [usersSearch, setUsersSearch] = useState("");
+  const [managementSearch, setManagementSearch] = useState("");
+
   const { data: jobs = [], isLoading: isLoadingJobs } = useQuery<Job[]>({
     queryKey: ["/api/jobs"],
     enabled: true,
@@ -60,6 +68,40 @@ export default function AdminDashboardPage() {
     queryKey: ["/api/admin/users"],
     enabled: true
   });
+
+  // Filter functions for each tab
+  const filteredActiveJobs = jobs.filter(job => 
+    job.isActive && 
+    (activeJobsSearch === "" || 
+      job.title.toLowerCase().includes(activeJobsSearch.toLowerCase()) ||
+      job.company.toLowerCase().includes(activeJobsSearch.toLowerCase()) ||
+      job.jobIdentifier.toLowerCase().includes(activeJobsSearch.toLowerCase()) ||
+      job.location.toLowerCase().includes(activeJobsSearch.toLowerCase())
+    )
+  );
+
+  const filteredArchivedJobs = jobs.filter(job => 
+    !job.isActive && 
+    (archivedJobsSearch === "" || 
+      job.title.toLowerCase().includes(archivedJobsSearch.toLowerCase()) ||
+      job.company.toLowerCase().includes(archivedJobsSearch.toLowerCase()) ||
+      job.jobIdentifier.toLowerCase().includes(archivedJobsSearch.toLowerCase()) ||
+      job.location.toLowerCase().includes(archivedJobsSearch.toLowerCase())
+    )
+  );
+
+  const filteredUsers = users.filter(user => 
+    usersSearch === "" || 
+    user.username.toLowerCase().includes(usersSearch.toLowerCase()) ||
+    user.email.toLowerCase().includes(usersSearch.toLowerCase())
+  );
+
+  const filteredManagementUsers = users.filter(user => 
+    managementSearch === "" || 
+    user.username.toLowerCase().includes(managementSearch.toLowerCase()) ||
+    user.email.toLowerCase().includes(managementSearch.toLowerCase())
+  );
+
   const createJobMutation = useMutation({
     mutationFn: async (formInput: NewJobForm) => {
       try {
@@ -744,155 +786,182 @@ export default function AdminDashboardPage() {
               <CardTitle>
                 Active Jobs Management
                 <span className="ml-2 text-sm font-normal text-muted-foreground">
-                  ({jobs.filter(job => job.isActive).length} jobs)
+                  ({filteredActiveJobs.length} jobs)
                 </span>
               </CardTitle>
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => setShowNewJobDialog(true)}
-              >
-                <Plus className="h-4 w-4" />
-              </Button>
+              <div className="flex items-center gap-4">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search jobs by title, ID, company..."
+                    className="w-[300px] pl-9"
+                    value={activeJobsSearch}
+                    onChange={(e) => setActiveJobsSearch(e.target.value)}
+                  />
+                </div>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setShowNewJobDialog(true)}
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {jobs.filter(job => job.isActive).map((job) => (
-                  <div
-                    key={job.id}
-                    className="flex items-center justify-between p-4 rounded-lg border"
-                  >
-                    <div>
-                      <h3 className="font-medium">
-                        {job.title}
-                        <span className="ml-2 text-sm text-muted-foreground">
-                          (ID: {job.jobIdentifier})
-                        </span>
-                      </h3>
-                      <p className="text-sm text-muted-foreground">
-                        {job.company} - {job.location}
-                      </p>
+                {filteredActiveJobs.length > 0 ? (
+                  filteredActiveJobs.map((job) => (
+                    <div
+                      key={job.id}
+                      className="flex items-center justify-between p-4 rounded-lg border"
+                    >
+                      <div>
+                        <h3 className="font-medium">
+                          {job.title}
+                          <span className="ml-2 text-sm text-muted-foreground">
+                            (ID: {job.jobIdentifier})
+                          </span>
+                        </h3>
+                        <p className="text-sm text-muted-foreground">
+                          {job.company} - {job.location}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => editJobMutation.mutate({ id: job.id, isActive: false })}
+                        >
+                          Archive
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() => handleEditJob(job)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="destructive" size="icon">
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Delete Job</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Are you sure you want to delete this job? This action cannot be undone.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() => deleteJobMutation.mutate(job.id)}
+                              >
+                                Delete
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => editJobMutation.mutate({ id: job.id, isActive: false })}
-                      >
-                        Archive
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={() => handleEditJob(job)}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button variant="destructive" size="icon">
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Delete Job</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Are you sure you want to delete this job? This action cannot be undone.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction
-                              onClick={() => deleteJobMutation.mutate(job.id)}
-                            >
-                              Delete
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    {activeJobsSearch ? "No matching active jobs found" : "No active jobs found"}
                   </div>
-                ))}
+                )}
               </div>
             </CardContent>
           </Card>
         </TabsContent>
         <TabsContent value="archived-jobs">
           <Card>
-            <CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0">
               <CardTitle>
                 Archived Jobs
                 <span className="ml-2 text-sm font-normal text-muted-foreground">
-                  ({jobs.filter(job => !job.isActive).length} jobs)
+                  ({filteredArchivedJobs.length} jobs)
                 </span>
               </CardTitle>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search archived jobs..."
+                  className="w-[300px] pl-9"
+                  value={archivedJobsSearch}
+                  onChange={(e) => setArchivedJobsSearch(e.target.value)}
+                />
+              </div>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {jobs.filter(job => !job.isActive).map((job) => (
-                  <div
-                    key={job.id}
-                    className="flex items-center justify-between p-4 rounded-lg border"
-                  >
-                    <div>
-                      <h3 className="font-medium">
-                        {job.title}
-                        <span className="ml-2 text-sm text-muted-foreground">
-                          (ID: {job.jobIdentifier})
-                        </span>
-                      </h3>
-                      <p className="text-sm text-muted-foreground">
-                        {job.company} - {job.location}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        Archived on: {job.deactivatedAt ? format(new Date(job.deactivatedAt), "MMM d, yyyy") : "Unknown"}
-                      </p>
+                {filteredArchivedJobs.length > 0 ? (
+                  filteredArchivedJobs.map((job) => (
+                    <div
+                      key={job.id}
+                      className="flex items-center justify-between p-4 rounded-lg border"
+                    >
+                      <div>
+                        <h3 className="font-medium">
+                          {job.title}
+                          <span className="ml-2 text-sm text-muted-foreground">
+                            (ID: {job.jobIdentifier})
+                          </span>
+                        </h3>
+                        <p className="text-sm text-muted-foreground">
+                          {job.company} - {job.location}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          Archived on: {job.deactivatedAt ? format(new Date(job.deactivatedAt), "MMM d, yyyy") : "Unknown"}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => editJobMutation.mutate({ id: job.id, isActive: true })}
+                        >
+                          Restore
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() => handleEditJob(job)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="destructive" size="icon">
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Delete Job</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Are you sure you want to delete this archived job? This action cannot be undone.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() => deleteJobMutation.mutate(job.id)}
+                              >
+                                Delete
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => editJobMutation.mutate({ id: job.id, isActive: true })}
-                      >
-                        Restore
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={() => handleEditJob(job)}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button variant="destructive" size="icon">
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Delete Job</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Are you sure you want to delete this archived job? This action cannot be undone.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction
-                              onClick={() => deleteJobMutation.mutate(job.id)}
-                            >
-                              Delete
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </div>
-                  </div>
-                ))}
-                {jobs.filter(job => !job.isActive).length === 0 && (
+                  ))
+                ) : (
                   <div className="text-center py-8 text-muted-foreground">
-                    No archived jobs found
+                    {archivedJobsSearch ? "No matching archived jobs found" : "No archived jobs found"}
                   </div>
                 )}
               </div>
@@ -905,124 +974,141 @@ export default function AdminDashboardPage() {
               <CardTitle>
                 Users Management 
                 <span className="ml-2 text-sm font-normal text-muted-foreground">
-                  ({users.length} users)
+                  ({filteredUsers.length} users)
                 </span>
               </CardTitle>
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => setShowNewUserDialog(true)}
-              >
-                <Plus className="h-4 w-4" />
-              </Button>
+              <div className="flex items-center gap-4">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search users by name or email..."
+                    className="w-[300px] pl-9"
+                    value={usersSearch}
+                    onChange={(e) => setUsersSearch(e.target.value)}
+                  />
+                </div>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setShowNewUserDialog(true)}
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                {users.map((user) => (
-                  <Card key={user.id} className="overflow-hidden w-auto">
-                    <CardContent className="p-3">
-                      <div className="flex items-center mb-1.5">
-                        <UserIcon className="h-5 w-5 text-muted-foreground mr-2" />
-                        <span className="font-medium text-base">{user.username}</span>
-                        {user.isAdmin && (
-                          <Badge variant="outline" className="ml-2 text-xs py-0">
-                            Admin
-                          </Badge>
-                        )}
-                      </div>
-                      
-                      <div className="text-sm text-muted-foreground mb-2">
-                        <div className="flex items-center mb-1">
-                          <Mail className="h-4 w-4 mr-2" />
-                          <span className="truncate">{user.email}</span>
+                {filteredUsers.length > 0 ? (
+                  filteredUsers.map((user) => (
+                    <Card key={user.id} className="overflow-hidden w-auto">
+                      <CardContent className="p-3">
+                        <div className="flex items-center mb-1.5">
+                          <UserIcon className="h-5 w-5 text-muted-foreground mr-2" />
+                          <span className="font-medium text-base">{user.username}</span>
+                          {user.isAdmin && (
+                            <Badge variant="outline" className="ml-2 text-xs py-0">
+                              Admin
+                            </Badge>
+                          )}
                         </div>
-                        <div className="flex items-center">
-                          <CreditCard className="h-4 w-4 mr-2" />
-                          <span>{user.bankedCredits} banked credits</span>
+                        
+                        <div className="text-sm text-muted-foreground mb-2">
+                          <div className="flex items-center mb-1">
+                            <Mail className="h-4 w-4 mr-2" />
+                            <span className="truncate">{user.email}</span>
+                          </div>
+                          <div className="flex items-center">
+                            <CreditCard className="h-4 w-4 mr-2" />
+                            <span>{user.bankedCredits} banked credits</span>
+                          </div>
                         </div>
-                      </div>
-                      
-                      <div className="flex items-center justify-start mt-1.5 border-t pt-1.5">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="h-8 w-8 p-0 mr-1.5"
-                          onClick={() => setSelectedUserCredits({ user, action: 'manage_credits' })}
-                          title="Manage Credits"
-                        >
-                          <CreditCard className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="h-8 w-8 p-0 mr-1.5"
-                          onClick={() => handleEditUser(user)}
-                          title="Edit User"
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="h-8 w-8 p-0 mr-1.5"
-                          onClick={async () => {
-                            try {
-                              const profileResponse = await apiRequest("GET", `/api/admin/profiles/${user.id}`);
-                              if (profileResponse.ok) {
-                                const profile = await profileResponse.json();
-                                setSelectedUserDocuments({ user, profile });
-                              } else {
+                        
+                        <div className="flex items-center justify-start mt-1.5 border-t pt-1.5">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-8 w-8 p-0 mr-1.5"
+                            onClick={() => setSelectedUserCredits({ user, action: 'manage_credits' })}
+                            title="Manage Credits"
+                          >
+                            <CreditCard className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-8 w-8 p-0 mr-1.5"
+                            onClick={() => handleEditUser(user)}
+                            title="Edit User"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-8 w-8 p-0 mr-1.5"
+                            onClick={async () => {
+                              try {
+                                const profileResponse = await apiRequest("GET", `/api/admin/profiles/${user.id}`);
+                                if (profileResponse.ok) {
+                                  const profile = await profileResponse.json();
+                                  setSelectedUserDocuments({ user, profile });
+                                } else {
+                                  toast({
+                                    title: "Error",
+                                    description: "Could not fetch user documents",
+                                    variant: "destructive",
+                                  });
+                                }
+                              } catch (error) {
+                                console.error("Error fetching user documents:", error);
                                 toast({
                                   title: "Error",
                                   description: "Could not fetch user documents",
                                   variant: "destructive",
                                 });
                               }
-                            } catch (error) {
-                              console.error("Error fetching user documents:", error);
-                              toast({
-                                title: "Error",
-                                description: "Could not fetch user documents",
-                                variant: "destructive",
-                              });
-                            }
-                          }}
-                          title="View Documents & Export Profile"
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button 
-                              variant="destructive" 
-                              size="sm"
-                              className="h-8 w-8 p-0"
-                              title="Delete User"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                This will permanently delete the user and all associated data.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancel</AlertDialogCancel>
-                              <AlertDialogAction
-                                onClick={() => deleteUserMutation.mutate(user.id)}
+                            }}
+                            title="View Documents & Export Profile"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button 
+                                variant="destructive" 
+                                size="sm"
+                                className="h-8 w-8 p-0"
+                                title="Delete User"
                               >
-                                Delete
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  This will permanently delete the user and all associated data.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => deleteUserMutation.mutate(user.id)}
+                                >
+                                  Delete
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))
+                ) : (
+                  <div className="col-span-3 text-center py-8 text-muted-foreground">
+                    {usersSearch ? "No matching users found" : "No users found"}
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -1033,55 +1119,70 @@ export default function AdminDashboardPage() {
               <CardTitle>
                 Management
                 <span className="ml-2 text-sm font-normal text-muted-foreground">
-                  ({users.length} users)
+                  ({filteredManagementUsers.length} users)
                 </span>
               </CardTitle>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search users by name or email..."
+                  className="w-[300px] pl-9"
+                  value={managementSearch}
+                  onChange={(e) => setManagementSearch(e.target.value)}
+                />
+              </div>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {users.map((user) => (
-                  <Card 
-                    key={user.id} 
-                    className="overflow-hidden cursor-pointer hover:shadow-md transition-all"
-                    onClick={() => {
-                      setLocation(`/admin/users/${user.id}`);
-                    }}
-                  >
-                    <CardContent className="p-4">
-                      <div className="flex items-center mb-2">
-                        <UserIcon className="h-5 w-5 text-muted-foreground mr-2" />
-                        <span className="font-medium text-base">{user.username}</span>
-                        {user.isAdmin && (
-                          <Badge variant="outline" className="ml-2 text-xs py-0">
-                            Admin
-                          </Badge>
-                        )}
-                      </div>
-                      
-                      <div className="text-sm text-muted-foreground mb-2">
-                        <div className="flex items-center mb-1">
-                          <Mail className="h-4 w-4 mr-2" />
-                          <span className="truncate">{user.email}</span>
+                {filteredManagementUsers.length > 0 ? (
+                  filteredManagementUsers.map((user) => (
+                    <Card 
+                      key={user.id} 
+                      className="overflow-hidden cursor-pointer hover:shadow-md transition-all"
+                      onClick={() => {
+                        setLocation(`/admin/users/${user.id}`);
+                      }}
+                    >
+                      <CardContent className="p-4">
+                        <div className="flex items-center mb-2">
+                          <UserIcon className="h-5 w-5 text-muted-foreground mr-2" />
+                          <span className="font-medium text-base">{user.username}</span>
+                          {user.isAdmin && (
+                            <Badge variant="outline" className="ml-2 text-xs py-0">
+                              Admin
+                            </Badge>
+                          )}
                         </div>
-                        <div className="flex items-center">
-                          <CreditCard className="h-4 w-4 mr-2" />
-                          <span>{user.bankedCredits} banked credits</span>
+                        
+                        <div className="text-sm text-muted-foreground mb-2">
+                          <div className="flex items-center mb-1">
+                            <Mail className="h-4 w-4 mr-2" />
+                            <span className="truncate">{user.email}</span>
+                          </div>
+                          <div className="flex items-center">
+                            <CreditCard className="h-4 w-4 mr-2" />
+                            <span>{user.bankedCredits} banked credits</span>
+                          </div>
                         </div>
-                      </div>
-                      
-                      <div className="flex items-center justify-end mt-2 pt-2 border-t">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="flex items-center gap-1"
-                        >
-                          View Details
-                          <ChevronRight className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                        
+                        <div className="flex items-center justify-end mt-2 pt-2 border-t">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="flex items-center gap-1"
+                          >
+                            View Details
+                            <ChevronRight className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))
+                ) : (
+                  <div className="col-span-3 text-center py-8 text-muted-foreground">
+                    {managementSearch ? "No matching users found" : "No users found"}
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
