@@ -1,10 +1,12 @@
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
-import { UserPlus, FileText, Send, ChevronRight } from "lucide-react";
+import { UserPlus, FileText, Send, ChevronRight, Star, ArrowRight } from "lucide-react";
 import { motion } from "framer-motion";
 import { HoverCard, HoverCardTrigger, HoverCardContent } from "@/components/ui/hover-card";
 import { cn } from "@/lib/utils";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 
 export default function HomePage() {
   const { user } = useAuth();
@@ -32,142 +34,305 @@ export default function HomePage() {
     }
   };
 
+  // Testimonials data
+  const testimonials = [
+    {
+      name: "Alex Johnson",
+      role: "Software Engineer",
+      company: "TechCorp",
+      avatar: "/avatars/alex.jpg",
+      content: "Pipeline helped me land my dream job in just 2 weeks. The one-click apply feature saved me countless hours!",
+      rating: 5
+    },
+    {
+      name: "Sarah Chen",
+      role: "Marketing Manager",
+      company: "BrandGrowth",
+      avatar: "/avatars/sarah.jpg",
+      content: "I was skeptical at first, but Pipeline's matching algorithm found me opportunities I wouldn't have discovered otherwise.",
+      rating: 5
+    },
+    {
+      name: "Michael Rodriguez",
+      role: "Product Designer",
+      company: "CreativeStudio",
+      avatar: "/avatars/michael.jpg",
+      content: "The streamlined application process is a game-changer. I applied to 15 jobs in the time it used to take me to apply to just one.",
+      rating: 5
+    }
+  ];
+
+  // Company logos
+  const companyLogos = [
+    { name: "Google", logo: "/logos/google.svg" },
+    { name: "Microsoft", logo: "/logos/microsoft.svg" },
+    { name: "Amazon", logo: "/logos/amazon.svg" },
+    { name: "Apple", logo: "/logos/apple.svg" },
+    { name: "Meta", logo: "/logos/meta.svg" },
+    { name: "Netflix", logo: "/logos/netflix.svg" }
+  ];
+
   return (
     <div className="flex flex-col min-h-[calc(100vh-3.5rem)]">
-      <main className="flex-1 flex items-center justify-center py-8 sm:py-12 lg:py-16">
-        <div className="w-full max-w-[2000px] px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col items-center justify-center space-y-8 sm:space-y-12 lg:space-y-16">
-            {/* Hero section with animated background */}
-            <div className="relative w-full max-w-4xl rounded-2xl overflow-hidden p-8 sm:p-12">
-              <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-background to-primary/5 animate-gradient" />
-              <div className="absolute inset-0 bg-grid-pattern opacity-10" />
+      <main className="flex-1">
+        {/* Hero section with animated background and stronger value proposition */}
+        <section className="relative py-20 overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-background to-primary/10 animate-gradient" />
+          <div className="absolute inset-0 bg-grid-pattern opacity-10" />
+          
+          <div className="container mx-auto px-4 relative z-10">
+            <div className="max-w-3xl mx-auto text-center">
+              <motion.div 
+                className="mb-8"
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.8 }}
+              >
+                <Badge variant="outline" className="mb-4 py-1.5 px-4 text-sm font-medium">
+                  Job searching, simplified
+                </Badge>
+                <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight mb-4">
+                  One Application,<br />
+                  <span className="text-primary">Any Job</span>
+                </h1>
+                <p className="text-xl md:text-2xl text-muted-foreground mb-8">
+                  Stop wasting time on repetitive applications.<br />
+                  Apply once, reach hundreds of employers.
+                </p>
+              </motion.div>
               
               <motion.div 
-                className="space-y-4 text-center relative z-10"
-                initial={{ opacity: 0, y: -20 }}
+                className="flex flex-col sm:flex-row gap-4 justify-center mb-8"
+                initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.7 }}
+                transition={{ duration: 0.5, delay: 0.3 }}
               >
-                <motion.h1 
-                  className="text-4xl font-bold tracking-tighter sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl/none"
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.8, delay: 0.2 }}
-                >
-                  One Application, Any Job
-                </motion.h1>
-                <motion.h2 
-                  className="text-xl sm:text-2xl lg:text-3xl text-muted-foreground"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ duration: 0.8, delay: 0.4 }}
-                >
-                  Your Career Pipeline Starts Here
-                </motion.h2>
+                <Link href={user ? "/profile" : "/auth/register"} className="w-full sm:w-auto">
+                  <Button size="lg" className="w-full h-14 text-lg group">
+                    Get Started <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
+                  </Button>
+                </Link>
+                <Link href="/how-it-works" className="w-full sm:w-auto">
+                  <Button variant="outline" size="lg" className="w-full h-14 text-lg">
+                    See How It Works
+                  </Button>
+                </Link>
+              </motion.div>
+              
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.5, delay: 0.5 }}
+                className="text-sm text-muted-foreground"
+              >
+                <p>Join over <span className="font-medium">100,000+</span> job seekers who've simplified their job search</p>
               </motion.div>
             </div>
-
-            {/* Steps section with animations */}
+          </div>
+        </section>
+        
+        {/* Key stats section */}
+        <section className="py-12 bg-muted/30">
+          <div className="container mx-auto px-4">
             <motion.div 
-              className="w-full max-w-4xl"
+              className="grid grid-cols-2 md:grid-cols-4 gap-8"
               variants={containerVariants}
               initial="hidden"
               animate="visible"
             >
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 w-full">
-                {[
-                  { 
-                    number: 1, 
-                    text: "Signup", 
-                    description: "Create your account in seconds",
-                    icon: "UserPlus",
-                    hoverContent: "Quick and secure signup process with social login options"
-                  },
-                  { 
-                    number: 2, 
-                    text: "Make a Profile", 
-                    description: "Showcase your skills and experience",
-                    icon: "FileText",
-                    hoverContent: "Our AI-powered profile builder helps highlight your strengths" 
-                  },
-                  { 
-                    number: 3, 
-                    text: "Apply", 
-                    description: "One-click applications to top jobs",
-                    icon: "Send",
-                    hoverContent: "Apply to multiple positions without repetitive form filling" 
-                  },
-                ].map((step) => (
-                  <motion.div 
-                    key={step.number}
-                    variants={itemVariants}
-                    whileHover={{ y: -5, boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1)" }}
-                    className="flex flex-col items-center bg-card p-6 rounded-lg border shadow-sm transition-all relative overflow-visible group"
-                  >
-                    <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-background opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                    
-                    <motion.div 
-                      className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-primary/10 flex items-center justify-center mb-4 relative z-10"
-                      whileHover={{ scale: 1.05, rotate: 5 }}
-                      transition={{ type: "spring", stiffness: 300 }}
-                    >
-                      {step.icon === "UserPlus" && <UserPlus className="h-8 w-8 text-primary" />}
-                      {step.icon === "FileText" && <FileText className="h-8 w-8 text-primary" />}
-                      {step.icon === "Send" && <Send className="h-8 w-8 text-primary" />}
-                    </motion.div>
-                    
-                    <span className="text-xl font-semibold mb-1 relative z-10">{step.text}</span>
-                    <span className="text-sm text-muted-foreground text-center relative z-10">{step.description}</span>
-                    
-                    <div className="relative z-50">
-                      <HoverCard openDelay={100} closeDelay={100}>
-                        <HoverCardTrigger asChild>
-                          <Button variant="ghost" size="sm" className="mt-4 relative z-10">
-                            Learn More <ChevronRight className="h-4 w-4 ml-1" />
-                          </Button>
-                        </HoverCardTrigger>
-                        <HoverCardContent 
-                          side="bottom" 
-                          align="center" 
-                          className="w-80 z-50 shadow-lg"
-                          sideOffset={5}
-                        >
-                          <div className="space-y-2">
-                            <h4 className="text-sm font-semibold">Step {step.number}: {step.text}</h4>
-                            <p className="text-sm">{step.hoverContent}</p>
-                          </div>
-                        </HoverCardContent>
-                      </HoverCard>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
-            </motion.div>
-
-            {/* CTA buttons with animations */}
-            <motion.div 
-              className="flex flex-col sm:flex-row gap-4 w-full max-w-lg justify-center"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.7 }}
-            >
-              <Link href="/jobs" className="w-full sm:w-auto">
-                <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
-                  <Button size="lg" className="w-full h-12 sm:h-14 text-lg">
-                    Browse Jobs
-                  </Button>
+              {[
+                { label: "Jobs Available", value: "10,000+" },
+                { label: "Companies", value: "500+" },
+                { label: "Success Rate", value: "92%" },
+                { label: "Time Saved", value: "85%" }
+              ].map((stat, index) => (
+                <motion.div 
+                  key={index}
+                  variants={itemVariants}
+                  className="text-center"
+                >
+                  <p className="text-3xl md:text-4xl font-bold text-primary mb-2">{stat.value}</p>
+                  <p className="text-sm text-muted-foreground">{stat.label}</p>
                 </motion.div>
-              </Link>
-              <Link href={user ? "/profile" : "/auth/register"} className="w-full sm:w-auto">
-                <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
-                  <Button variant="outline" size="lg" className="w-full h-12 sm:h-14 text-lg">
-                    {user ? "Create Profile" : "Sign Up to Create Profile"}
-                  </Button>
-                </motion.div>
-              </Link>
+              ))}
             </motion.div>
           </div>
-        </div>
+        </section>
+        
+        {/* Simplified steps section */}
+        <section className="py-16">
+          <div className="container mx-auto px-4">
+            <div className="text-center mb-12">
+              <h2 className="text-3xl font-bold mb-4">How Pipeline Works</h2>
+              <p className="text-muted-foreground max-w-2xl mx-auto">
+                Our streamlined process gets you from sign-up to job offers faster than ever before
+              </p>
+            </div>
+            
+            <motion.div 
+              className="grid grid-cols-1 sm:grid-cols-3 gap-8 max-w-4xl mx-auto"
+              variants={containerVariants}
+              initial="hidden"
+              animate="visible"
+            >
+              {[
+                { 
+                  number: 1, 
+                  text: "Create Profile", 
+                  description: "One profile, unlimited opportunities",
+                  icon: "UserPlus",
+                },
+                { 
+                  number: 2, 
+                  text: "Match", 
+                  description: "AI finds your perfect fit",
+                  icon: "FileText",
+                },
+                { 
+                  number: 3, 
+                  text: "Apply", 
+                  description: "One click, done",
+                  icon: "Send",
+                },
+              ].map((step) => (
+                <motion.div 
+                  key={step.number}
+                  variants={itemVariants}
+                  className="flex flex-col items-center text-center p-6"
+                >
+                  <motion.div 
+                    className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4"
+                    whileHover={{ scale: 1.05 }}
+                  >
+                    {step.icon === "UserPlus" && <UserPlus className="h-8 w-8 text-primary" />}
+                    {step.icon === "FileText" && <FileText className="h-8 w-8 text-primary" />}
+                    {step.icon === "Send" && <Send className="h-8 w-8 text-primary" />}
+                  </motion.div>
+                  
+                  <h3 className="text-xl font-semibold mb-2">{step.text}</h3>
+                  <p className="text-muted-foreground">{step.description}</p>
+                  
+                  <Link href="/how-it-works" className="mt-4 text-sm text-primary hover:underline inline-flex items-center">
+                    Learn more <ChevronRight className="h-3 w-3 ml-1" />
+                  </Link>
+                </motion.div>
+              ))}
+            </motion.div>
+          </div>
+        </section>
+        
+        {/* Testimonials section */}
+        <section className="py-16 bg-muted/30">
+          <div className="container mx-auto px-4">
+            <div className="text-center mb-12">
+              <h2 className="text-3xl font-bold mb-4">What Our Users Say</h2>
+              <p className="text-muted-foreground max-w-2xl mx-auto">
+                Join thousands of satisfied job seekers who've transformed their career search
+              </p>
+            </div>
+            
+            <motion.div 
+              className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto"
+              variants={containerVariants}
+              initial="hidden"
+              animate="visible"
+            >
+              {testimonials.map((testimonial, index) => (
+                <motion.div 
+                  key={index}
+                  variants={itemVariants}
+                  className="bg-card rounded-xl p-6 shadow-sm border"
+                >
+                  <div className="flex items-center mb-4">
+                    <Avatar className="h-10 w-10 mr-3">
+                      <AvatarImage src={testimonial.avatar} alt={testimonial.name} />
+                      <AvatarFallback>{testimonial.name.charAt(0)}</AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <p className="font-medium">{testimonial.name}</p>
+                      <p className="text-sm text-muted-foreground">{testimonial.role} at {testimonial.company}</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex mb-3">
+                    {[...Array(5)].map((_, i) => (
+                      <Star key={i} className={cn(
+                        "h-4 w-4", 
+                        i < testimonial.rating ? "text-yellow-500 fill-yellow-500" : "text-gray-300"
+                      )} />
+                    ))}
+                  </div>
+                  
+                  <p className="text-sm">{testimonial.content}</p>
+                </motion.div>
+              ))}
+            </motion.div>
+          </div>
+        </section>
+        
+        {/* Company logos section */}
+        <section className="py-16">
+          <div className="container mx-auto px-4">
+            <div className="text-center mb-8">
+              <h2 className="text-xl font-medium text-muted-foreground">
+                Trusted by leading companies worldwide
+              </h2>
+            </div>
+            
+            <motion.div 
+              className="flex flex-wrap justify-center items-center gap-8 md:gap-12 max-w-4xl mx-auto"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.5 }}
+            >
+              {companyLogos.map((company, index) => (
+                <div key={index} className="h-8 opacity-70 hover:opacity-100 transition-opacity">
+                  <img 
+                    src={company.logo} 
+                    alt={`${company.name} logo`} 
+                    className="h-full w-auto object-contain grayscale hover:grayscale-0 transition-all"
+                  />
+                </div>
+              ))}
+            </motion.div>
+          </div>
+        </section>
+        
+        {/* Final CTA section */}
+        <section className="py-20 relative overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-background to-primary/5" />
+          <div className="absolute inset-0 bg-grid-pattern opacity-10" />
+          
+          <div className="container mx-auto px-4 relative z-10">
+            <div className="max-w-3xl mx-auto text-center">
+              <motion.div 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5 }}
+              >
+                <h2 className="text-3xl md:text-4xl font-bold mb-4">
+                  Ready to transform your job search?
+                </h2>
+                <p className="text-xl text-muted-foreground mb-8">
+                  Join Pipeline today and experience the future of job applications
+                </p>
+                
+                <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                  <Link href={user ? "/profile" : "/auth/register"} className="w-full sm:w-auto">
+                    <Button size="lg" className="w-full h-14 text-lg">
+                      {user ? "Go to Dashboard" : "Sign Up Now"}
+                    </Button>
+                  </Link>
+                  <Link href="/jobs" className="w-full sm:w-auto">
+                    <Button variant="outline" size="lg" className="w-full h-14 text-lg">
+                      Browse Jobs
+                    </Button>
+                  </Link>
+                </div>
+              </motion.div>
+            </div>
+          </div>
+        </section>
       </main>
     </div>
   );
