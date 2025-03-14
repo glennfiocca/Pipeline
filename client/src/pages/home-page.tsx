@@ -81,7 +81,7 @@ export default function HomePage() {
           <div className="absolute inset-0 bg-grid-pattern opacity-10" />
           
           <div className="container mx-auto px-4 relative z-10">
-            <div className="max-w-3xl mx-auto text-center">
+            <div className="max-w-5xl mx-auto text-center">
               <motion.div 
                 className="mb-8"
                 initial={{ opacity: 0, scale: 0.9 }}
@@ -91,12 +91,11 @@ export default function HomePage() {
                 <Badge variant="outline" className="mb-4 py-1.5 px-4 text-sm font-medium">
                   Job searching, simplified
                 </Badge>
-                <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight mb-4">
-                  One Application,<br />
-                  <span className="text-primary">Any Job</span>
+                <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight mb-6 mx-auto max-w-5xl">
+                  One Application, <span className="text-primary">Any Job</span>
                 </h1>
-                <p className="text-xl md:text-2xl text-muted-foreground mb-8">
-                  Stop wasting time on repetitive applications.<br />
+                <p className="text-xl md:text-2xl text-muted-foreground mb-10 max-w-4xl mx-auto px-4 md:px-8 lg:px-0">
+                  Stop wasting time on repetitive applications.
                   Apply once, reach hundreds of employers.
                 </p>
               </motion.div>
@@ -304,16 +303,16 @@ export default function HomePage() {
           <div className="absolute inset-0 bg-grid-pattern opacity-10" />
           
           <div className="container mx-auto px-4 relative z-10">
-            <div className="max-w-3xl mx-auto text-center">
+            <div className="max-w-5xl mx-auto text-center">
               <motion.div 
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5 }}
               >
-                <h2 className="text-3xl md:text-4xl font-bold mb-4">
+                <h2 className="text-3xl md:text-4xl font-bold mb-6">
                   Ready to transform your job search?
                 </h2>
-                <p className="text-xl text-muted-foreground mb-8">
+                <p className="text-xl text-muted-foreground mb-10 max-w-4xl mx-auto px-4 md:px-8">
                   Join Pipeline today and experience the future of job applications
                 </p>
                 
