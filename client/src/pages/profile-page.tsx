@@ -410,7 +410,7 @@ export default function ProfilePage() {
 
   return (
     <motion.div 
-      className="container max-w-4xl mx-auto py-6"
+      className="container mx-auto py-6 px-4 sm:px-6 lg:px-8"
       initial="hidden"
       animate="visible"
       variants={pageVariants}
@@ -446,26 +446,26 @@ export default function ProfilePage() {
           className="space-y-8"
         >
           <motion.div variants={itemVariants}>
-            <Tabs defaultValue="personal">
-              <TabsList className="mb-2">
-                <TabsTrigger value="personal">Personal Info</TabsTrigger>
-                <TabsTrigger value="education">Education</TabsTrigger>
-                <TabsTrigger value="experience">Experience</TabsTrigger>
-                <TabsTrigger value="skills">Skills & Languages</TabsTrigger>
-                <TabsTrigger value="certifications">Certifications</TabsTrigger>
-                <TabsTrigger value="projects">Projects</TabsTrigger>
-                <TabsTrigger value="documents">Documents</TabsTrigger>
-                <TabsTrigger value="additional">Additional</TabsTrigger>
+            <Tabs defaultValue="personal" className="w-full">
+              <TabsList className="mb-4 flex flex-wrap justify-start gap-2 border-b pb-2 w-full">
+                <TabsTrigger value="personal" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Personal Info</TabsTrigger>
+                <TabsTrigger value="education" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Education</TabsTrigger>
+                <TabsTrigger value="experience" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Experience</TabsTrigger>
+                <TabsTrigger value="skills" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Skills & Languages</TabsTrigger>
+                <TabsTrigger value="certifications" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Certifications</TabsTrigger>
+                <TabsTrigger value="projects" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Projects</TabsTrigger>
+                <TabsTrigger value="documents" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Documents</TabsTrigger>
+                <TabsTrigger value="additional" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Additional</TabsTrigger>
               </TabsList>
 
               <TabsContent value="personal" className="mt-2">
                 <motion.div variants={itemVariants}>
-                  <Card>
+                  <Card className="w-full">
                     <CardHeader>
                       <CardTitle>Personal Info</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         <FormField
                           control={form.control}
                           name="name"
@@ -521,6 +521,34 @@ export default function ProfilePage() {
                             </FormItem>
                           )}
                         />
+                        
+                        <FormField
+                          control={form.control}
+                          name="linkedinUrl"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>LinkedIn URL</FormLabel>
+                              <FormControl>
+                                <Input {...field} placeholder="https://linkedin.com/in/username" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        
+                        <FormField
+                          control={form.control}
+                          name="portfolioUrl"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Portfolio URL</FormLabel>
+                              <FormControl>
+                                <Input {...field} placeholder="https://yourportfolio.com" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
                       </div>
 
                       <FormField
@@ -530,7 +558,7 @@ export default function ProfilePage() {
                           <FormItem>
                             <FormLabel>Professional Summary</FormLabel>
                             <FormControl>
-                              <Textarea {...field} />
+                              <Textarea {...field} className="min-h-[120px]" />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -630,7 +658,7 @@ export default function ProfilePage() {
 
               <TabsContent value="education" className="mt-2">
                 <motion.div variants={itemVariants}>
-                  <Card>
+                  <Card className="w-full">
                     <CardHeader>
                       <CardTitle>Education</CardTitle>
                       <CardDescription>Add your educational background</CardDescription>
@@ -648,7 +676,7 @@ export default function ProfilePage() {
                             <X className="h-4 w-4" />
                           </Button>
 
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
                             <FormField
                               control={form.control}
                               name={`education.${index}.institution`}
@@ -678,7 +706,7 @@ export default function ProfilePage() {
                             />
                           </div>
 
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
                             <FormField
                               control={form.control}
                               name={`education.${index}.field`}
@@ -708,7 +736,7 @@ export default function ProfilePage() {
                             />
                           </div>
 
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
                             <FormField
                               control={form.control}
                               name={`education.${index}.startDate`}
@@ -789,7 +817,7 @@ export default function ProfilePage() {
 
               <TabsContent value="experience" className="mt-2">
                 <motion.div variants={itemVariants}>
-                  <Card>
+                  <Card className="w-full">
                     <CardHeader>
                       <CardTitle>Experience</CardTitle>
                       <CardDescription>Add your work experience</CardDescription>
@@ -807,7 +835,7 @@ export default function ProfilePage() {
                             <X className="h-4 w-4" />
                           </Button>
 
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
                             <FormField
                               control={form.control}
                               name={`experience.${index}.company`}
@@ -837,7 +865,7 @@ export default function ProfilePage() {
                             />
                           </div>
 
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
                             <FormField
                               control={form.control}
                               name={`experience.${index}.location`}
@@ -852,7 +880,7 @@ export default function ProfilePage() {
                               )}
                             />
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4">
                               <FormField
                                 control={form.control}
                                 name={`experience.${index}.startDate`}
@@ -948,7 +976,7 @@ export default function ProfilePage() {
 
               <TabsContent value="skills" className="mt-2">
                 <motion.div variants={itemVariants}>
-                  <Card>
+                  <Card className="w-full">
                     <CardHeader>
                       <CardTitle>Skills & Languages</CardTitle>
                     </CardHeader>
@@ -1065,7 +1093,7 @@ export default function ProfilePage() {
 
               <TabsContent value="certifications" className="mt-2">
                 <motion.div variants={itemVariants}>
-                  <Card>
+                  <Card className="w-full">
                     <CardHeader>
                       <CardTitle>Certifications</CardTitle>
                     </CardHeader>
@@ -1103,7 +1131,7 @@ export default function ProfilePage() {
                             <X className="h-4 w-4" />
                           </Button>
 
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                             <FormField
                               control={form.control}
                               name={`certifications.${index}.name`}
@@ -1197,7 +1225,7 @@ export default function ProfilePage() {
 
               <TabsContent value="projects" className="mt-2">
                 <motion.div variants={itemVariants}>
-                  <Card>
+                  <Card className="w-full">
                     <CardHeader>
                       <CardTitle>Projects</CardTitle>
                       <CardDescription>
@@ -1289,76 +1317,124 @@ export default function ProfilePage() {
 
               <TabsContent value="documents" className="mt-2">
                 <motion.div variants={itemVariants}>
-                  <Card>
+                  <Card className="w-full">
                     <CardHeader>
-                      <CardTitle>Documents</CardTitle>
+                      <CardTitle>Documents & Links</CardTitle>
                       <CardDescription>
-                        Upload your resume and transcript (PDF only)
+                        Upload your documents and add your professional links
                       </CardDescription>
                     </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <FormItem>
-                          <FormLabel>Resume (PDF only)</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="file"
-                              accept=".pdf"
-                              onChange={(e) => {
-                                const file = e.target.files?.[0];
-                                if (file) {
-                                  setFileState(prev => ({ ...prev, resume: file }));
-                                }
-                              }}
-                            />
-                          </FormControl>
-                          <FormDescription>
-                            Upload your current resume (max 5MB)
-                          </FormDescription>
-                          {profile?.resumeUrl && !profile.resumeUrl.startsWith('blob:') && (
-                            <div className="mt-2">
-                              <a
-                                href={profile.resumeUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-sm text-blue-600 hover:underline flex items-center gap-2"
-                              >
-                                View Current Resume
-                              </a>
-                            </div>
-                          )}
-                        </FormItem>
+                    <CardContent className="space-y-6">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-4">
+                          <h3 className="text-lg font-medium">Documents</h3>
+                          <FormItem>
+                            <FormLabel>Resume (PDF only)</FormLabel>
+                            <FormControl>
+                              <Input
+                                type="file"
+                                accept=".pdf"
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0];
+                                  if (file) {
+                                    setFileState(prev => ({ ...prev, resume: file }));
+                                  }
+                                }}
+                              />
+                            </FormControl>
+                            <FormDescription>
+                              Upload your current resume (max 5MB)
+                            </FormDescription>
+                            {profile?.resumeUrl && !profile.resumeUrl.startsWith('blob:') && (
+                              <div className="mt-2">
+                                <a
+                                  href={profile.resumeUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-sm text-blue-600 hover:underline flex items-center gap-2"
+                                >
+                                  View Current Resume
+                                </a>
+                              </div>
+                            )}
+                          </FormItem>
 
-                        <FormItem>
-                          <FormLabel>Transcript (PDF only)</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="file"
-                              accept=".pdf"
-                              onChange={(e) => {
-                                const file = e.target.files?.[0];
-                                if (file) {
-                                  setFileState(prev => ({ ...prev, transcript: file }));
-                                }
-                              }}
-                            />
-                          </FormControl>
-                          <FormDescription>
-                            Upload your academic transcript (max 5MB)
-                          </FormDescription>
-                          {profile?.transcriptUrl && !profile.transcriptUrl.startsWith('blob:') && (
-                            <div className="mt-2">
-                              <a
-                                href={profile.transcriptUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-sm text-blue-600 hover:underline flex items-center gap-2"
-                              >
-                                View Current Transcript
-                              </a>
-                            </div>
-                          )}
-                        </FormItem>
+                          <FormItem>
+                            <FormLabel>Transcript (PDF only)</FormLabel>
+                            <FormControl>
+                              <Input
+                                type="file"
+                                accept=".pdf"
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0];
+                                  if (file) {
+                                    setFileState(prev => ({ ...prev, transcript: file }));
+                                  }
+                                }}
+                              />
+                            </FormControl>
+                            <FormDescription>
+                              Upload your academic transcript (max 5MB)
+                            </FormDescription>
+                            {profile?.transcriptUrl && !profile.transcriptUrl.startsWith('blob:') && (
+                              <div className="mt-2">
+                                <a
+                                  href={profile.transcriptUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-sm text-blue-600 hover:underline flex items-center gap-2"
+                                >
+                                  View Current Transcript
+                                </a>
+                              </div>
+                            )}
+                          </FormItem>
+                        </div>
+                        
+                        <div className="space-y-4">
+                          <h3 className="text-lg font-medium">Professional Links</h3>
+                          <FormField
+                            control={form.control}
+                            name="linkedinUrl"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>LinkedIn URL</FormLabel>
+                                <FormControl>
+                                  <Input {...field} placeholder="https://linkedin.com/in/username" />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          
+                          <FormField
+                            control={form.control}
+                            name="githubUrl"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>GitHub URL</FormLabel>
+                                <FormControl>
+                                  <Input {...field} placeholder="https://github.com/username" />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          
+                          <FormField
+                            control={form.control}
+                            name="portfolioUrl"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Portfolio URL</FormLabel>
+                                <FormControl>
+                                  <Input {...field} placeholder="https://yourportfolio.com" />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
                       </div>
                     </CardContent>
                   </Card>
@@ -1367,12 +1443,15 @@ export default function ProfilePage() {
 
               <TabsContent value="additional" className="mt-2">
                 <motion.div variants={itemVariants}>
-                  <Card>
+                  <Card className="w-full">
                     <CardHeader>
                       <CardTitle>Additional Information</CardTitle>
+                      <CardDescription>
+                        Provide additional details about your work preferences and availability
+                      </CardDescription>
                     </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <CardContent className="space-y-6">
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         <FormField
                           control={form.control}
                           name="workAuthorization"
@@ -1525,23 +1604,37 @@ export default function ProfilePage() {
 
           {/* Single submit button for the entire form */}
           <motion.div 
-            className="flex justify-end mt-4 pb-4"
+            className="flex justify-end mt-6 pb-8"
             variants={itemVariants}
           >
-            <Button
-              type="submit"
-              disabled={form.formState.isSubmitting}
-              className="min-w-[120px]"
-            >
-              {form.formState.isSubmitting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                "Save Profile"
-              )}
-            </Button>
+            <div className="flex gap-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  if (formRef.current) {
+                    formRef.current.reset();
+                  }
+                }}
+                className="min-w-[120px]"
+              >
+                Reset
+              </Button>
+              <Button
+                type="submit"
+                disabled={form.formState.isSubmitting}
+                className="min-w-[120px]"
+              >
+                {form.formState.isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  "Save Profile"
+                )}
+              </Button>
+            </div>
           </motion.div>
         </form>
       </Form>
