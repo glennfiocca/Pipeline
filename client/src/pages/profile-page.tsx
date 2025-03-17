@@ -410,17 +410,19 @@ export default function ProfilePage() {
 
   return (
     <motion.div 
-      className="container mx-auto py-6 px-4 sm:px-6 lg:px-8"
-      initial="hidden"
-      animate="visible"
-      variants={pageVariants}
+      className="container mx-auto px-4 py-2 max-w-7xl"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.5 }}
     >
       <motion.div 
         className="flex items-center justify-between mb-4"
-        variants={itemVariants}
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
       >
         <div className="flex items-center gap-2">
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-primary"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6 text-primary"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
           <h1 className="text-3xl font-bold">Profile</h1>
         </div>
       </motion.div>
@@ -445,7 +447,15 @@ export default function ProfilePage() {
           }}
           className="space-y-8"
         >
-          <motion.div variants={itemVariants}>
+          <motion.div 
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ 
+              type: "spring", 
+              stiffness: 100,
+              delay: 0.2
+            }}
+          >
             <Tabs defaultValue="personal" className="w-full">
               <TabsList className="mb-4 flex flex-wrap justify-start gap-2 border-b pb-2 w-full">
                 <TabsTrigger value="personal" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Personal Info</TabsTrigger>
@@ -459,7 +469,15 @@ export default function ProfilePage() {
               </TabsList>
 
               <TabsContent value="personal" className="mt-2">
-                <motion.div variants={itemVariants}>
+                <motion.div 
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ 
+                    type: "spring", 
+                    stiffness: 100,
+                    delay: 0.2
+                  }}
+                >
                   <Card className="w-full">
                     <CardHeader>
                       <CardTitle>Personal Info</CardTitle>
@@ -529,7 +547,7 @@ export default function ProfilePage() {
                             <FormItem>
                               <FormLabel>LinkedIn URL</FormLabel>
                               <FormControl>
-                                <Input {...field} placeholder="https://linkedin.com/in/username" />
+                                <Input {...field} value={field.value || ''} placeholder="https://linkedin.com/in/username" />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -543,7 +561,7 @@ export default function ProfilePage() {
                             <FormItem>
                               <FormLabel>Portfolio URL</FormLabel>
                               <FormControl>
-                                <Input {...field} placeholder="https://yourportfolio.com" />
+                                <Input {...field} value={field.value || ''} placeholder="https://yourportfolio.com" />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -657,7 +675,15 @@ export default function ProfilePage() {
               </TabsContent>
 
               <TabsContent value="education" className="mt-2">
-                <motion.div variants={itemVariants}>
+                <motion.div 
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ 
+                    type: "spring", 
+                    stiffness: 100,
+                    delay: 0.2
+                  }}
+                >
                   <Card className="w-full">
                     <CardHeader>
                       <CardTitle>Education</CardTitle>
@@ -816,7 +842,15 @@ export default function ProfilePage() {
               </TabsContent>
 
               <TabsContent value="experience" className="mt-2">
-                <motion.div variants={itemVariants}>
+                <motion.div 
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ 
+                    type: "spring", 
+                    stiffness: 100,
+                    delay: 0.2
+                  }}
+                >
                   <Card className="w-full">
                     <CardHeader>
                       <CardTitle>Experience</CardTitle>
@@ -975,7 +1009,15 @@ export default function ProfilePage() {
               </TabsContent>
 
               <TabsContent value="skills" className="mt-2">
-                <motion.div variants={itemVariants}>
+                <motion.div 
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ 
+                    type: "spring", 
+                    stiffness: 100,
+                    delay: 0.2
+                  }}
+                >
                   <Card className="w-full">
                     <CardHeader>
                       <CardTitle>Skills & Languages</CardTitle>
@@ -1092,7 +1134,15 @@ export default function ProfilePage() {
               </TabsContent>
 
               <TabsContent value="certifications" className="mt-2">
-                <motion.div variants={itemVariants}>
+                <motion.div 
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ 
+                    type: "spring", 
+                    stiffness: 100,
+                    delay: 0.2
+                  }}
+                >
                   <Card className="w-full">
                     <CardHeader>
                       <CardTitle>Certifications</CardTitle>
@@ -1224,7 +1274,15 @@ export default function ProfilePage() {
               </TabsContent>
 
               <TabsContent value="projects" className="mt-2">
-                <motion.div variants={itemVariants}>
+                <motion.div 
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ 
+                    type: "spring", 
+                    stiffness: 100,
+                    delay: 0.2
+                  }}
+                >
                   <Card className="w-full">
                     <CardHeader>
                       <CardTitle>Projects</CardTitle>
@@ -1316,7 +1374,15 @@ export default function ProfilePage() {
               </TabsContent>
 
               <TabsContent value="documents" className="mt-2">
-                <motion.div variants={itemVariants}>
+                <motion.div 
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ 
+                    type: "spring", 
+                    stiffness: 100,
+                    delay: 0.2
+                  }}
+                >
                   <Card className="w-full">
                     <CardHeader>
                       <CardTitle>Documents & Links</CardTitle>
@@ -1400,7 +1466,7 @@ export default function ProfilePage() {
                               <FormItem>
                                 <FormLabel>LinkedIn URL</FormLabel>
                                 <FormControl>
-                                  <Input {...field} placeholder="https://linkedin.com/in/username" />
+                                  <Input {...field} value={field.value || ''} placeholder="https://linkedin.com/in/username" />
                                 </FormControl>
                                 <FormMessage />
                               </FormItem>
@@ -1414,7 +1480,7 @@ export default function ProfilePage() {
                               <FormItem>
                                 <FormLabel>GitHub URL</FormLabel>
                                 <FormControl>
-                                  <Input {...field} placeholder="https://github.com/username" />
+                                  <Input {...field} value={field.value || ''} placeholder="https://github.com/username" />
                                 </FormControl>
                                 <FormMessage />
                               </FormItem>
@@ -1428,7 +1494,7 @@ export default function ProfilePage() {
                               <FormItem>
                                 <FormLabel>Portfolio URL</FormLabel>
                                 <FormControl>
-                                  <Input {...field} placeholder="https://yourportfolio.com" />
+                                  <Input {...field} value={field.value || ''} placeholder="https://yourportfolio.com" />
                                 </FormControl>
                                 <FormMessage />
                               </FormItem>
@@ -1442,7 +1508,15 @@ export default function ProfilePage() {
               </TabsContent>
 
               <TabsContent value="additional" className="mt-2">
-                <motion.div variants={itemVariants}>
+                <motion.div 
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ 
+                    type: "spring", 
+                    stiffness: 100,
+                    delay: 0.2
+                  }}
+                >
                   <Card className="w-full">
                     <CardHeader>
                       <CardTitle>Additional Information</CardTitle>

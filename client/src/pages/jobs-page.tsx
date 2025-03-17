@@ -282,363 +282,363 @@ export default function JobsPage() {
 
   return (
     <motion.div 
-      className="container mx-auto px-4 py-6 max-w-7xl"
+      className="container mx-auto px-4 py-2 max-w-7xl"
       initial="hidden"
       animate="visible"
       variants={containerVariants}
     >
-      <div className="flex flex-col gap-4">
-        {/* Header with title */}
-        <motion.div 
-          className="flex items-center mb-4"
-          variants={itemVariants}
-        >
-          <div className="flex items-center gap-2">
-            <Briefcase className="h-6 w-6 text-primary" />
-            <h1 className="text-3xl font-bold">Jobs</h1>
+      {/* Header with title */}
+      <motion.div 
+        className="flex items-center justify-between mb-4"
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+      >
+        <div className="flex items-center gap-2">
+          <Briefcase className="h-6 w-6 text-primary" />
+          <h1 className="text-3xl font-bold">Jobs</h1>
+        </div>
+      </motion.div>
+
+      {/* Filters Section */}
+      <motion.div 
+        variants={itemVariants}
+        className="w-full mb-4"
+      >
+        <Card className="overflow-hidden border border-gray-200/30 dark:border-gray-700/30 shadow-sm">
+          <div className="relative">
+            <div className="absolute inset-0 bg-gradient-to-br from-gray-100/20 via-gray-50/10 to-gray-200/20 dark:from-gray-800/20 dark:via-gray-900/10 dark:to-gray-700/20" />
+            <CardContent className="p-4 relative">
+              {/* Header and search row */}
+              <div className="flex flex-col md:flex-row gap-3 mb-4">
+                <div className="flex-1">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                    <Input
+                      placeholder="Search job titles, companies, or keywords..."
+                      className="pl-10 h-11 w-full"
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                    />
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <Select
+                    value={location}
+                    onValueChange={setLocation}
+                  >
+                    <SelectTrigger className="h-11 min-w-[180px] bg-gray-50 dark:bg-gray-800/50">
+                      <SelectValue placeholder="Location" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {LOCATIONS.map((loc) => (
+                        <SelectItem key={loc} value={loc}>
+                          {loc}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-11 w-11 shrink-0"
+                    onClick={() => {
+                      setIndustryType("All");
+                      setLocation("All");
+                      setMinSalary("");
+                      setMaxSalary("");
+                      setSearch("");
+                      setJobType("All");
+                      setExperienceLevel("All");
+                      setDatePosted("All");
+                      setEducation("All");
+                    }}
+                    title="Reset all filters"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-rotate-ccw"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                  </Button>
+                </div>
+              </div>
+              
+              {/* Advanced filters grid */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2">
+                {/* Date Posted */}
+                <div>
+                  <Select
+                    value={datePosted}
+                    onValueChange={setDatePosted}
+                  >
+                    <SelectTrigger className="h-10 w-full bg-gray-50 dark:bg-gray-800/50 border-gray-200/70 dark:border-gray-700/70">
+                      <div className="flex flex-col items-start truncate">
+                        <span className="text-xs text-muted-foreground">Date posted</span>
+                        <SelectValue placeholder="Any time" className="text-sm" />
+                      </div>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {DATE_POSTED.map((date) => (
+                        <SelectItem key={date} value={date}>
+                          {date}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Job Type */}
+                <div>
+                  <Select
+                    value={jobType}
+                    onValueChange={setJobType}
+                  >
+                    <SelectTrigger className="h-10 w-full bg-gray-50 dark:bg-gray-800/50 border-gray-200/70 dark:border-gray-700/70">
+                      <div className="flex flex-col items-start truncate">
+                        <span className="text-xs text-muted-foreground">Job Type</span>
+                        <SelectValue placeholder="Any type" className="text-sm" />
+                      </div>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {JOB_TYPES.map((type) => (
+                        <SelectItem key={type} value={type}>
+                          {type}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Company/Industry */}
+                <div>
+                  <Select
+                    value={industryType}
+                    onValueChange={setIndustryType}
+                  >
+                    <SelectTrigger className="h-10 w-full bg-gray-50 dark:bg-gray-800/50 border-gray-200/70 dark:border-gray-700/70">
+                      <div className="flex flex-col items-start truncate">
+                        <span className="text-xs text-muted-foreground">Industry</span>
+                        <SelectValue placeholder="Any industry" className="text-sm" />
+                      </div>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {INDUSTRY_TYPES.map((type) => (
+                        <SelectItem key={type} value={type}>
+                          {type}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Experience Level */}
+                <div>
+                  <Select
+                    value={experienceLevel}
+                    onValueChange={setExperienceLevel}
+                  >
+                    <SelectTrigger className="h-10 w-full bg-gray-50 dark:bg-gray-800/50 border-gray-200/70 dark:border-gray-700/70">
+                      <div className="flex flex-col items-start truncate">
+                        <span className="text-xs text-muted-foreground">Experience</span>
+                        <SelectValue placeholder="Any level" className="text-sm" />
+                      </div>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {EXPERIENCE_LEVELS.map((level) => (
+                        <SelectItem key={level} value={level}>
+                          {level}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Education */}
+                <div>
+                  <Select
+                    value={education}
+                    onValueChange={setEducation}
+                  >
+                    <SelectTrigger className="h-10 w-full bg-gray-50 dark:bg-gray-800/50 border-gray-200/70 dark:border-gray-700/70">
+                      <div className="flex flex-col items-start truncate">
+                        <span className="text-xs text-muted-foreground">Education</span>
+                        <SelectValue placeholder="Any degree" className="text-sm" />
+                      </div>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {EDUCATION_LEVELS.map((level) => (
+                        <SelectItem key={level} value={level}>
+                          {level}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Salary Range - Combined into one dropdown */}
+                <div className="relative group">
+                  <div className="h-10 w-full bg-gray-50 dark:bg-gray-800/50 border border-gray-200/70 dark:border-gray-700/70 rounded-md px-3 py-1 cursor-pointer flex flex-col justify-center">
+                    <span className="text-xs text-muted-foreground">Salary range</span>
+                    <div className="text-sm truncate">
+                      {minSalary || maxSalary ? 
+                        `${minSalary ? '$'+minSalary : 'Any'} - ${maxSalary ? '$'+maxSalary : 'Any'}` : 
+                        'Any range'}
+                    </div>
+                  </div>
+                  
+                  {/* Dropdown panel */}
+                  <div className="absolute top-full left-0 mt-1 z-10 w-64 bg-white dark:bg-gray-900 rounded-md shadow-lg border border-gray-200 dark:border-gray-700 p-3 hidden group-hover:block hover:block">
+                    <div className="space-y-3">
+                      <div>
+                        <Label htmlFor="min-salary" className="text-xs">Minimum salary</Label>
+                        <div className="flex items-center mt-1">
+                          <span className="text-sm text-muted-foreground mr-1">$</span>
+                          <Input
+                            id="min-salary"
+                            type="number"
+                            placeholder="No minimum"
+                            value={minSalary}
+                            onChange={(e) => setMinSalary(e.target.value)}
+                            className="h-8"
+                            min="0"
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <Label htmlFor="max-salary" className="text-xs">Maximum salary</Label>
+                        <div className="flex items-center mt-1">
+                          <span className="text-sm text-muted-foreground mr-1">$</span>
+                          <Input
+                            id="max-salary"
+                            type="number"
+                            placeholder="No maximum"
+                            value={maxSalary}
+                            onChange={(e) => setMaxSalary(e.target.value)}
+                            className="h-8"
+                            min="0"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Active filters display */}
+              <div className="flex flex-wrap gap-1.5 mt-3">
+                {search && (
+                  <div className="bg-primary/10 text-primary text-xs rounded-full px-2.5 py-1 flex items-center gap-1.5">
+                    <span>"{search}"</span>
+                    <button onClick={() => setSearch("")} className="hover:bg-primary/20 rounded-full p-0.5">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                    </button>
+                  </div>
+                )}
+                {location !== "All" && (
+                  <div className="bg-primary/10 text-primary text-xs rounded-full px-2.5 py-1 flex items-center gap-1.5">
+                    <span>{location}</span>
+                    <button onClick={() => setLocation("All")} className="hover:bg-primary/20 rounded-full p-0.5">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                    </button>
+                  </div>
+                )}
+                {datePosted !== "All" && (
+                  <div className="bg-primary/10 text-primary text-xs rounded-full px-2.5 py-1 flex items-center gap-1.5">
+                    <span>{datePosted}</span>
+                    <button onClick={() => setDatePosted("All")} className="hover:bg-primary/20 rounded-full p-0.5">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                    </button>
+                  </div>
+                )}
+                {jobType !== "All" && (
+                  <div className="bg-primary/10 text-primary text-xs rounded-full px-2.5 py-1 flex items-center gap-1.5">
+                    <span>{jobType}</span>
+                    <button onClick={() => setJobType("All")} className="hover:bg-primary/20 rounded-full p-0.5">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                    </button>
+                  </div>
+                )}
+                {industryType !== "All" && (
+                  <div className="bg-primary/10 text-primary text-xs rounded-full px-2.5 py-1 flex items-center gap-1.5">
+                    <span>{industryType}</span>
+                    <button onClick={() => setIndustryType("All")} className="hover:bg-primary/20 rounded-full p-0.5">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                    </button>
+                  </div>
+                )}
+                {experienceLevel !== "All" && (
+                  <div className="bg-primary/10 text-primary text-xs rounded-full px-2.5 py-1 flex items-center gap-1.5">
+                    <span>{experienceLevel}</span>
+                    <button onClick={() => setExperienceLevel("All")} className="hover:bg-primary/20 rounded-full p-0.5">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                    </button>
+                  </div>
+                )}
+                {education !== "All" && (
+                  <div className="bg-primary/10 text-primary text-xs rounded-full px-2.5 py-1 flex items-center gap-1.5">
+                    <span>{education}</span>
+                    <button onClick={() => setEducation("All")} className="hover:bg-primary/20 rounded-full p-0.5">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                    </button>
+                  </div>
+                )}
+                {(minSalary || maxSalary) && (
+                  <div className="bg-primary/10 text-primary text-xs rounded-full px-2.5 py-1 flex items-center gap-1.5">
+                    <span>Salary: {minSalary ? '$'+minSalary : '$0'} - {maxSalary ? '$'+maxSalary : 'Any'}</span>
+                    <button onClick={() => {setMinSalary(""); setMaxSalary("");}} className="hover:bg-primary/20 rounded-full p-0.5">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                    </button>
+                  </div>
+                )}
+              </div>
+            </CardContent>
           </div>
-        </motion.div>
+        </Card>
+      </motion.div>
 
-        {/* Filters Section */}
-        <motion.div 
-          variants={itemVariants}
-          className="w-full"
-        >
-          <Card className="overflow-hidden border border-gray-200/30 dark:border-gray-700/30 shadow-sm">
-            <div className="relative">
-              <div className="absolute inset-0 bg-gradient-to-br from-gray-100/20 via-gray-50/10 to-gray-200/20 dark:from-gray-800/20 dark:via-gray-900/10 dark:to-gray-700/20" />
-              <CardContent className="p-4 relative">
-                {/* Header and search row */}
-                <div className="flex flex-col md:flex-row gap-3 mb-4">
-                  <div className="flex-1">
-                    <div className="relative">
-                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                      <Input
-                        placeholder="Search job titles, companies, or keywords..."
-                        className="pl-10 h-11 w-full"
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                      />
-                    </div>
-                  </div>
-                  <div className="flex gap-2">
-                    <Select
-                      value={location}
-                      onValueChange={setLocation}
-                    >
-                      <SelectTrigger className="h-11 min-w-[180px] bg-gray-50 dark:bg-gray-800/50">
-                        <SelectValue placeholder="Location" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {LOCATIONS.map((loc) => (
-                          <SelectItem key={loc} value={loc}>
-                            {loc}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="h-11 w-11 shrink-0"
-                      onClick={() => {
-                        setIndustryType("All");
-                        setLocation("All");
-                        setMinSalary("");
-                        setMaxSalary("");
-                        setSearch("");
-                        setJobType("All");
-                        setExperienceLevel("All");
-                        setDatePosted("All");
-                        setEducation("All");
-                      }}
-                      title="Reset all filters"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-rotate-ccw"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
-                    </Button>
-                  </div>
-                </div>
-                
-                {/* Advanced filters grid */}
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2">
-                  {/* Date Posted */}
-                  <div>
-                    <Select
-                      value={datePosted}
-                      onValueChange={setDatePosted}
-                    >
-                      <SelectTrigger className="h-10 w-full bg-gray-50 dark:bg-gray-800/50 border-gray-200/70 dark:border-gray-700/70">
-                        <div className="flex flex-col items-start truncate">
-                          <span className="text-xs text-muted-foreground">Date posted</span>
-                          <SelectValue placeholder="Any time" className="text-sm" />
-                        </div>
-                      </SelectTrigger>
-                      <SelectContent>
-                        {DATE_POSTED.map((date) => (
-                          <SelectItem key={date} value={date}>
-                            {date}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+      {/* Jobs count */}
+      <motion.div 
+        className="flex justify-between items-center"
+        variants={fadeInVariants}
+      >
+        <p className="text-sm text-muted-foreground">
+          Found <span className="font-semibold text-foreground">{filteredJobs.length}</span> active jobs
+        </p>
+      </motion.div>
 
-                  {/* Job Type */}
-                  <div>
-                    <Select
-                      value={jobType}
-                      onValueChange={setJobType}
-                    >
-                      <SelectTrigger className="h-10 w-full bg-gray-50 dark:bg-gray-800/50 border-gray-200/70 dark:border-gray-700/70">
-                        <div className="flex flex-col items-start truncate">
-                          <span className="text-xs text-muted-foreground">Job Type</span>
-                          <SelectValue placeholder="Any type" className="text-sm" />
-                        </div>
-                      </SelectTrigger>
-                      <SelectContent>
-                        {JOB_TYPES.map((type) => (
-                          <SelectItem key={type} value={type}>
-                            {type}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+      {/* Jobs List Section - Now in 2 columns */}
+      <motion.div 
+        className="grid grid-cols-1 md:grid-cols-2 gap-6"
+        variants={containerVariants}
+      >
+        {filteredJobs.map((job: Job, index: number) => (
+          <motion.div
+            key={job.id}
+            variants={itemVariants}
+            custom={index}
+            whileHover={{ y: -5 }}
+            transition={{ type: "spring", stiffness: 300 }}
+            className={cn("h-full")}
+          >
+            <JobCard
+              job={job}
+              onApply={() => applyMutation.mutate(job.id)}
+              onViewDetails={() => setSelectedJob(job)}
+              isApplying={applyMutation.isPending && selectedJob?.id === job.id}
+              isApplied={user ? applications.some((app) => app.jobId === job.id) : false}
+            />
+          </motion.div>
+        ))}
 
-                  {/* Company/Industry */}
-                  <div>
-                    <Select
-                      value={industryType}
-                      onValueChange={setIndustryType}
-                    >
-                      <SelectTrigger className="h-10 w-full bg-gray-50 dark:bg-gray-800/50 border-gray-200/70 dark:border-gray-700/70">
-                        <div className="flex flex-col items-start truncate">
-                          <span className="text-xs text-muted-foreground">Industry</span>
-                          <SelectValue placeholder="Any industry" className="text-sm" />
-                        </div>
-                      </SelectTrigger>
-                      <SelectContent>
-                        {INDUSTRY_TYPES.map((type) => (
-                          <SelectItem key={type} value={type}>
-                            {type}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {/* Experience Level */}
-                  <div>
-                    <Select
-                      value={experienceLevel}
-                      onValueChange={setExperienceLevel}
-                    >
-                      <SelectTrigger className="h-10 w-full bg-gray-50 dark:bg-gray-800/50 border-gray-200/70 dark:border-gray-700/70">
-                        <div className="flex flex-col items-start truncate">
-                          <span className="text-xs text-muted-foreground">Experience</span>
-                          <SelectValue placeholder="Any level" className="text-sm" />
-                        </div>
-                      </SelectTrigger>
-                      <SelectContent>
-                        {EXPERIENCE_LEVELS.map((level) => (
-                          <SelectItem key={level} value={level}>
-                            {level}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {/* Education */}
-                  <div>
-                    <Select
-                      value={education}
-                      onValueChange={setEducation}
-                    >
-                      <SelectTrigger className="h-10 w-full bg-gray-50 dark:bg-gray-800/50 border-gray-200/70 dark:border-gray-700/70">
-                        <div className="flex flex-col items-start truncate">
-                          <span className="text-xs text-muted-foreground">Education</span>
-                          <SelectValue placeholder="Any degree" className="text-sm" />
-                        </div>
-                      </SelectTrigger>
-                      <SelectContent>
-                        {EDUCATION_LEVELS.map((level) => (
-                          <SelectItem key={level} value={level}>
-                            {level}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {/* Salary Range - Combined into one dropdown */}
-                  <div className="relative group">
-                    <div className="h-10 w-full bg-gray-50 dark:bg-gray-800/50 border border-gray-200/70 dark:border-gray-700/70 rounded-md px-3 py-1 cursor-pointer flex flex-col justify-center">
-                      <span className="text-xs text-muted-foreground">Salary range</span>
-                      <div className="text-sm truncate">
-                        {minSalary || maxSalary ? 
-                          `${minSalary ? '$'+minSalary : 'Any'} - ${maxSalary ? '$'+maxSalary : 'Any'}` : 
-                          'Any range'}
-                      </div>
-                    </div>
-                    
-                    {/* Dropdown panel */}
-                    <div className="absolute top-full left-0 mt-1 z-10 w-64 bg-white dark:bg-gray-900 rounded-md shadow-lg border border-gray-200 dark:border-gray-700 p-3 hidden group-hover:block hover:block">
-                      <div className="space-y-3">
-                        <div>
-                          <Label htmlFor="min-salary" className="text-xs">Minimum salary</Label>
-                          <div className="flex items-center mt-1">
-                            <span className="text-sm text-muted-foreground mr-1">$</span>
-                            <Input
-                              id="min-salary"
-                              type="number"
-                              placeholder="No minimum"
-                              value={minSalary}
-                              onChange={(e) => setMinSalary(e.target.value)}
-                              className="h-8"
-                              min="0"
-                            />
-                          </div>
-                        </div>
-                        <div>
-                          <Label htmlFor="max-salary" className="text-xs">Maximum salary</Label>
-                          <div className="flex items-center mt-1">
-                            <span className="text-sm text-muted-foreground mr-1">$</span>
-                            <Input
-                              id="max-salary"
-                              type="number"
-                              placeholder="No maximum"
-                              value={maxSalary}
-                              onChange={(e) => setMaxSalary(e.target.value)}
-                              className="h-8"
-                              min="0"
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                
-                {/* Active filters display */}
-                <div className="flex flex-wrap gap-1.5 mt-3">
-                  {search && (
-                    <div className="bg-primary/10 text-primary text-xs rounded-full px-2.5 py-1 flex items-center gap-1.5">
-                      <span>"{search}"</span>
-                      <button onClick={() => setSearch("")} className="hover:bg-primary/20 rounded-full p-0.5">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-                      </button>
-                    </div>
-                  )}
-                  {location !== "All" && (
-                    <div className="bg-primary/10 text-primary text-xs rounded-full px-2.5 py-1 flex items-center gap-1.5">
-                      <span>{location}</span>
-                      <button onClick={() => setLocation("All")} className="hover:bg-primary/20 rounded-full p-0.5">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-                      </button>
-                    </div>
-                  )}
-                  {datePosted !== "All" && (
-                    <div className="bg-primary/10 text-primary text-xs rounded-full px-2.5 py-1 flex items-center gap-1.5">
-                      <span>{datePosted}</span>
-                      <button onClick={() => setDatePosted("All")} className="hover:bg-primary/20 rounded-full p-0.5">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-                      </button>
-                    </div>
-                  )}
-                  {jobType !== "All" && (
-                    <div className="bg-primary/10 text-primary text-xs rounded-full px-2.5 py-1 flex items-center gap-1.5">
-                      <span>{jobType}</span>
-                      <button onClick={() => setJobType("All")} className="hover:bg-primary/20 rounded-full p-0.5">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-                      </button>
-                    </div>
-                  )}
-                  {industryType !== "All" && (
-                    <div className="bg-primary/10 text-primary text-xs rounded-full px-2.5 py-1 flex items-center gap-1.5">
-                      <span>{industryType}</span>
-                      <button onClick={() => setIndustryType("All")} className="hover:bg-primary/20 rounded-full p-0.5">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-                      </button>
-                    </div>
-                  )}
-                  {experienceLevel !== "All" && (
-                    <div className="bg-primary/10 text-primary text-xs rounded-full px-2.5 py-1 flex items-center gap-1.5">
-                      <span>{experienceLevel}</span>
-                      <button onClick={() => setExperienceLevel("All")} className="hover:bg-primary/20 rounded-full p-0.5">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-                      </button>
-                    </div>
-                  )}
-                  {education !== "All" && (
-                    <div className="bg-primary/10 text-primary text-xs rounded-full px-2.5 py-1 flex items-center gap-1.5">
-                      <span>{education}</span>
-                      <button onClick={() => setEducation("All")} className="hover:bg-primary/20 rounded-full p-0.5">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-                      </button>
-                    </div>
-                  )}
-                  {(minSalary || maxSalary) && (
-                    <div className="bg-primary/10 text-primary text-xs rounded-full px-2.5 py-1 flex items-center gap-1.5">
-                      <span>Salary: {minSalary ? '$'+minSalary : '$0'} - {maxSalary ? '$'+maxSalary : 'Any'}</span>
-                      <button onClick={() => {setMinSalary(""); setMaxSalary("");}} className="hover:bg-primary/20 rounded-full p-0.5">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </div>
-          </Card>
-        </motion.div>
-
-        {/* Jobs count */}
-        <motion.div 
-          className="flex justify-between items-center"
-          variants={fadeInVariants}
-        >
-          <p className="text-sm text-muted-foreground">
-            Found <span className="font-semibold text-foreground">{filteredJobs.length}</span> active jobs
-          </p>
-        </motion.div>
-
-        {/* Jobs List Section - Now in 2 columns */}
-        <motion.div 
-          className="grid grid-cols-1 md:grid-cols-2 gap-6"
-          variants={containerVariants}
-        >
-          {filteredJobs.map((job: Job, index: number) => (
-            <motion.div
-              key={job.id}
-              variants={itemVariants}
-              custom={index}
-              whileHover={{ y: -5 }}
-              transition={{ type: "spring", stiffness: 300 }}
-              className={cn("h-full")}
-            >
-              <JobCard
-                job={job}
-                onApply={() => applyMutation.mutate(job.id)}
-                onViewDetails={() => setSelectedJob(job)}
-                isApplying={applyMutation.isPending && selectedJob?.id === job.id}
-                isApplied={user ? applications.some((app) => app.jobId === job.id) : false}
-              />
-            </motion.div>
-          ))}
-
-          {filteredJobs.length === 0 && (
-            <motion.div 
-              className="text-center py-8 md:col-span-2"
-              variants={fadeInVariants}
-            >
-              <p className="text-muted-foreground">
-                No active jobs found matching your criteria. Try adjusting your filters.
-              </p>
-            </motion.div>
-          )}
-        </motion.div>
-      </div>
+        {filteredJobs.length === 0 && (
+          <motion.div 
+            className="text-center py-8 md:col-span-2"
+            variants={fadeInVariants}
+          >
+            <p className="text-muted-foreground">
+              No active jobs found matching your criteria. Try adjusting your filters.
+            </p>
+          </motion.div>
+        )}
+      </motion.div>
 
       <JobModal
         job={selectedJob}

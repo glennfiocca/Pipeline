@@ -226,10 +226,10 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="container mx-auto px-4 py-6 max-w-7xl flex flex-col min-h-[calc(100vh-4rem)]">
+    <div className="container mx-auto px-4 py-2 max-w-7xl flex flex-col min-h-[calc(100vh-4rem)]">
       {/* Header section with title and filter button */}
       <motion.div 
-        className="flex items-center justify-between mb-6"
+        className="flex items-center justify-between mb-4"
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
