@@ -34,14 +34,14 @@ function Router() {
   );
 }
 
-function App() {
+export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <NotificationsProvider>
           <div className="min-h-screen bg-background font-sans antialiased flex flex-col">
             <NavBar />
-            <main className="flex-1 w-full max-w-[2000px] mx-auto px-4 sm:px-6 lg:px-8">
+            <main className="flex-1">
               <Router />
             </main>
             <Footer />
@@ -52,5 +52,3 @@ function App() {
     </QueryClientProvider>
   );
 }
-
-export default App;
