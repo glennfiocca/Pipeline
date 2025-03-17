@@ -6,7 +6,8 @@ import { format } from "date-fns";
 import { 
   Loader2, AlertCircle, ChevronRight, 
   CalendarIcon, MapPinIcon, NotebookIcon, ArrowRightIcon, BriefcaseIcon, XCircleIcon,
-  MessageSquare, Sparkles, Search, MousePointerClick, LayoutDashboard
+  MessageSquare, Sparkles, Search, MousePointerClick, LayoutDashboard,
+  CheckCircle2, Circle, CircleDot
 } from "lucide-react";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
@@ -28,6 +29,176 @@ interface StatusHistoryItem {
   status: string;
   date: string;
 }
+
+// Define the application stages in order
+const APPLICATION_STAGES = ["Applied", "Interviewing", "Accepted"];
+
+// Component for the application progress tracker
+const ApplicationProgressTracker = ({ 
+  currentStatus, 
+  statusHistory 
+}: { 
+  currentStatus: string; 
+  statusHistory?: StatusHistoryItem[];
+}) => {
+  // Determine the current stage index (0-based)
+  const getCurrentStageIndex = () => {
+    if (currentStatus === "Rejected" || currentStatus === "Withdrawn") {
+      // For rejected/withdrawn, find the last valid stage from history
+      if (statusHistory && statusHistory.length > 0) {
+        for (let i = statusHistory.length - 2; i >= 0; i--) {
+          const status = statusHistory[i].status;
+          if (APPLICATION_STAGES.includes(status)) {
+            return APPLICATION_STAGES.indexOf(status);
+          }
+        }
+      }
+      return -1; // No valid previous stage found
+    }
+    
+    return APPLICATION_STAGES.indexOf(currentStatus);
+  };
+
+  const currentStageIndex = getCurrentStageIndex();
+  
+  // Get the appropriate icon for each stage
+  const getStageIcon = (stage: string, index: number) => {
+    if (currentStatus === "Rejected" && index > currentStageIndex) {
+      // Show "blocked" icon for stages after the last valid stage if rejected
+      return <XCircleIcon className="h-4 w-4" />;
+    } else if (index < currentStageIndex) {
+      // Completed stage
+      return <CheckCircle2 className="h-4 w-4" />;
+    } else if (index === currentStageIndex) {
+      // Current stage
+      return <CircleDot className="h-4 w-4" />;
+    } else {
+      // Future stage
+      return <Circle className="h-4 w-4" />;
+    }
+  };
+
+  // Get the color class for each stage
+  const getStageColorClass = (index: number) => {
+    if (currentStatus === "Rejected") {
+      return index <= currentStageIndex 
+        ? "text-red-500" 
+        : "text-muted-foreground/30";
+    } else if (currentStatus === "Withdrawn") {
+      return index <= currentStageIndex 
+        ? "text-gray-500" 
+        : "text-muted-foreground/30";
+    } else {
+      if (index < currentStageIndex) {
+        return "text-green-500"; // Completed
+      } else if (index === currentStageIndex) {
+        if (currentStatus === "Applied") return "text-blue-500";
+        if (currentStatus === "Interviewing") return "text-yellow-500";
+        if (currentStatus === "Accepted") return "text-green-500";
+        return "text-primary";
+      } else {
+        return "text-muted-foreground/30"; // Future stage
+      }
+    }
+  };
+
+  // Get the date for a specific stage from history
+  const getStageDate = (stage: string) => {
+    if (!statusHistory) return null;
+    
+    // Find the first occurrence of this stage in history
+    const historyItem = statusHistory.find(item => item.status === stage);
+    return historyItem ? new Date(historyItem.date) : null;
+  };
+
+  return (
+    <div className="mt-4 pt-3 border-t border-border/40">
+      <div className="relative">
+        {/* Progress bar background */}
+        <div className="absolute top-4 left-0 right-0 h-[2px] bg-muted-foreground/20"></div>
+        
+        {/* Filled progress bar */}
+        <div 
+          className={cn(
+            "absolute top-4 left-0 h-[2px] transition-all duration-500",
+            currentStatus === "Rejected" ? "bg-red-500" : 
+            currentStatus === "Withdrawn" ? "bg-gray-500" : 
+            "bg-primary"
+          )}
+          style={{ 
+            width: currentStageIndex >= 0 
+              ? `${((currentStageIndex + 1) / APPLICATION_STAGES.length) * 100}%` 
+              : '0%' 
+          }}
+        ></div>
+        
+        {/* Stage markers */}
+        <div className="flex justify-between relative">
+          {/* Start marker */}
+          <div className="flex flex-col items-center">
+            <div className={cn(
+              "w-8 h-8 rounded-full flex items-center justify-center bg-background border-2",
+              currentStatus === "Rejected" || currentStatus === "Withdrawn" 
+                ? "border-red-500/50 text-red-500" 
+                : "border-primary/50 text-primary"
+            )}>
+              <MousePointerClick className="h-4 w-4" />
+            </div>
+            <span className="text-xs mt-2 font-medium">Start</span>
+          </div>
+          
+          {/* Application stages */}
+          {APPLICATION_STAGES.map((stage, index) => (
+            <div key={stage} className="flex flex-col items-center">
+              <div className={cn(
+                "w-8 h-8 rounded-full flex items-center justify-center bg-background border-2",
+                getStageColorClass(index),
+                index <= currentStageIndex 
+                  ? currentStatus === "Rejected" 
+                    ? "border-red-500/50" 
+                    : currentStatus === "Withdrawn"
+                      ? "border-gray-500/50"
+                      : "border-primary/50" 
+                  : "border-muted-foreground/20"
+              )}>
+                {getStageIcon(stage, index)}
+              </div>
+              <span className={cn(
+                "text-xs mt-2 font-medium",
+                getStageColorClass(index)
+              )}>
+                {stage}
+              </span>
+              {getStageDate(stage) && (
+                <span className="text-[10px] text-muted-foreground mt-1">
+                  {format(getStageDate(stage)!, "MMM d")}
+                </span>
+              )}
+            </div>
+          ))}
+        </div>
+        
+        {/* Status indicator for rejected/withdrawn */}
+        {(currentStatus === "Rejected" || currentStatus === "Withdrawn") && (
+          <div className="mt-3 flex items-center justify-center">
+            <Badge variant="outline" className={
+              currentStatus === "Rejected" 
+                ? "bg-red-500/10 text-red-500 border-red-500/20" 
+                : "bg-gray-500/10 text-gray-500 border-gray-500/20"
+            }>
+              {currentStatus === "Rejected" ? (
+                <XCircleIcon className="h-3 w-3 mr-1" />
+              ) : (
+                <AlertCircle className="h-3 w-3 mr-1" />
+              )}
+              {currentStatus}
+            </Badge>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
 
 export default function DashboardPage() {
   const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
@@ -378,36 +549,12 @@ export default function DashboardPage() {
                         </Badge>
                       </div>
 
+                      {/* Replace Status History with Application Progress Tracker */}
                       {statusHistory && statusHistory.length > 0 && (
-                        <div className="mt-2 text-sm">
-                          <Collapsible>
-                            <CollapsibleTrigger asChild>
-                              <Button 
-                                variant="ghost" 
-                                size="sm" 
-                                className="flex items-center gap-1 mb-1 px-2 h-7 text-xs"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                }}
-                              >
-                                <ChevronRight className="h-3 w-3 transition-transform ui-expanded:rotate-90" />
-                                Status History
-                              </Button>
-                            </CollapsibleTrigger>
-                            <CollapsibleContent onClick={(e) => e.stopPropagation()} className="pl-2 border-l-2 border-muted ml-1">
-                              {statusHistory.map((history, index) => (
-                                <div key={index} className="flex items-center text-muted-foreground py-1">
-                                  <span className="mr-2 text-xs">
-                                    {format(new Date(history.date), "MMM d, yyyy")}:
-                                  </span>
-                                  <Badge variant="outline" className={getStatusColor(!job.isActive && index === statusHistory.length - 1 ? "inactive" : history.status)}>
-                                    {!job.isActive && index === statusHistory.length - 1 ? "Inactive" : history.status}
-                                  </Badge>
-                                </div>
-                              ))}
-                            </CollapsibleContent>
-                          </Collapsible>
-                        </div>
+                        <ApplicationProgressTracker 
+                          currentStatus={!job.isActive ? "Inactive" : application.status}
+                          statusHistory={statusHistory}
+                        />
                       )}
 
                       {application.notes && (
