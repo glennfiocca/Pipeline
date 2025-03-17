@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
-import { Loader2, ArrowLeft, User as UserIcon, Mail, CreditCard, Calendar, FileText, Trash2, Send, NotebookIcon, ArrowRightIcon, FileDown, Search } from "lucide-react";
+import { Loader2, ArrowLeft, User as UserIcon, Mail, CreditCard, Calendar, FileText, Trash2, Send, NotebookIcon, ArrowRightIcon, FileDown, Search, CheckCircle2, XCircle, PlusCircle, AlertCircle, Clock, CalendarIcon, ListTodo, FileEdit, Save, CheckIcon } from "lucide-react";
 import { useLocation } from "wouter";
 import { Separator } from "@/components/ui/separator";
 import { useState, useRef, useEffect } from "react";
@@ -58,6 +58,49 @@ interface Job {
   company: string;
   isActive: boolean;
 }
+
+// Add this interface for multiple next steps
+interface NextStep {
+  id: string; // Using string IDs for new steps
+  description: string;
+  dueDate?: string;
+  completed?: boolean;
+}
+
+// Add a new function to parse next steps from string format
+const parseNextSteps = (stepText?: string, dueDate?: string): NextStep[] => {
+  if (!stepText) return [];
+  
+  // If the stepText contains bullet points or numbered lists, split by those
+  if (stepText.includes('•') || /^\d+\.\s/.test(stepText)) {
+    const steps = stepText.split(/(?:^|\n)(?:•|\d+\.\s)/m)
+      .filter(step => step.trim().length > 0)
+      .map((step, index) => ({
+        id: `step-${Date.now()}-${index}`,
+        description: step.trim(),
+        dueDate: dueDate || undefined,
+        completed: false
+      }));
+    return steps;
+  }
+  
+  // Otherwise treat as a single step
+  return [{
+    id: `step-${Date.now()}`,
+    description: stepText.trim(),
+    dueDate: dueDate || undefined,
+    completed: false
+  }];
+};
+
+// Add a new function to format next steps back to string
+const formatNextStepsToString = (steps: NextStep[]): string => {
+  if (steps.length === 0) return '';
+  if (steps.length === 1) return steps[0].description;
+  
+  // Format as bullet points if multiple steps
+  return steps.map(step => `• ${step.description}`).join('\n');
+};
 
 export default function AdminUserPage() {
   const { userId } = useParams<{ userId: string }>();
@@ -729,23 +772,67 @@ export default function AdminUserPage() {
                               </div>
                               
                               {app.notes && (
-                                <div className="mt-3 text-sm bg-muted/50 p-2 rounded-md">
-                                  <div className="font-medium">Notes:</div>
-                                  <p className="text-muted-foreground">{app.notes}</p>
+                                <div className="mt-3 text-sm bg-muted/50 p-3 rounded-md space-y-2">
+                                  <div className="font-medium flex items-center gap-1.5">
+                                    <NotebookIcon className="h-4 w-4 text-primary" />
+                                    Notes:
+                                  </div>
+                                  {app.notes.split('\n').filter(line => line.trim().length > 0).map((line, i) => {
+                                    const isImportant = line.toLowerCase().includes('important') || 
+                                                      line.toLowerCase().includes('critical') ||
+                                                      line.toLowerCase().includes('!');
+                                                      
+                                    const isQuestion = line.includes('?');
+                                    
+                                    return (
+                                      <p 
+                                        key={i} 
+                                        className={cn(
+                                          "text-muted-foreground py-1 px-2 rounded",
+                                          isImportant ? "bg-yellow-50 border-l-2 border-yellow-500 dark:bg-yellow-950/20" : 
+                                          isQuestion ? "bg-blue-50 border-l-2 border-blue-500 dark:bg-blue-950/20" : 
+                                          "bg-transparent"
+                                        )}
+                                      >
+                                        {line}
+                                      </p>
+                                    );
+                                  })}
                                 </div>
                               )}
                               
                               {app.nextStep && (
-                                <div className="mt-2 text-sm bg-primary/5 p-2 rounded-md">
-                                  <div className="font-medium">Next Step:</div>
-                                  <p className="text-muted-foreground">
-                                    {app.nextStep}
-                                    {app.nextStepDueDate && (
-                                      <span className="ml-2 text-xs bg-background px-1.5 py-0.5 rounded-full">
-                                        Due: {format(new Date(app.nextStepDueDate), "MMM d, yyyy")}
-                                      </span>
-                                    )}
-                                  </p>
+                                <div className="mt-2 text-sm bg-primary/5 p-3 rounded-md space-y-2">
+                                  <div className="font-medium flex items-center gap-1.5">
+                                    <ArrowRightIcon className="h-4 w-4 text-primary" />
+                                    Next Steps:
+                                  </div>
+                                  {app.nextStep.split(/(?:^|\n)(?:•|\d+\.\s)/m)
+                                    .filter(step => step.trim().length > 0)
+                                    .map((step, index) => (
+                                      <div 
+                                        key={index}
+                                        className="flex items-start gap-2 p-2 rounded bg-background/50"
+                                      >
+                                        <div className="mt-0.5">
+                                          <div className="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center">
+                                            <span className="text-xs font-medium text-primary">{index + 1}</span>
+                                          </div>
+                                        </div>
+                                        <div>
+                                          <p className="text-muted-foreground">{step.trim()}</p>
+                                          {app.nextStepDueDate && index === 0 && (
+                                            <div className="flex items-center gap-1 mt-1 text-xs">
+                                              <CalendarIcon className="h-3 w-3 text-muted-foreground" />
+                                              <span className="text-muted-foreground">
+                                                Due: {format(new Date(app.nextStepDueDate), "MMM d, yyyy")}
+                                              </span>
+                                            </div>
+                                          )}
+                                        </div>
+                                      </div>
+                                    ))
+                                  }
                                 </div>
                               )}
                             </CardContent>
@@ -863,7 +950,7 @@ export default function AdminUserPage() {
             setSelectedDueDate(undefined);
           }
         }}>
-          <DialogContent className="max-w-md">
+          <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Application Details</DialogTitle>
               <DialogDescription>
@@ -871,85 +958,197 @@ export default function AdminUserPage() {
               </DialogDescription>
             </DialogHeader>
             
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <h4 className="text-sm font-medium">Notes</h4>
-                <Textarea 
-                  placeholder="Add notes about this application"
-                  defaultValue={selectedApplication.notes || ""}
-                  className="min-h-[100px]"
-                  id="application-notes"
-                />
-              </div>
+            {/* Add state for multiple next steps */}
+            {(() => {
+              // Use an IIFE to handle local state within JSX
+              const [nextSteps, setNextSteps] = useState<NextStep[]>(() => 
+                parseNextSteps(selectedApplication.nextStep, selectedApplication.nextStepDueDate)
+              );
+              const [activeNotes, setActiveNotes] = useState(selectedApplication.notes || '');
               
-              <div className="space-y-2">
-                <h4 className="text-sm font-medium">Next Step</h4>
-                <Input 
-                  placeholder="e.g., Schedule interview, Check references"
-                  defaultValue={selectedApplication.nextStep || ""}
-                  id="next-step"
-                />
-              </div>
+              // Function to add a new next step
+              const addNextStep = () => {
+                setNextSteps([
+                  ...nextSteps,
+                  {
+                    id: `step-${Date.now()}`,
+                    description: '',
+                    completed: false
+                  }
+                ]);
+              };
               
-              <div className="space-y-2">
-                <h4 className="text-sm font-medium">Due Date for Next Step</h4>
-                <div className="w-[280px]">
-                  <Input
-                    type="date"
-                    id="next-step-due-date"
-                    value={selectedDueDate ? 
-                      selectedDueDate.toISOString().split('T')[0] : 
-                      (selectedApplication.nextStepDueDate ? 
-                        new Date(selectedApplication.nextStepDueDate).toISOString().split('T')[0] : 
-                        '')}
-                    onChange={(e) => {
-                      if (e.target.value) {
-                        setSelectedDueDate(new Date(e.target.value + 'T00:00:00'));
-                      } else {
-                        setSelectedDueDate(undefined);
-                      }
-                    }}
-                  />
+              // Function to remove a next step
+              const removeNextStep = (id: string) => {
+                setNextSteps(nextSteps.filter(step => step.id !== id));
+              };
+              
+              // Function to update a next step
+              const updateNextStep = (id: string, data: Partial<NextStep>) => {
+                setNextSteps(nextSteps.map(step => 
+                  step.id === id ? { ...step, ...data } : step
+                ));
+              };
+              
+              // Function to handle saving the application details
+              const handleSave = () => {
+                // Format the next steps back to string
+                const nextStepString = formatNextStepsToString(nextSteps);
+                
+                // Get the due date from the first next step (for backward compatibility)
+                const nextStepDueDate = nextSteps.length > 0 && nextSteps[0].dueDate ? 
+                  nextSteps[0].dueDate : null;
+                
+                updateApplicationStatusMutation.mutate({
+                  applicationId: selectedApplication.id,
+                  notes: activeNotes,
+                  nextStep: nextStepString,
+                  nextStepDueDate
+                });
+              };
+              
+              return (
+                <div className="space-y-6 py-4">
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="text-lg font-semibold flex items-center gap-2">
+                        <NotebookIcon className="h-5 w-5 text-primary" />
+                        Notes
+                      </h3>
+                      <Button variant="ghost" size="sm" className="h-8 gap-1">
+                        <FileEdit className="h-4 w-4" />
+                        Edit
+                      </Button>
+                    </div>
+                    
+                    <Textarea 
+                      placeholder="Add notes about this application"
+                      value={activeNotes}
+                      onChange={(e) => setActiveNotes(e.target.value)}
+                      className="min-h-[120px]"
+                    />
+                    
+                    <div className="mt-2 text-xs text-muted-foreground">
+                      <p>Use <kbd className="px-1 py-0.5 bg-muted rounded">!</kbd> for important notes and <kbd className="px-1 py-0.5 bg-muted rounded">?</kbd> for questions. These will be highlighted for the user.</p>
+                    </div>
+                  </div>
+                  
+                  <Separator />
+                  
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="text-lg font-semibold flex items-center gap-2">
+                        <ListTodo className="h-5 w-5 text-primary" />
+                        Next Steps
+                      </h3>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="h-8 gap-1"
+                        onClick={addNextStep}
+                      >
+                        <PlusCircle className="h-4 w-4" />
+                        Add Step
+                      </Button>
+                    </div>
+                    
+                    <div className="space-y-3">
+                      {nextSteps.length === 0 ? (
+                        <div className="text-center py-6 text-muted-foreground bg-muted/30 rounded-lg">
+                          No next steps defined yet
+                        </div>
+                      ) : (
+                        nextSteps.map((step, index) => (
+                          <div 
+                            key={step.id}
+                            className="border rounded-lg p-3 space-y-3 bg-background relative"
+                          >
+                            <div className="absolute top-2 right-2">
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                                onClick={() => removeNextStep(step.id)}
+                              >
+                                <XCircle className="h-4 w-4" />
+                              </Button>
+                            </div>
+                            
+                            <div>
+                              <label className="text-sm font-medium mb-1.5 block">
+                                Step {index + 1}
+                              </label>
+                              <div className="flex items-start gap-2">
+                                <div className="mt-2">
+                                  <button 
+                                    type="button"
+                                    onClick={() => updateNextStep(step.id, { completed: !step.completed })}
+                                    className={cn(
+                                      "w-5 h-5 rounded-full border flex items-center justify-center transition-colors",
+                                      step.completed 
+                                        ? "bg-primary border-primary text-primary-foreground" 
+                                        : "border-muted-foreground/30 hover:border-primary"
+                                    )}
+                                  >
+                                    {step.completed && <CheckIcon className="h-3 w-3" />}
+                                  </button>
+                                </div>
+                                <Input 
+                                  value={step.description}
+                                  onChange={(e) => updateNextStep(step.id, { description: e.target.value })}
+                                  placeholder="Describe the next step..."
+                                  className="flex-1"
+                                />
+                              </div>
+                            </div>
+                            
+                            <div>
+                              <label className="text-sm font-medium mb-1.5 block flex items-center gap-1.5">
+                                <Clock className="h-3.5 w-3.5" />
+                                Due Date
+                              </label>
+                              <Input 
+                                type="date"
+                                value={step.dueDate ? new Date(step.dueDate).toISOString().split('T')[0] : ''}
+                                onChange={(e) => updateNextStep(step.id, { 
+                                  dueDate: e.target.value ? new Date(e.target.value + 'T00:00:00').toISOString() : undefined 
+                                })}
+                              />
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                  
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => {
+                      setApplicationDetailsDialogOpen(false);
+                      setSelectedDueDate(undefined);
+                    }}>
+                      Cancel
+                    </Button>
+                    <Button 
+                      onClick={handleSave}
+                      disabled={updateApplicationStatusMutation.isPending}
+                      className="gap-1.5"
+                    >
+                      {updateApplicationStatusMutation.isPending ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Saving...
+                        </>
+                      ) : (
+                        <>
+                          <Save className="h-4 w-4" />
+                          Save Changes
+                        </>
+                      )}
+                    </Button>
+                  </DialogFooter>
                 </div>
-              </div>
-            </div>
-            
-            <DialogFooter>
-              <Button variant="outline" onClick={() => {
-                setApplicationDetailsDialogOpen(false);
-                setSelectedDueDate(undefined);
-              }}>
-                Cancel
-              </Button>
-              <Button 
-                onClick={() => {
-                  const notesElement = document.getElementById('application-notes') as HTMLTextAreaElement;
-                  const nextStepElement = document.getElementById('next-step') as HTMLInputElement;
-                  const nextStepDueDateElement = document.getElementById('next-step-due-date') as HTMLInputElement;
-                  
-                  // Use the selectedDueDate state or get it from the input field
-                  const nextStepDueDate = nextStepDueDateElement.value ? 
-                    new Date(nextStepDueDateElement.value + 'T00:00:00').toISOString() : null;
-                  
-                  updateApplicationStatusMutation.mutate({
-                    applicationId: selectedApplication.id,
-                    notes: notesElement?.value,
-                    nextStep: nextStepElement?.value,
-                    nextStepDueDate
-                  });
-                }}
-                disabled={updateApplicationStatusMutation.isPending}
-              >
-                {updateApplicationStatusMutation.isPending ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Saving...
-                  </>
-                ) : (
-                  "Save Changes"
-                )}
-              </Button>
-            </DialogFooter>
+              );
+            })()}
           </DialogContent>
         </Dialog>
       )}

@@ -7,14 +7,18 @@ import {
   Loader2, AlertCircle, ChevronRight, 
   CalendarIcon, MapPinIcon, NotebookIcon, ArrowRightIcon, BriefcaseIcon, XCircleIcon,
   MessageSquare, Sparkles, Search, MousePointerClick, LayoutDashboard,
-  CheckCircle2, Circle, CircleDot
+  CheckCircle2, Circle, CircleDot,
+  Clock,
+  PlusCircle,
+  Pencil,
+  Info
 } from "lucide-react";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { apiRequest } from "@/lib/queryClient";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@/components/ui/use-toast";
 import { queryClient } from "@/lib/queryClient";
 import { WithdrawDialog } from "@/components/WithdrawDialog";
 import { MessageDialog } from "@/components/MessageDialog";
@@ -200,6 +204,206 @@ const ApplicationProgressTracker = ({
   );
 };
 
+// Modify NextStepItem to not use hooks directly
+interface NextStepItemProps {
+  step: string;
+  dueDate?: string;
+  isCompleted?: boolean;
+  onToggleComplete?: () => void;
+  isReadOnly?: boolean;
+  isLoading?: boolean;
+}
+
+const NextStepItem = ({ 
+  step, 
+  dueDate, 
+  isCompleted = false,
+  onToggleComplete,
+  isReadOnly = true,
+  isLoading = false
+}: NextStepItemProps) => {
+  // Calculate days remaining until due date
+  const getDaysRemaining = () => {
+    if (!dueDate) return null;
+    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const dueDateTime = new Date(dueDate);
+    dueDateTime.setHours(0, 0, 0, 0);
+    
+    const diffTime = dueDateTime.getTime() - today.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    return diffDays;
+  };
+  
+  const daysRemaining = getDaysRemaining();
+  
+  // Determine urgency level
+  const getUrgencyColor = () => {
+    if (daysRemaining === null) return "";
+    
+    if (daysRemaining < 0) return "text-red-500 bg-red-50 dark:bg-red-950/20";
+    if (daysRemaining === 0) return "text-red-500 bg-red-50 dark:bg-red-950/20";
+    if (daysRemaining <= 2) return "text-orange-500 bg-orange-50 dark:bg-orange-950/20";
+    if (daysRemaining <= 5) return "text-yellow-500 bg-yellow-50 dark:bg-yellow-950/20";
+    return "text-green-500 bg-green-50 dark:bg-green-950/20";
+  };
+  
+  const getUrgencyLabel = () => {
+    if (daysRemaining === null) return null;
+    
+    if (daysRemaining < 0) return `Overdue by ${Math.abs(daysRemaining)} day${Math.abs(daysRemaining) !== 1 ? 's' : ''}`;
+    if (daysRemaining === 0) return "Due today";
+    if (daysRemaining === 1) return "Due tomorrow";
+    return `${daysRemaining} days left`;
+  };
+  
+  return (
+    <div 
+      className={cn(
+        "flex items-start gap-3 p-3 rounded-lg transition-all",
+        isCompleted ? "bg-muted/30 line-through text-muted-foreground" : "bg-primary/5",
+        isLoading && "opacity-70 cursor-wait pointer-events-none"
+      )}
+      onClick={(e) => {
+        // Prevent click propagation to parent
+        e.stopPropagation();
+      }}
+    >
+      {!isReadOnly && (
+        <div className="mt-0.5">
+          <button 
+            onClick={(e) => {
+              e.stopPropagation(); // Prevent propagation here too
+              if (onToggleComplete && !isLoading) onToggleComplete();
+            }}
+            disabled={isLoading}
+            className={cn(
+              "w-5 h-5 rounded-full border flex items-center justify-center transition-colors",
+              isCompleted 
+                ? "bg-primary border-primary text-primary-foreground" 
+                : "border-muted-foreground/30 hover:border-primary",
+              isLoading && "opacity-50 cursor-not-allowed"
+            )}
+            aria-label={isCompleted ? "Mark as incomplete" : "Mark as complete"}
+          >
+            {isLoading ? (
+              <Loader2 className="h-3 w-3 animate-spin" />
+            ) : isCompleted ? (
+              <CheckCircle2 className="h-4 w-4" />
+            ) : null}
+          </button>
+        </div>
+      )}
+      
+      <div className="flex-1">
+        <div className={cn("font-medium text-sm", isLoading && "text-muted-foreground")}>
+          {step}
+          {isLoading && (
+            <span className="ml-2 text-xs text-muted-foreground inline-flex items-center">
+              <Loader2 className="h-3 w-3 animate-spin mr-1" />
+              Updating...
+            </span>
+          )}
+        </div>
+        
+        {dueDate && (
+          <div className="flex items-center gap-2 mt-1.5">
+            <div className="flex items-center gap-1.5">
+              <CalendarIcon className="h-3.5 w-3.5 text-muted-foreground" />
+              <span className="text-xs text-muted-foreground">
+                {format(new Date(dueDate), "MMM d, yyyy")}
+              </span>
+            </div>
+            
+            {daysRemaining !== null && !isLoading && (
+              <span className={cn(
+                "text-xs px-2 py-0.5 rounded-full",
+                getUrgencyColor(),
+                isCompleted && "opacity-50"
+              )}>
+                {getUrgencyLabel()}
+              </span>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// Also add a new NotesDisplay component for better notes presentation
+const NotesDisplay = ({ notes }: { notes: string }) => {
+  // Split notes by line breaks to handle them separately
+  const noteLines = notes.split('\n').filter(line => line.trim().length > 0);
+  
+  return (
+    <div 
+      className="space-y-2"
+      onClick={(e) => e.stopPropagation()} // Prevent click propagation
+    >
+      {noteLines.map((line, index) => {
+        // Check if line contains any indicators that might deserve special treatment
+        const isImportant = line.toLowerCase().includes('important') || 
+                           line.toLowerCase().includes('critical') ||
+                           line.toLowerCase().includes('!');
+                           
+        const isQuestion = line.includes('?');
+        
+        return (
+          <div 
+            key={index}
+            className={cn(
+              "px-3 py-2 rounded text-sm",
+              isImportant ? "bg-yellow-50 border-l-2 border-yellow-500 dark:bg-yellow-950/20" : 
+              isQuestion ? "bg-blue-50 border-l-2 border-blue-500 dark:bg-blue-950/20" : 
+              "bg-muted/30"
+            )}
+          >
+            {line}
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
+// Add a function to parse next steps from string format
+const parseNextSteps = (stepText?: string): Array<{ step: string; completed?: boolean }> => {
+  if (!stepText || typeof stepText !== 'string') return [];
+  
+  // Split by line breaks
+  return stepText.split('\n')
+    .filter(line => line.trim().length > 0)
+    .map(line => {
+      // Check if the step is marked as completed (has a [x] or [X] prefix)
+      const completedMatch = line.match(/^\s*\[(x|X)\]\s*(.+)$/);
+      if (completedMatch) {
+        return {
+          step: completedMatch[2].trim(),
+          completed: true
+        };
+      }
+      
+      // Check if the step has an incomplete checkbox
+      const incompleteMatch = line.match(/^\s*\[\s*\]\s*(.+)$/);
+      if (incompleteMatch) {
+        return {
+          step: incompleteMatch[1].trim(),
+          completed: false
+        };
+      }
+      
+      // Regular step without checkbox notation
+      return {
+        step: line.trim(),
+        completed: false
+      };
+    });
+};
+
 export default function DashboardPage() {
   const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
   const [activeMessageId, setActiveMessageId] = useState<number | null>(null);
@@ -210,6 +414,10 @@ export default function DashboardPage() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   const [location] = useLocation();
+  // Add state to track completed steps locally using a Set
+  const [completedSteps, setCompletedSteps] = useState<Set<string>>(new Set());
+  // Add state to track which steps are currently loading using a Set
+  const [loadingSteps, setLoadingSteps] = useState<Set<string>>(new Set());
 
   // Animation variants for staggered animations
   const containerVariants = {
@@ -353,6 +561,127 @@ export default function DashboardPage() {
   const handleJobClick = (job: Job) => {
     setSelectedJob(job);
   };
+
+  // Function to check if step is completed
+  const isStepCompleted = (application: Application, step: string): boolean => {
+    try {
+      // First check local state
+      if (completedSteps.has(`${application.id}-${step}`)) {
+        return true;
+      }
+      
+      // Then check application data
+      if (application.nextStep && typeof application.nextStep === 'string') {
+        const parsedSteps = parseNextSteps(application.nextStep);
+        const matchingStep = parsedSteps.find(s => s.step === step);
+        return matchingStep?.completed || false;
+      }
+      
+      return false;
+    } catch (error) {
+      console.error("Error checking step completion:", error);
+      return false;
+    }
+  };
+  
+  // Function to toggle step completion locally
+  const toggleStepCompletionLocally = (applicationId: number, step: string, completed: boolean) => {
+    const key = `${applicationId}-${step}`;
+    setCompletedSteps(prev => {
+      const newSet = new Set(prev);
+      if (completed) {
+        newSet.add(key);
+      } else {
+        newSet.delete(key);
+      }
+      return newSet;
+    });
+    
+    toast({
+      title: completed ? "Step marked as completed" : "Step marked as incomplete",
+      description: "This change is saved locally while we update the server.",
+    });
+  };
+
+  // Improve the mutation function with better error handling and fallback
+  const updateNextStepMutation = useMutation({
+    mutationFn: async ({ applicationId, step, completed }: { applicationId: number; step: string; completed: boolean }) => {
+      try {
+        // Set loading state for this step
+        const stepKey = `${applicationId}-${step}`;
+        setLoadingSteps(prev => {
+          const newSet = new Set(prev);
+          newSet.add(stepKey);
+          return newSet;
+        });
+        
+        const response = await apiRequest(
+          "PATCH", 
+          `/api/applications/${applicationId}/next-step-status`,
+          { 
+            stepDescription: step,
+            isCompleted: completed 
+          }
+        );
+        
+        // Handle empty response (204 No Content)
+        if (response.status === 204) {
+          return { success: true, message: "Step updated successfully" };
+        }
+        
+        // Check content type to determine if it's JSON
+        const contentType = response.headers.get("content-type");
+        if (contentType && contentType.includes("application/json")) {
+          return await response.json();
+        } else {
+          // Return a success message for non-JSON responses
+          return { success: true, message: "Step updated successfully" };
+        }
+      } catch (error) {
+        console.error("Error updating next step:", error);
+        // Use our fallback implementation
+        toggleStepCompletionLocally(applicationId, step, completed);
+        throw new Error("Failed to update next step on the server. Updated locally instead.");
+      } finally {
+        // Clear loading state regardless of outcome
+        const stepKey = `${applicationId}-${step}`;
+        setLoadingSteps(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(stepKey);
+          return newSet;
+        });
+      }
+    },
+    onSuccess: (data, variables) => {
+      toast({
+        title: variables.completed ? "Step marked as completed" : "Step marked as incomplete",
+        description: "Great job making progress on your application!",
+      });
+      
+      // Update the completed steps in the local state to match the server
+      const stepKey = `${variables.applicationId}-${variables.step}`;
+      setCompletedSteps(prev => {
+        const newSet = new Set(prev);
+        if (variables.completed) {
+          newSet.add(stepKey);
+        } else {
+          newSet.delete(stepKey);
+        }
+        return newSet;
+      });
+      
+      // Refresh the application data
+      queryClient.invalidateQueries({ queryKey: ["applications"] });
+    },
+    onError: (error, variables) => {
+      toast({
+        title: "Error updating step",
+        description: "Please try again later or contact support if the issue persists.",
+        variant: "destructive",
+      });
+      console.error("Error updating next step:", error);
+    }
+  });
 
   if (isLoadingApps || isLoadingJobs) {
     return (
@@ -557,30 +886,81 @@ export default function DashboardPage() {
                         />
                       )}
 
+                      {/* Notes Section */}
                       {application.notes && (
-                        <div className="mt-2 text-sm bg-muted/50 p-2 rounded-md">
-                          <div className="font-medium flex items-center gap-1">
-                            <NotebookIcon className="h-3.5 w-3.5" />
-                            Notes:
+                        <div 
+                          className="mt-3 space-y-1.5"
+                          onClick={(e) => e.stopPropagation()} // Prevent propagation
+                        >
+                          <div className="flex items-center gap-1.5">
+                            <NotebookIcon className="h-4 w-4 text-primary" />
+                            <h4 className="font-medium text-sm">Notes</h4>
                           </div>
-                          <p className="text-muted-foreground">{application.notes}</p>
+                          
+                          <NotesDisplay notes={application.notes} />
                         </div>
                       )}
 
+                      {/* Next Steps Section */}
                       {application.nextStep && (
-                        <div className="mt-2 text-sm bg-primary/5 p-2 rounded-md">
-                          <div className="font-medium flex items-center gap-1">
-                            <ArrowRightIcon className="h-3.5 w-3.5" />
-                            Next Step:
+                        <div 
+                          className="mt-3 space-y-1.5"
+                          onClick={(e) => e.stopPropagation()} // Prevent propagation
+                        >
+                          <div className="flex items-center gap-1.5">
+                            <ArrowRightIcon className="h-4 w-4 text-primary" />
+                            <h4 className="font-medium text-sm">Next Steps</h4>
                           </div>
-                          <p className="text-muted-foreground">
-                            {application.nextStep}
-                            {application.nextStepDueDate && (
-                              <span className="ml-2 text-xs bg-background px-1.5 py-0.5 rounded-full">
-                                Due: {format(new Date(application.nextStepDueDate), "MMM d, yyyy")}
-                              </span>
-                            )}
-                          </p>
+                          
+                          <div className="space-y-2">
+                            {application.nextStep.split('\n').map((step: string, index: number) => {
+                              if (step.trim()) {
+                                // Extract any due date from the step text (format: YYYY-MM-DD)
+                                const dueDateMatch = step.match(/\b(\d{4}-\d{2}-\d{2})\b/);
+                                const dueDate = dueDateMatch ? dueDateMatch[1] : undefined;
+                                
+                                // Remove the date from the display text if found
+                                const stepText = dueDateMatch 
+                                  ? step.replace(dueDateMatch[0], '').trim() 
+                                  : step.trim();
+                                
+                                const stepIsCompleted = isStepCompleted(application, stepText);
+                                const stepKey = `${application.id}-${stepText}`;
+                                const isLoading = loadingSteps.has(stepKey);
+                                
+                                return (
+                                  <NextStepItem
+                                    key={`step-${index}`}
+                                    step={stepText}
+                                    dueDate={dueDate}
+                                    isCompleted={stepIsCompleted}
+                                    isLoading={isLoading}
+                                    isReadOnly={false}
+                                    onToggleComplete={() => {
+                                      try {
+                                        updateNextStepMutation.mutate({
+                                          applicationId: application.id, 
+                                          step: stepText,
+                                          completed: !stepIsCompleted
+                                        });
+                                      } catch (e) {
+                                        // If the mutation throws, fall back to local state
+                                        toggleStepCompletionLocally(application.id, stepText, !stepIsCompleted);
+                                        
+                                        // Clear loading state
+                                        setLoadingSteps(prev => {
+                                          const newSet = new Set(prev);
+                                          newSet.delete(stepKey);
+                                          return newSet;
+                                        });
+                                      }
+                                    }}
+                                  />
+                                );
+                              }
+                              return null;
+                            })}
+                          </div>
                         </div>
                       )}
                     </motion.div>

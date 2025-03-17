@@ -105,6 +105,16 @@ export function JobModal({
           <DialogHeader>
             <motion.div variants={itemVariants}>
               <DialogTitle className="text-2xl">{job.title}</DialogTitle>
+              <DialogDescription className="flex items-center mt-1">
+                <Building2 className="h-4 w-4 mr-1.5 text-muted-foreground" />
+                {job.company} {job.location && (
+                  <>
+                    <span className="mx-1.5 text-muted-foreground">•</span>
+                    <MapPin className="h-4 w-4 mr-1.5 text-muted-foreground" />
+                    {job.location}
+                  </>
+                )}
+              </DialogDescription>
             </motion.div>
           </DialogHeader>
 
