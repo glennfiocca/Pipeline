@@ -18,6 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { Calendar, Award, Globe, Code } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { motion } from "framer-motion";
+import { User } from "lucide-react";
 
 // Add file state management
 interface FileState {
@@ -422,7 +423,7 @@ export default function ProfilePage() {
         transition={{ duration: 0.5 }}
       >
         <div className="flex items-center gap-2">
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6 text-primary"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+          <User className="h-6 w-6 text-primary" />
           <h1 className="text-3xl font-bold">Profile</h1>
         </div>
       </motion.div>

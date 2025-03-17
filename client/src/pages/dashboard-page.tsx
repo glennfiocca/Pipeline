@@ -6,7 +6,7 @@ import { format } from "date-fns";
 import { 
   Loader2, AlertCircle, ChevronRight, 
   CalendarIcon, MapPinIcon, NotebookIcon, ArrowRightIcon, BriefcaseIcon, XCircleIcon,
-  MessageSquare, Sparkles, Search, MousePointerClick
+  MessageSquare, Sparkles, Search, MousePointerClick, LayoutDashboard
 } from "lucide-react";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
@@ -235,7 +235,7 @@ export default function DashboardPage() {
         transition={{ duration: 0.5 }}
       >
         <div className="flex items-center gap-2">
-          <BriefcaseIcon className="h-6 w-6 text-primary" />
+          <LayoutDashboard className="h-6 w-6 text-primary" />
           <h1 className="text-3xl font-bold">Application Dashboard</h1>
         </div>
         {selectedStatus && (
