@@ -5,6 +5,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { NotificationsDialog } from "@/components/NotificationsDialog";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { NavCreditsCard } from "@/components/NavCreditsCard";
 
 export function NavBar() {
   const { user, logoutMutation } = useAuth();
@@ -90,7 +91,12 @@ export function NavBar() {
         )}
 
         <div className="flex-1 flex justify-end items-center space-x-2">
-          {user && <NotificationsDialog />}
+          {user && (
+            <>
+              <NavCreditsCard />
+              <NotificationsDialog />
+            </>
+          )}
           {user ? (
             <Button 
               variant="ghost" 

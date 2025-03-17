@@ -16,7 +16,6 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
 import { WithdrawDialog } from "@/components/WithdrawDialog";
-import { ApplicationCreditsCard } from "@/components/ApplicationCreditsCard";
 import { MessageDialog } from "@/components/MessageDialog";
 import { FeedbackDialog } from "@/components/FeedbackDialog";
 import { useLocation } from "wouter";
@@ -227,37 +226,25 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="container mx-auto px-4 py-10 max-w-7xl flex flex-col min-h-[calc(100vh-4rem)]">
-      {/* Hero section with animated gradient background */}
-      <div className="relative mb-8 p-6 rounded-2xl overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-gray-200/20 via-gray-100/10 to-gray-300/20 animate-gradient-slow dark:from-gray-800/20 dark:via-gray-900/10 dark:to-gray-700/20" />
-        <div className="absolute inset-0 bg-grid-pattern opacity-10" />
-        
-        <div className="relative flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <motion.h1 
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-            className="text-3xl font-bold tracking-tight"
-          >
-            Application Dashboard
-          </motion.h1>
-          <motion.div 
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-            className="flex items-center gap-2"
-          >
-            <ApplicationCreditsCard />
-            {selectedStatus && (
-              <Button variant="outline" size="sm" onClick={() => setSelectedStatus(null)} className="h-9">
-                <XCircleIcon className="h-4 w-4 mr-1" />
-                Clear Filter
-              </Button>
-            )}
-          </motion.div>
+    <div className="container mx-auto px-4 py-6 max-w-7xl flex flex-col min-h-[calc(100vh-4rem)]">
+      {/* Header section with title and filter button */}
+      <motion.div 
+        className="flex items-center justify-between mb-6"
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+      >
+        <div className="flex items-center gap-2">
+          <BriefcaseIcon className="h-6 w-6 text-primary" />
+          <h1 className="text-3xl font-bold">Application Dashboard</h1>
         </div>
-      </div>
+        {selectedStatus && (
+          <Button variant="outline" size="sm" onClick={() => setSelectedStatus(null)} className="h-9">
+            <XCircleIcon className="h-4 w-4 mr-1" />
+            Clear Filter
+          </Button>
+        )}
+      </motion.div>
 
       <motion.div 
         className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 mb-6"

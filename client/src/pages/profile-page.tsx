@@ -13,7 +13,6 @@ import { apiRequest } from "@/lib/queryClient";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2, Plus, X } from "lucide-react";
 import { useEffect, useMemo, useCallback, useState, useRef } from 'react';
-import { ApplicationCreditsCard } from "@/components/ApplicationCreditsCard";
 import { useAuth } from "@/hooks/use-auth";
 import { Badge } from "@/components/ui/badge";
 import { Calendar, Award, Globe, Code } from "lucide-react";
@@ -411,17 +410,20 @@ export default function ProfilePage() {
 
   return (
     <motion.div 
-      className="container py-10"
+      className="container py-6"
       initial="hidden"
       animate="visible"
       variants={pageVariants}
     >
-      <motion.h1 
-        className="text-3xl font-bold mb-6"
+      <motion.div 
+        className="flex items-center justify-between mb-4"
         variants={itemVariants}
       >
-        Profile
-      </motion.h1>
+        <div className="flex items-center gap-2">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-primary"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+          <h1 className="text-3xl font-bold">Profile</h1>
+        </div>
+      </motion.div>
 
       <Form {...form}>
         <form
@@ -445,7 +447,7 @@ export default function ProfilePage() {
         >
           <motion.div variants={itemVariants}>
             <Tabs defaultValue="personal">
-              <TabsList className="mb-4">
+              <TabsList className="mb-2">
                 <TabsTrigger value="personal">Personal Info</TabsTrigger>
                 <TabsTrigger value="education">Education</TabsTrigger>
                 <TabsTrigger value="experience">Experience</TabsTrigger>
@@ -456,7 +458,7 @@ export default function ProfilePage() {
                 <TabsTrigger value="additional">Additional</TabsTrigger>
               </TabsList>
 
-              <TabsContent value="personal">
+              <TabsContent value="personal" className="mt-2">
                 <motion.div variants={itemVariants}>
                   <Card>
                     <CardHeader>
@@ -626,7 +628,7 @@ export default function ProfilePage() {
                 </motion.div>
               </TabsContent>
 
-              <TabsContent value="education">
+              <TabsContent value="education" className="mt-2">
                 <motion.div variants={itemVariants}>
                   <Card>
                     <CardHeader>
@@ -785,7 +787,7 @@ export default function ProfilePage() {
                 </motion.div>
               </TabsContent>
 
-              <TabsContent value="experience">
+              <TabsContent value="experience" className="mt-2">
                 <motion.div variants={itemVariants}>
                   <Card>
                     <CardHeader>
@@ -944,7 +946,7 @@ export default function ProfilePage() {
                 </motion.div>
               </TabsContent>
 
-              <TabsContent value="skills">
+              <TabsContent value="skills" className="mt-2">
                 <motion.div variants={itemVariants}>
                   <Card>
                     <CardHeader>
@@ -1061,7 +1063,7 @@ export default function ProfilePage() {
                 </motion.div>
               </TabsContent>
 
-              <TabsContent value="certifications">
+              <TabsContent value="certifications" className="mt-2">
                 <motion.div variants={itemVariants}>
                   <Card>
                     <CardHeader>
@@ -1193,7 +1195,7 @@ export default function ProfilePage() {
                 </motion.div>
               </TabsContent>
 
-              <TabsContent value="projects">
+              <TabsContent value="projects" className="mt-2">
                 <motion.div variants={itemVariants}>
                   <Card>
                     <CardHeader>
@@ -1285,7 +1287,7 @@ export default function ProfilePage() {
                 </motion.div>
               </TabsContent>
 
-              <TabsContent value="documents">
+              <TabsContent value="documents" className="mt-2">
                 <motion.div variants={itemVariants}>
                   <Card>
                     <CardHeader>
@@ -1363,7 +1365,7 @@ export default function ProfilePage() {
                 </motion.div>
               </TabsContent>
 
-              <TabsContent value="additional">
+              <TabsContent value="additional" className="mt-2">
                 <motion.div variants={itemVariants}>
                   <Card>
                     <CardHeader>
@@ -1523,7 +1525,7 @@ export default function ProfilePage() {
 
           {/* Single submit button for the entire form */}
           <motion.div 
-            className="flex justify-end mt-6 pb-6"
+            className="flex justify-end mt-4 pb-4"
             variants={itemVariants}
           >
             <Button

@@ -14,7 +14,6 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useState, useEffect } from "react";
 import { JobModal } from "@/components/JobModal";
 import { Loader2, Search, Filter, Briefcase } from "lucide-react";
-import { ApplicationCreditsCard } from "@/components/ApplicationCreditsCard";
 import { useLocation } from "wouter";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -283,25 +282,24 @@ export default function JobsPage() {
 
   return (
     <motion.div 
-      className="container mx-auto px-4 py-10 max-w-7xl"
+      className="container mx-auto px-4 py-6 max-w-7xl"
       initial="hidden"
       animate="visible"
       variants={containerVariants}
     >
-      <div className="flex flex-col gap-6">
-        {/* Header with title and credits */}
+      <div className="flex flex-col gap-4">
+        {/* Header with title */}
         <motion.div 
-          className="flex items-center justify-between"
+          className="flex items-center mb-4"
           variants={itemVariants}
         >
           <div className="flex items-center gap-2">
             <Briefcase className="h-6 w-6 text-primary" />
             <h1 className="text-3xl font-bold">Jobs</h1>
           </div>
-          {user && <ApplicationCreditsCard />}
         </motion.div>
 
-        {/* Filters Section - Now at the top */}
+        {/* Filters Section */}
         <motion.div 
           variants={itemVariants}
           className="w-full"
