@@ -65,47 +65,6 @@ const ApplicationProgressTracker = ({
 
   const currentStageIndex = getCurrentStageIndex();
   
-  // Get the appropriate icon for each stage
-  const getStageIcon = (stage: string, index: number) => {
-    if (currentStatus === "Rejected" && index > currentStageIndex) {
-      // Show "blocked" icon for stages after the last valid stage if rejected
-      return <XCircleIcon className="h-4 w-4" />;
-    } else if (index < currentStageIndex) {
-      // Completed stage
-      return <CheckCircle2 className="h-4 w-4" />;
-    } else if (index === currentStageIndex) {
-      // Current stage
-      return <CircleDot className="h-4 w-4" />;
-    } else {
-      // Future stage
-      return <Circle className="h-4 w-4" />;
-    }
-  };
-
-  // Get the color class for each stage
-  const getStageColorClass = (index: number) => {
-    if (currentStatus === "Rejected") {
-      return index <= currentStageIndex 
-        ? "text-red-500" 
-        : "text-muted-foreground/30";
-    } else if (currentStatus === "Withdrawn") {
-      return index <= currentStageIndex 
-        ? "text-gray-500" 
-        : "text-muted-foreground/30";
-    } else {
-      if (index < currentStageIndex) {
-        return "text-green-500"; // Completed
-      } else if (index === currentStageIndex) {
-        if (currentStatus === "Applied") return "text-blue-500";
-        if (currentStatus === "Interviewing") return "text-yellow-500";
-        if (currentStatus === "Accepted") return "text-green-500";
-        return "text-primary";
-      } else {
-        return "text-muted-foreground/30"; // Future stage
-      }
-    }
-  };
-
   // Get the date for a specific stage from history
   const getStageDate = (stage: string) => {
     if (!statusHistory) return null;
@@ -115,71 +74,220 @@ const ApplicationProgressTracker = ({
     return historyItem ? new Date(historyItem.date) : null;
   };
 
+  // Function to get specific segment colors based on progress
+  const getSegmentColors = () => {
+    if (currentStatus === "Rejected") {
+      // For rejected, color up to the last stage before rejection
+      return Array(APPLICATION_STAGES.length).fill("").map((_, index) => {
+        if (index <= currentStageIndex) {
+          return index === currentStageIndex ? "bg-red-500/90" : "bg-blue-500/70"; 
+        }
+        return "bg-muted-foreground/10";
+      });
+    } else if (currentStatus === "Withdrawn") {
+      // For withdrawn, color up to the last stage before withdrawal
+      return Array(APPLICATION_STAGES.length).fill("").map((_, index) => {
+        if (index <= currentStageIndex) {
+          return index === currentStageIndex ? "bg-gray-500/90" : "bg-blue-500/70";
+        }
+        return "bg-muted-foreground/10";
+      });
+    } else {
+      // Regular progression - each stage gets its own color
+      return APPLICATION_STAGES.map((stage) => {
+        if (stage === "Applied") return "bg-blue-500/90";
+        if (stage === "Interviewing") return "bg-yellow-500/90";
+        if (stage === "Accepted") return "bg-green-500/90";
+        return "bg-muted-foreground/10";
+      });
+    }
+  };
+
+  const segmentColors = getSegmentColors();
+  
+  // Get solid color for each status
+  const getStageColor = (stage: string) => {
+    // Solid colors for each stage
+    const colors = {
+      Applied: "bg-blue-500",
+      Interviewing: "bg-yellow-500",
+      Accepted: "bg-green-500",
+      Rejected: "bg-red-500",
+      Withdrawn: "bg-gray-500"
+    };
+    
+    return colors[stage as keyof typeof colors] || "bg-muted-foreground/30";
+  };
+  
+  // Get glow color based on stage
+  const getGlowColor = (index: number) => {
+    if (index !== currentStageIndex) return "";
+    
+    if (currentStatus === "Rejected") {
+      return "shadow-[0_0_8px_rgba(239,68,68,0.5)]"; // Red glow
+    } else if (currentStatus === "Withdrawn") {
+      return "shadow-[0_0_8px_rgba(107,114,128,0.5)]"; // Gray glow
+    } else if (currentStatus === "Applied") {
+      return "shadow-[0_0_8px_rgba(59,130,246,0.5)]"; // Blue glow
+    } else if (currentStatus === "Interviewing") {
+      return "shadow-[0_0_8px_rgba(234,179,8,0.5)]"; // Yellow glow
+    } else if (currentStatus === "Accepted") {
+      return "shadow-[0_0_8px_rgba(34,197,94,0.5)]"; // Green glow
+    }
+    
+    return "";
+  };
+  
+  // Text color for each stage
+  const getStageTextColor = (stage: string, index: number) => {
+    if (currentStatus === "Rejected") {
+      return index <= currentStageIndex ? "text-red-500" : "text-muted-foreground/40";
+    } else if (currentStatus === "Withdrawn") {
+      return index <= currentStageIndex ? "text-gray-500" : "text-muted-foreground/40";
+    } else {
+      if (index === 0) return "text-blue-500"; // Applied always stays blue
+      if (index < currentStageIndex) return "text-green-500"; // Completed stages green
+      if (index === currentStageIndex) {
+        // Current stage gets its color
+        if (stage === "Applied") return "text-blue-500";
+        if (stage === "Interviewing") return "text-yellow-500";
+        if (stage === "Accepted") return "text-green-500";
+      }
+      return "text-muted-foreground/40"; // Future stages muted
+    }
+  };
+  
+  // Icon for each stage
+  const getStageIcon = (stage: string, index: number) => {
+    if (currentStatus === "Rejected" && index > currentStageIndex) {
+      // Show "blocked" icon for stages after the last valid stage if rejected
+      return <XCircleIcon className="h-5 w-5" />;
+    } else if (index < currentStageIndex) {
+      // Completed stage
+      return <CheckCircle2 className="h-5 w-5" />;
+    } else if (index === currentStageIndex) {
+      // Current stage gets a dot
+      return <CircleDot className="h-5 w-5" />;
+    } else {
+      // Future stage
+      return <Circle className="h-5 w-5" />;
+    }
+  };
+
   return (
     <div className="mt-4 pt-3 border-t border-border/40">
       <div className="relative">
-        {/* Progress bar background */}
-        <div className="absolute top-4 left-0 right-0 h-[2px] bg-muted-foreground/20"></div>
-        
-        {/* Filled progress bar */}
-        <div 
-          className={cn(
-            "absolute top-4 left-0 h-[2px] transition-all duration-500",
-            currentStatus === "Rejected" ? "bg-red-500" : 
-            currentStatus === "Withdrawn" ? "bg-gray-500" : 
-            "bg-primary"
-          )}
-          style={{ 
-            width: currentStageIndex >= 0 
-              ? `${((currentStageIndex + 1) / APPLICATION_STAGES.length) * 100}%` 
-              : '0%' 
-          }}
-        ></div>
-        
-        {/* Stage markers */}
+        {/* Stage markers and progress bar */}
         <div className="flex justify-between relative">
           {/* Start marker */}
-          <div className="flex flex-col items-center">
+          <div className="flex flex-col items-center z-10">
             <div className={cn(
-              "w-8 h-8 rounded-full flex items-center justify-center bg-background border-2",
-              currentStatus === "Rejected" || currentStatus === "Withdrawn" 
-                ? "border-red-500/50 text-red-500" 
-                : "border-primary/50 text-primary"
+              "w-10 h-10 rounded-full flex items-center justify-center bg-background shadow-sm transition-all duration-300",
+              currentStatus === "Rejected" 
+                ? "text-red-500" 
+                : currentStatus === "Withdrawn"
+                  ? "text-gray-500"
+                  : "text-foreground hover:scale-110 hover:shadow-[0_0_8px_rgba(0,0,0,0.3)]"
             )}>
-              <MousePointerClick className="h-4 w-4" />
+              <MousePointerClick className="h-5 w-5" />
             </div>
-            <span className="text-xs mt-2 font-medium">Start</span>
+            <span className={cn(
+              "text-xs mt-2 font-medium",
+              currentStatus === "Rejected" ? "text-red-500" : 
+              currentStatus === "Withdrawn" ? "text-gray-500" : "text-foreground"
+            )}>
+              Start
+            </span>
           </div>
           
-          {/* Application stages */}
-          {APPLICATION_STAGES.map((stage, index) => (
-            <div key={stage} className="flex flex-col items-center">
-              <div className={cn(
-                "w-8 h-8 rounded-full flex items-center justify-center bg-background border-2",
-                getStageColorClass(index),
-                index <= currentStageIndex 
-                  ? currentStatus === "Rejected" 
-                    ? "border-red-500/50" 
-                    : currentStatus === "Withdrawn"
-                      ? "border-gray-500/50"
-                      : "border-primary/50" 
-                  : "border-muted-foreground/20"
-              )}>
-                {getStageIcon(stage, index)}
+          {/* Progress bar background */}
+          <div className="absolute top-5 left-0 right-0 h-[6px] bg-muted-foreground/10 rounded-full"></div>
+          
+          {/* Separate color segments for each stage */}
+          {currentStageIndex >= 0 && APPLICATION_STAGES.map((stage, index) => {
+            // Only render segments up to current stage
+            if (index > currentStageIndex) return null;
+            
+            // Calculate segment position and width
+            const segmentWidth = 100 / APPLICATION_STAGES.length;
+            const segmentStart = index * segmentWidth;
+            
+            // Get color for this specific segment
+            const segmentColor = segmentColors[index];
+            
+            // Determine if this is the active stage
+            const isActiveStage = index === currentStageIndex;
+            
+            return (
+              <div 
+                key={`segment-${index}`}
+                className={cn(
+                  "absolute top-5 h-[6px] rounded-full transition-all duration-500",
+                  segmentColor
+                )}
+                style={{ 
+                  left: index === 0 ? "0%" : `${segmentStart}%`, 
+                  width: `${segmentWidth}%`,
+                }}
+              />
+            );
+          })}
+          
+          {/* Apply white bead animation only to current active segment */}
+          {currentStageIndex >= 0 && currentStatus !== "Rejected" && currentStatus !== "Withdrawn" && (
+            <div 
+              className="absolute top-5 h-[6px] overflow-hidden rounded-full"
+              style={{ 
+                left: currentStageIndex === 0 
+                  ? "0%" 
+                  : `${(currentStageIndex * (100 / APPLICATION_STAGES.length))}%`, 
+                width: `${100 / APPLICATION_STAGES.length}%`,
+              }}
+            >
+              <div className="absolute inset-0">
+                <div className="animate-light-bead absolute h-full w-[20%] bg-gradient-to-r from-transparent via-white/80 to-transparent" />
               </div>
-              <span className={cn(
-                "text-xs mt-2 font-medium",
-                getStageColorClass(index)
-              )}>
-                {stage}
-              </span>
-              {getStageDate(stage) && (
-                <span className="text-[10px] text-muted-foreground mt-1">
-                  {format(getStageDate(stage)!, "MMM d")}
-                </span>
-              )}
             </div>
-          ))}
+          )}
+          
+          {/* Application stages */}
+          {APPLICATION_STAGES.map((stage, index) => {
+            const stageColorMap = {
+              Applied: "hover:shadow-[0_0_8px_rgba(59,130,246,0.5)]",
+              Interviewing: "hover:shadow-[0_0_8px_rgba(234,179,8,0.5)]",
+              Accepted: "hover:shadow-[0_0_8px_rgba(34,197,94,0.5)]"
+            };
+            
+            const hoverEffect = currentStatus !== "Rejected" && currentStatus !== "Withdrawn"
+              ? stageColorMap[stage as keyof typeof stageColorMap] || ""
+              : "";
+              
+            return (
+              <div key={stage} className="flex flex-col items-center z-10">
+                <div className={cn(
+                  "w-10 h-10 rounded-full flex items-center justify-center bg-background shadow-sm transition-all duration-300 cursor-pointer",
+                  getStageTextColor(stage, index),
+                  index === currentStageIndex && getGlowColor(index),
+                  index === currentStageIndex && "scale-110",
+                  "hover:scale-110",
+                  hoverEffect
+                )}>
+                  {getStageIcon(stage, index)}
+                </div>
+                <span className={cn(
+                  "text-xs mt-2 font-medium transition-colors duration-300",
+                  getStageTextColor(stage, index)
+                )}>
+                  {stage}
+                </span>
+                {getStageDate(stage) && (
+                  <span className="text-[10px] text-muted-foreground mt-1">
+                    {format(getStageDate(stage)!, "MMM d")}
+                  </span>
+                )}
+              </div>
+            );
+          })}
         </div>
         
         {/* Status indicator for rejected/withdrawn */}
@@ -683,6 +791,17 @@ export default function DashboardPage() {
     }
   });
 
+  // Clean up the MessageDialog implementation to fix errors
+  const getJobTitleAndCompany = (applicationId: number) => {
+    const application = applications.find(a => a.id === applicationId);
+    if (!application) return { title: "", company: "" };
+    
+    const job = jobs.find(j => j.id === application.jobId);
+    if (!job) return { title: "", company: "" };
+    
+    return { title: job.title, company: job.company };
+  };
+
   if (isLoadingApps || isLoadingJobs) {
     return (
       <div className="flex items-center justify-center min-h-[calc(100vh-4rem)]">
@@ -980,8 +1099,8 @@ export default function DashboardPage() {
       {activeMessageId && (
         <MessageDialog
           applicationId={activeMessageId}
-          jobTitle={jobs.find(j => j.id === applications.find(a => a.id === activeMessageId)?.jobId)?.title || ""}
-          company={jobs.find(j => j.id === applications.find(a => a.id === activeMessageId)?.jobId)?.company || ""}
+          jobTitle={getJobTitleAndCompany(activeMessageId).title}
+          company={getJobTitleAndCompany(activeMessageId).company}
           onClose={() => setActiveMessageId(null)}
           isOpen={true}
         />

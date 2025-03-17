@@ -83,11 +83,21 @@ export default {
           "0%, 100%": { backgroundPosition: "0% 50%" },
           "50%": { backgroundPosition: "100% 50%" },
         },
+        "pulse-subtle": {
+          "0%, 100%": { opacity: "1" },
+          "50%": { opacity: "0.7" },
+        },
+        "light-bead": {
+          "0%": { left: "-20%" },
+          "100%": { left: "120%" }
+        }
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
         "gradient-slow": "gradient-shift 8s ease infinite",
+        "pulse-subtle": "pulse-subtle 2s cubic-bezier(0.4, 0, 0.6, 1) infinite",
+        "light-bead": "light-bead 2.5s cubic-bezier(0.4, 0, 0.2, 1) infinite"
       },
       backgroundImage: {
         "grid-pattern": "linear-gradient(to right, #80808015 1px, transparent 1px), linear-gradient(to bottom, #80808015 1px, transparent 1px)",
