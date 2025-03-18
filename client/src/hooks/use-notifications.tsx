@@ -10,6 +10,7 @@ interface NotificationsContextType {
   unreadCount: number;
   markAsRead: (id: number) => void;
   markAllAsRead: () => void;
+  deleteNotification: (id: number) => void;
   isLoading: boolean;
 }
 
@@ -22,11 +23,14 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
   const { data: notifications = [], isLoading } = useQuery<Notification[]>({
     queryKey: ["/api/notifications"],
     enabled: !!user,
+    staleTime: 0,
+    refetchOnWindowFocus: true,
   });
 
   const { data: unreadCount = 0 } = useQuery<number>({
     queryKey: ["/api/notifications/unread-count"],
     enabled: !!user,
+    staleTime: 0,
   });
 
   const markAsReadMutation = useMutation({
@@ -77,11 +81,69 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
     },
   });
 
+  const deleteNotificationMutation = useMutation({
+    mutationFn: async (id: number) => {
+      console.log(`Attempting to delete notification with ID: ${id}`);
+      
+      const response = await fetch(`/api/notifications/${id}`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json"
+        }
+      });
+      
+      console.log(`Delete response status: ${response.status}`);
+      
+      if (!response.ok) {
+        let errorMessage = "Failed to delete notification";
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorMessage;
+          console.error("Delete notification error:", errorData);
+        } catch (parseError) {
+          console.error("Error parsing error response:", parseError);
+        }
+        throw new Error(errorMessage);
+      }
+      
+      console.log(`Successfully deleted notification with ID: ${id}`);
+      return id;
+    },
+    onSuccess: (deletedId) => {
+      console.log(`Updating cache after successful deletion of ID: ${deletedId}`);
+      
+      queryClient.setQueryData<Notification[]>(["/api/notifications"], (oldData) => {
+        if (!oldData) return [];
+        const filteredData = oldData.filter(n => n.id !== deletedId);
+        console.log(`Filtered ${oldData.length} notifications to ${filteredData.length}`);
+        return filteredData;
+      });
+      
+      queryClient.invalidateQueries({ queryKey: ["/api/notifications"] });
+      
+      queryClient.invalidateQueries({ queryKey: ["/api/notifications/unread-count"] });
+      
+      toast({
+        title: "Success",
+        description: "Notification deleted successfully",
+      });
+    },
+    onError: (error) => {
+      console.error("Failed to delete notification:", error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to delete notification",
+        variant: "destructive",
+      });
+    },
+  });
+
   const value = {
     notifications,
     unreadCount,
     markAsRead: (id: number) => markAsReadMutation.mutate(id),
     markAllAsRead: () => markAllAsReadMutation.mutate(),
+    deleteNotification: (id: number) => deleteNotificationMutation.mutate(id),
     isLoading,
   };
 

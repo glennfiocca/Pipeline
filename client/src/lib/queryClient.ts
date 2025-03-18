@@ -74,11 +74,20 @@ export const queryClient = new QueryClient({
       queryFn: getQueryFn({ on401: "returnNull" }), // Changed to returnNull to handle 401s gracefully
       refetchInterval: false,
       refetchOnWindowFocus: true,
-      staleTime: 0,
+      staleTime: 0, // Don't cache any data
+      gcTime: 1000, // Very short garbage collection time (1 second)
       retry: false,
     },
     mutations: {
       retry: false,
     },
-  },
+  }
+});
+
+// Add a listener for notification mutations
+queryClient.getMutationCache().subscribe(() => {
+  // Whenever any mutation happens, invalidate notification queries
+  // This ensures they get refreshed after notification deletions
+  queryClient.invalidateQueries({ queryKey: ["/api/notifications"] });
+  queryClient.invalidateQueries({ queryKey: ["/api/notifications/unread-count"] });
 });

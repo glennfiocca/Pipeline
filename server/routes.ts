@@ -111,12 +111,87 @@ export function registerRoutes(app: Express): Server {
         return res.status(404).json({ error: "Application not found" });
       }
 
+      // Get the job details for the notification
+      const job = await storage.getJob(application.jobId);
+      if (!job) {
+        return res.status(404).json({ error: "Job not found" });
+      }
+
+      // Store the current state of the application to detect changes
+      const oldStatus = application.status;
+      const oldNextStep = application.nextStep;
+
+      // Update the application
       const updatedApplication = await storage.updateApplication(applicationId, {
         status,
         notes,
         nextStep,
         nextStepDueDate
       });
+
+      // Create notifications for material changes
+      if (application.profileId) {
+        // 1. Status change notification
+        if (status && status !== oldStatus) {
+          // Determine notification type and content based on status
+          const notificationData = 
+            status === 'Accepted' 
+              ? {
+                  type: 'application_accepted' as const,
+                  title: 'Application Accepted',
+                  content: `Congratulations! Your application for ${job.title} at ${job.company} has been accepted.`
+                }
+              : status === 'Rejected'
+                ? {
+                    type: 'application_rejected' as const,
+                    title: 'Application Not Selected',
+                    content: `We regret to inform you that your application for ${job.title} at ${job.company} was not selected to move forward.`
+                  }
+                : {
+                    type: 'application_status' as const,
+                    title: 'Application Status Updated',
+                    content: `Your application for ${job.title} at ${job.company} has been moved to ${status}`
+                  };
+          
+          await storage.createNotification({
+            userId: application.profileId,
+            ...notificationData,
+            isRead: false,
+            relatedId: applicationId,
+            relatedType: 'application',
+            metadata: {
+              applicationId,
+              oldStatus,
+              newStatus: status,
+              jobId: job.id,
+              jobTitle: job.title,
+              company: job.company
+            }
+          });
+        }
+
+        // 2. Next Steps notification - if next steps were added or updated
+        if (nextStep && nextStep !== oldNextStep) {
+          const isNewSteps = !oldNextStep; // Check if this is the first time next steps are being added
+          
+          await storage.createNotification({
+            userId: application.profileId,
+            type: isNewSteps ? 'next_steps_added' as const : 'next_steps_updated' as const,
+            title: isNewSteps ? 'Next Steps Added' : 'Next Steps Updated',
+            content: `Next steps have been ${isNewSteps ? 'added to' : 'updated for'} your application for ${job.title} at ${job.company}.`,
+            isRead: false,
+            relatedId: applicationId,
+            relatedType: 'application',
+            metadata: {
+              applicationId,
+              nextSteps: nextStep.split('\n').filter((step: string) => step.trim()),
+              jobId: job.id,
+              jobTitle: job.title,
+              company: job.company
+            }
+          });
+        }
+      }
 
       res.json(updatedApplication);
     } catch (error) {
@@ -670,11 +745,29 @@ export function registerRoutes(app: Express): Server {
 
       // Create a notification for the status change
       if (application.profileId) {
+        // Determine notification type and content based on status
+        const notificationData = 
+          status === 'Accepted' 
+            ? {
+                type: 'application_accepted' as const,
+                title: 'Application Accepted',
+                content: `Congratulations! Your application for ${job.title} at ${job.company} has been accepted.`
+              }
+            : status === 'Rejected'
+              ? {
+                  type: 'application_rejected' as const,
+                  title: 'Application Not Selected',
+                  content: `We regret to inform you that your application for ${job.title} at ${job.company} was not selected to move forward.`
+                }
+              : {
+                  type: 'application_status' as const,
+                  title: 'Application Status Updated',
+                  content: `Your application for ${job.title} at ${job.company} has been moved to ${status}`
+                };
+        
         await storage.createNotification({
           userId: application.profileId,
-          type: 'application_status_change',
-          title: 'Application Status Updated',
-          content: `Your application for ${job.title} at ${job.company} has been moved to ${status}`,
+          ...notificationData,
           isRead: false,
           relatedId: applicationId,
           relatedType: 'application',
@@ -756,7 +849,7 @@ export function registerRoutes(app: Express): Server {
         try {
           await storage.createNotification({
             userId: application.profileId,
-            type: 'message_received',
+            type: 'message_received' as const,
             title: 'New Message from Company',
             content: `You have a new message regarding your application for ${job.title}`,
             isRead: false,
@@ -926,6 +1019,44 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  app.post("/api/notifications", async (req: any, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ error: "Authentication required" });
+      }
+
+      // Only admin users or users creating notifications for themselves can use this endpoint
+      if (!req.user?.isAdmin && req.body.userId !== req.user.id) {
+        return res.status(403).json({ error: "Unauthorized to create notifications for this user" });
+      }
+
+      // Map the legacy format to the new schema format
+      let notificationData = { ...req.body };
+      
+      // Convert message field to content if it exists and content doesn't
+      if (req.body.message && !req.body.content) {
+        notificationData.content = req.body.message;
+        delete notificationData.message;
+      }
+
+      // Convert read field to isRead if it exists and isRead doesn't
+      if (req.body.read !== undefined && req.body.isRead === undefined) {
+        notificationData.isRead = req.body.read;
+        delete notificationData.read;
+      }
+
+      const notification = await storage.createNotification(notificationData);
+      res.status(201).json(notification);
+    } catch (error) {
+      console.error('Error creating notification:', error);
+      if (error instanceof Error) {
+        res.status(500).json({ error: "Failed to create notification", details: error.message });
+      } else {
+        res.status(500).json({ error: "Failed to create notification" });
+      }
+    }
+  });
+
   app.post("/api/notifications/:id/mark-read", async (req: any, res) => {
     try {
       if (!req.isAuthenticated()) {
@@ -956,6 +1087,57 @@ export function registerRoutes(app: Express): Server {
     } catch (error) {
       console.error('Error marking all notifications as read:', error);
       res.status(500).json({ error: "Failed to mark all notifications as read" });
+    }
+  });
+
+  app.delete("/api/notifications/:id", async (req: any, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        console.log('Unauthenticated delete attempt');
+        return res.status(401).json({ error: "Authentication required" });
+      }
+
+      const notificationId = parseInt(req.params.id);
+      if (isNaN(notificationId)) {
+        console.log('Invalid notification ID format:', req.params.id);
+        return res.status(400).json({ error: "Invalid notification ID" });
+      }
+
+      console.log(`Processing delete request for notification ID: ${notificationId} by user ID: ${req.user.id}`);
+
+      // Get the notification to verify ownership
+      const notification = await storage.getNotificationById(notificationId);
+      
+      if (!notification) {
+        console.log(`Notification not found: ${notificationId}`);
+        return res.status(404).json({ error: "Notification not found" });
+      }
+
+      // Only allow users to delete their own notifications
+      if (notification.userId !== req.user.id && !req.user.isAdmin) {
+        console.log(`Unauthorized delete attempt - User ${req.user.id} tried to delete notification ${notificationId} owned by user ${notification.userId}`);
+        return res.status(403).json({ error: "Unauthorized to delete this notification" });
+      }
+
+      // Force a hard delete from the database
+      const deleted = await storage.deleteNotification(notificationId);
+      
+      if (!deleted) {
+        console.log(`Failed to delete notification: ${notificationId}`);
+        return res.status(500).json({ error: "Failed to delete notification" });
+      }
+      
+      // Clear any cached notifications for this user
+      // This ensures the notification won't be retrieved again
+      console.log(`Successfully deleted notification: ${notificationId}`);
+      res.json({ 
+        success: true,
+        message: "Notification deleted successfully", 
+        id: notificationId 
+      });
+    } catch (error) {
+      console.error('Error deleting notification:', error);
+      res.status(500).json({ error: "Failed to delete notification" });
     }
   });
 

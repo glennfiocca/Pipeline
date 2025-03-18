@@ -370,10 +370,15 @@ export const insertNotificationSchema = createInsertSchema(notifications).omit({
   createdAt: true
 }).extend({
   type: z.enum([
-    'application_status',
-    'feedback_response',
-    'application_confirmation',
-    'message_received'
+    'application_status',    // Status changes (Applied, Screening, Interviewing, etc.)
+    'feedback_response',     // Responses to feedback
+    'application_confirmation', // Initial application confirmation
+    'message_received',      // New message received
+    'next_steps_added',      // New next steps added to application
+    'next_steps_updated',    // Next steps updated
+    'interview_scheduled',   // Interview scheduled
+    'application_accepted',  // Application accepted
+    'application_rejected'   // Application rejected
   ]),
   relatedType: z.enum(['application', 'feedback', 'message']).optional(),
   metadata: z.object({
@@ -381,7 +386,15 @@ export const insertNotificationSchema = createInsertSchema(notifications).omit({
     newStatus: z.string().optional(),
     applicationId: z.number().optional(),
     feedbackId: z.number().optional(),
-    messageId: z.number().optional()
+    messageId: z.number().optional(),
+    jobId: z.number().optional(),
+    jobTitle: z.string().optional(),
+    company: z.string().optional(),
+    nextSteps: z.array(z.string()).optional(),
+    interviewDate: z.string().optional(),
+    interviewTime: z.string().optional(),
+    interviewType: z.string().optional(),
+    interviewLocation: z.string().optional()
   }).optional()
 });
 

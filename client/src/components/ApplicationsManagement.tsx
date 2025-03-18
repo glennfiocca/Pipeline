@@ -84,29 +84,88 @@ export function ApplicationsManagement() {
       }
 
       const application = await response.json();
+      
+      // Get the job information for notification metadata
+      const jobRes = await apiRequest("GET", `/api/jobs/${application.jobId}`);
+      if (!jobRes.ok) {
+        console.error("Failed to fetch job details for notification");
+        throw new Error("Failed to fetch job details");
+      }
+      const job = await jobRes.json();
 
-      // Create a notification for the status change if status was updated
+      // Create notifications based on what was updated
+      
+      // 1. Status change notification
       if (status) {
+        let notificationType = 'application_status';
+        let notificationTitle = 'Application Status Updated';
+        let notificationContent = `Your application for ${job.title} at ${job.company} has been moved to ${status}`;
+        
+        // Special handling for accepted/rejected
+        if (status === 'Accepted') {
+          notificationType = 'application_accepted';
+          notificationTitle = 'Application Accepted';
+          notificationContent = `Congratulations! Your application for ${job.title} at ${job.company} has been accepted.`;
+        } else if (status === 'Rejected') {
+          notificationType = 'application_rejected';
+          notificationTitle = 'Application Not Selected';
+          notificationContent = `We regret to inform you that your application for ${job.title} at ${job.company} was not selected to move forward.`;
+        }
+        
         const notifRes = await apiRequest(
           "POST",
           "/api/notifications",
           {
             userId: application.profileId,
-            type: "status_change",
-            title: "Application Status Updated",
-            message: `Your application status has been updated to ${status}.`,
+            type: notificationType,
+            title: notificationTitle,
+            content: notificationContent,
+            isRead: false,
+            relatedId: applicationId,
+            relatedType: 'application',
             metadata: {
               applicationId,
               status,
-              jobId: application.jobId
-            },
-            read: false,
-            createdAt: now
+              oldStatus: application.status,
+              newStatus: status,
+              jobId: application.jobId,
+              jobTitle: job.title,
+              company: job.company
+            }
           }
         );
 
         if (!notifRes.ok) {
-          console.error("Failed to create notification");
+          console.error("Failed to create status notification");
+        }
+      }
+
+      // 2. Next Steps notification - if next steps were added or updated
+      if (nextStep && nextStep !== application.nextStep) {
+        const isNewSteps = !application.nextStep; // Check if this is the first time next steps are being added
+        const notifRes = await apiRequest(
+          "POST",
+          "/api/notifications",
+          {
+            userId: application.profileId,
+            type: isNewSteps ? 'next_steps_added' : 'next_steps_updated',
+            title: isNewSteps ? 'Next Steps Added' : 'Next Steps Updated',
+            content: `Next steps have been ${isNewSteps ? 'added to' : 'updated for'} your application for ${job.title} at ${job.company}.`,
+            isRead: false,
+            relatedId: applicationId,
+            relatedType: 'application',
+            metadata: {
+              applicationId,
+              nextSteps: nextStep.split('\n').filter(step => step.trim()),
+              jobId: application.jobId,
+              jobTitle: job.title,
+              company: job.company
+            }
+          }
+        );
+
+        if (!notifRes.ok) {
+          console.error("Failed to create next steps notification");
         }
       }
 

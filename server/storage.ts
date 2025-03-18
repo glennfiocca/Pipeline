@@ -49,7 +49,10 @@ export interface IStorage {
   // User-related interfaces
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
+  getUserById(id: number): Promise<User | undefined>;
+  getAllUsers(): Promise<User[]>;
   getUserByEmail(email: string): Promise<User | undefined>;
+  getUserByResetToken(token: string): Promise<User | undefined>;
   createUser(user: Pick<InsertUser, "username" | "email" | "password"> & { createdAt: string }): Promise<User>;
   updateUserPassword(id: number, hashedPassword: string): Promise<User>;
   updateUserResetToken(id: number, token: string, expiry: string): Promise<User>;
@@ -85,10 +88,12 @@ export interface IStorage {
 
   // Notification methods
   getNotifications(userId: number): Promise<Notification[]>;
+  getNotificationById(id: number): Promise<Notification | undefined>;
   getUnreadNotificationCount(userId: number): Promise<number>;
   createNotification(notification: InsertNotification): Promise<Notification>;
   markNotificationAsRead(id: number): Promise<Notification>;
   markAllNotificationsAsRead(userId: number): Promise<void>;
+  deleteNotification(id: number): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -124,8 +129,22 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
+  async getUserById(id: number): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user;
+  }
+
+  async getAllUsers(): Promise<User[]> {
+    return await db.select().from(users);
+  }
+
   async getUserByEmail(email: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.email, email));
+    return user;
+  }
+
+  async getUserByResetToken(token: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.resetToken, token));
     return user;
   }
 
@@ -633,6 +652,15 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(notifications.createdAt));
   }
 
+  async getNotificationById(id: number): Promise<Notification | undefined> {
+    const results = await db
+      .select()
+      .from(notifications)
+      .where(eq(notifications.id, id));
+    
+    return results.length > 0 ? results[0] : undefined;
+  }
+
   async getUnreadNotificationCount(userId: number): Promise<number> {
     const unreadNotifications = await db
       .select()
@@ -671,6 +699,44 @@ export class DatabaseStorage implements IStorage {
       .update(notifications)
       .set({ isRead: true })
       .where(eq(notifications.userId, userId));
+  }
+  
+  async deleteNotification(id: number): Promise<boolean> {
+    try {
+      console.log(`[Storage] Attempting to delete notification with ID: ${id}`);
+      
+      // First check if the notification exists
+      const notification = await this.getNotificationById(id);
+      if (!notification) {
+        console.warn(`[Storage] No notification found with ID ${id} to delete`);
+        return false;
+      }
+      
+      // Execute a hard delete without any soft delete functionality
+      const result = await db
+        .delete(notifications)
+        .where(eq(notifications.id, id))
+        .returning();
+      
+      // Check if the delete operation was successful
+      if (result.length === 0) {
+        console.warn(`[Storage] Delete operation completed but no notification was deleted for ID ${id}`);
+        return false;
+      }
+      
+      // Verify that the notification is actually gone
+      const checkDeleted = await this.getNotificationById(id);
+      if (checkDeleted) {
+        console.error(`[Storage] Deletion verification failed - notification with ID ${id} still exists`);
+        return false;
+      }
+      
+      console.log(`[Storage] Successfully deleted notification with ID: ${id}`);
+      return true;
+    } catch (error) {
+      console.error(`[Storage] Error deleting notification with ID ${id}:`, error);
+      throw error;
+    }
   }
 
   async getProfileByUserId(userId: number): Promise<Profile | undefined> {
