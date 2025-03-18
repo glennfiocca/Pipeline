@@ -773,31 +773,32 @@ export default function AdminUserPage() {
                               
                               {app.notes && (
                                 <div className="mt-3 text-sm bg-muted/50 p-3 rounded-md space-y-2">
-                                  <div className="font-medium flex items-center gap-1.5">
-                                    <NotebookIcon className="h-4 w-4 text-primary" />
-                                    Notes:
+                                  <div className="flex items-center justify-between mb-3">
+                                    <h3 className="text-lg font-semibold flex items-center gap-2">
+                                      <NotebookIcon className="h-5 w-5 text-primary" />
+                                      Internal Notes
+                                    </h3>
+                                    <Button variant="ghost" size="sm" className="h-8 gap-1">
+                                      <FileEdit className="h-4 w-4" />
+                                      Edit
+                                    </Button>
                                   </div>
-                                  {app.notes.split('\n').filter(line => line.trim().length > 0).map((line, i) => {
-                                    const isImportant = line.toLowerCase().includes('important') || 
-                                                      line.toLowerCase().includes('critical') ||
-                                                      line.toLowerCase().includes('!');
-                                                      
-                                    const isQuestion = line.includes('?');
-                                    
-                                    return (
-                                      <p 
-                                        key={i} 
-                                        className={cn(
-                                          "text-muted-foreground py-1 px-2 rounded",
-                                          isImportant ? "bg-yellow-50 border-l-2 border-yellow-500 dark:bg-yellow-950/20" : 
-                                          isQuestion ? "bg-blue-50 border-l-2 border-blue-500 dark:bg-blue-950/20" : 
-                                          "bg-transparent"
-                                        )}
-                                      >
-                                        {line}
-                                      </p>
-                                    );
-                                  })}
+                                  
+                                  <Textarea 
+                                    placeholder="Add internal notes about this application"
+                                    value={app.notes}
+                                    onChange={(e) => {
+                                      updateApplicationStatusMutation.mutate({
+                                        applicationId: app.id,
+                                        notes: e.target.value
+                                      });
+                                    }}
+                                    className="min-h-[120px]"
+                                  />
+                                  
+                                  <div className="mt-2 text-xs text-muted-foreground">
+                                    <p>Use <kbd className="px-1 py-0.5 bg-muted rounded">!</kbd> for important notes and <kbd className="px-1 py-0.5 bg-muted rounded">?</kbd> for questions. These will be highlighted for admins.</p>
+                                  </div>
                                 </div>
                               )}
                               
@@ -1013,7 +1014,7 @@ export default function AdminUserPage() {
                     <div className="flex items-center justify-between mb-3">
                       <h3 className="text-lg font-semibold flex items-center gap-2">
                         <NotebookIcon className="h-5 w-5 text-primary" />
-                        Notes
+                        Internal Notes
                       </h3>
                       <Button variant="ghost" size="sm" className="h-8 gap-1">
                         <FileEdit className="h-4 w-4" />
@@ -1022,14 +1023,14 @@ export default function AdminUserPage() {
                     </div>
                     
                     <Textarea 
-                      placeholder="Add notes about this application"
+                      placeholder="Add internal notes about this application"
                       value={activeNotes}
                       onChange={(e) => setActiveNotes(e.target.value)}
                       className="min-h-[120px]"
                     />
                     
                     <div className="mt-2 text-xs text-muted-foreground">
-                      <p>Use <kbd className="px-1 py-0.5 bg-muted rounded">!</kbd> for important notes and <kbd className="px-1 py-0.5 bg-muted rounded">?</kbd> for questions. These will be highlighted for the user.</p>
+                      <p>Use <kbd className="px-1 py-0.5 bg-muted rounded">!</kbd> for important notes and <kbd className="px-1 py-0.5 bg-muted rounded">?</kbd> for questions. These will be highlighted for admins.</p>
                     </div>
                   </div>
                   

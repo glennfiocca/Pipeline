@@ -395,9 +395,9 @@ export function ApplicationsManagement() {
                 </div>
                 
                 <div className="space-y-2">
-                  <h4 className="font-medium">Notes</h4>
+                  <h4 className="font-medium">Internal Notes</h4>
                   <Textarea 
-                    placeholder="Add notes about this application"
+                    placeholder="Add internal notes about this application"
                     defaultValue={currentApplication.notes || ""}
                     className="min-h-[100px]"
                     id="application-notes"

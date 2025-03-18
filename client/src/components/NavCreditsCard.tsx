@@ -34,10 +34,10 @@ export function NavCreditsCard() {
 
       // If last reset was before today, count only today's applications
       const today = zonedNow.toISOString().split('T')[0];
-      const applicationsToday = applications.filter(app => {
+      const applicationsToday = applications?.filter(app => {
         const appDate = toZonedTime(new Date(app.appliedAt), userTimezone);
         return appDate.toISOString().startsWith(today);
-      }).length;
+      })?.length || 0;
 
       setRemainingDailyCredits(10 - applicationsToday);
 

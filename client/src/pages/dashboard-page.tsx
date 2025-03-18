@@ -1012,20 +1012,7 @@ export default function DashboardPage() {
                         />
                       )}
 
-                      {/* Notes Section */}
-                      {application.notes && (
-                        <div 
-                          className="mt-3 space-y-1.5"
-                          onClick={(e) => e.stopPropagation()} // Prevent propagation
-                        >
-                          <div className="flex items-center gap-1.5">
-                            <NotebookIcon className="h-4 w-4 text-primary" />
-                            <h4 className="font-medium text-sm">Notes</h4>
-                          </div>
-                          
-                          <NotesDisplay notes={application.notes} />
-                        </div>
-                      )}
+                      {/* Notes Section removed to hide internal notes from users */}
 
                       {/* Next Steps Section */}
                       {application.nextStep && (

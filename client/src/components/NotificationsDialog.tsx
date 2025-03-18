@@ -34,7 +34,7 @@ export function NotificationsDialog() {
     queryKey: ["/api/applications"],
   });
 
-  const selectedApplication = applications.find(app => app.jobId === selectedJobId);
+  const selectedApplication = applications?.find(app => app.jobId === selectedJobId);
 
   const getNotificationTitle = (notification: any) => {
     const company = notification.metadata?.company || '';
@@ -152,13 +152,13 @@ export function NotificationsDialog() {
               <div className="flex items-center justify-center h-[200px]">
                 <Loader2 className="h-8 w-8 animate-spin" />
               </div>
-            ) : notifications.length === 0 ? (
+            ) : !notifications || notifications.length === 0 ? (
               <div className="text-center text-muted-foreground py-8">
                 No notifications
               </div>
             ) : (
               <div className="space-y-4">
-                {notifications.map((notification: any) => (
+                {(notifications || []).map((notification: any) => (
                   <div
                     key={notification.id}
                     className={`p-4 rounded-lg border ${
