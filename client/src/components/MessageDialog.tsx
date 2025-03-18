@@ -37,6 +37,8 @@ export function MessageDialog({
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const messageEndRef = useRef<HTMLDivElement>(null);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const scrollableRef = useRef<HTMLDivElement>(null);
   const { user } = useAuth();
 
   // Track unread count
@@ -105,8 +107,8 @@ export function MessageDialog({
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
-    if (messageEndRef.current && !isMinimized) {
-      messageEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    if (messageEndRef.current && scrollableRef.current && !isMinimized) {
+      scrollableRef.current.scrollTop = scrollableRef.current.scrollHeight;
     }
   }, [messages, isMinimized]);
 
@@ -208,6 +210,30 @@ export function MessageDialog({
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  // Custom scroll handler
+  const handleScroll = (e: React.WheelEvent<HTMLDivElement>) => {
+    if (scrollAreaRef.current) {
+      e.stopPropagation();
+    }
+  };
+
+  // Handle scroll events
+  useEffect(() => {
+    const scrollableElement = scrollableRef.current;
+    if (scrollableElement) {
+      const handleWheelEvent = (e: WheelEvent) => {
+        // Allow scrolling to happen naturally
+        e.stopPropagation();
+      };
+      
+      scrollableElement.addEventListener('wheel', handleWheelEvent, { passive: false });
+      
+      return () => {
+        scrollableElement.removeEventListener('wheel', handleWheelEvent);
+      };
+    }
+  }, [scrollableRef.current]);
 
   if (!isOpen) {
     return (
@@ -343,9 +369,19 @@ export function MessageDialog({
           </div>
 
           {/* Message container - flexible height with proper scrolling */}
-          <div className="flex-1 min-h-0">
-            <ScrollArea className="h-full pr-1">
-              <div className="space-y-4 p-4">
+          <div 
+            className="flex-1 min-h-0 overflow-hidden"
+            ref={scrollAreaRef}
+          >
+            <div
+              ref={scrollableRef}
+              className="h-full overflow-y-scroll px-4 py-4 pr-8"
+              style={{
+                WebkitOverflowScrolling: 'touch',
+              }}
+              onWheel={(e) => e.stopPropagation()}
+            >
+              <div className="space-y-4">
                 {isLoading ? (
                   <div className="flex justify-center items-center h-full py-10">
                     <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -392,7 +428,7 @@ export function MessageDialog({
                   </>
                 )}
               </div>
-            </ScrollArea>
+            </div>
           </div>
 
           {/* Compose area - Fixed height with responsive design */}
