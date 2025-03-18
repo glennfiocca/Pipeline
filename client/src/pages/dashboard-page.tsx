@@ -96,7 +96,7 @@ const ApplicationProgressTracker = ({
       // Regular progression - each stage gets its own color
       return APPLICATION_STAGES.map((stage) => {
         if (stage === "Applied") return "bg-blue-500/90";
-        if (stage === "Interviewing") return "bg-yellow-500/90";
+        if (stage === "Interviewing") return "bg-purple-500/90";
         if (stage === "Accepted") return "bg-green-500/90";
         return "bg-muted-foreground/10";
       });
@@ -110,7 +110,7 @@ const ApplicationProgressTracker = ({
     // Solid colors for each stage
     const colors = {
       Applied: "bg-blue-500",
-      Interviewing: "bg-yellow-500",
+      Interviewing: "bg-purple-500",
       Accepted: "bg-green-500",
       Rejected: "bg-red-500",
       Withdrawn: "bg-gray-500"
@@ -130,7 +130,7 @@ const ApplicationProgressTracker = ({
     } else if (currentStatus === "Applied") {
       return "shadow-[0_0_8px_rgba(59,130,246,0.5)]"; // Blue glow
     } else if (currentStatus === "Interviewing") {
-      return "shadow-[0_0_8px_rgba(234,179,8,0.5)]"; // Yellow glow
+      return "shadow-[0_0_8px_rgba(168,85,247,0.5)]"; // Purple glow instead of yellow
     } else if (currentStatus === "Accepted") {
       return "shadow-[0_0_8px_rgba(34,197,94,0.5)]"; // Green glow
     }
@@ -150,7 +150,7 @@ const ApplicationProgressTracker = ({
       if (index === currentStageIndex) {
         // Current stage gets its color
         if (stage === "Applied") return "text-blue-500";
-        if (stage === "Interviewing") return "text-yellow-500";
+        if (stage === "Interviewing") return "text-purple-500";
         if (stage === "Accepted") return "text-green-500";
       }
       return "text-muted-foreground/40"; // Future stages muted
@@ -254,7 +254,7 @@ const ApplicationProgressTracker = ({
           {APPLICATION_STAGES.map((stage, index) => {
             const stageColorMap = {
               Applied: "hover:shadow-[0_0_8px_rgba(59,130,246,0.5)]",
-              Interviewing: "hover:shadow-[0_0_8px_rgba(234,179,8,0.5)]",
+              Interviewing: "hover:shadow-[0_0_8px_rgba(168,85,247,0.5)]",
               Accepted: "hover:shadow-[0_0_8px_rgba(34,197,94,0.5)]"
             };
             
@@ -603,7 +603,7 @@ export default function DashboardPage() {
       case "applied":
         return "bg-blue-500/10 text-blue-500";
       case "interviewing":
-        return "bg-yellow-500/10 text-yellow-500";
+        return "bg-purple-500/10 text-purple-500";
       case "accepted":
         return "bg-green-500/10 text-green-500";
       case "rejected":
@@ -612,7 +612,7 @@ export default function DashboardPage() {
         return "bg-gray-500/10 text-gray-500";
       case "archived":
       case "inactive":
-        return "bg-purple-500/10 text-purple-500";
+        return "bg-yellow-500/10 text-yellow-500";
       default:
         return "bg-gray-500/10 text-gray-500";
     }
@@ -970,7 +970,7 @@ export default function DashboardPage() {
                       className={cn(
                         "p-4 rounded-lg border space-y-3 cursor-pointer hover:bg-accent/30 transition-colors",
                         !job.isActive && "bg-muted/30",
-                        application.status === "Interviewing" && "border-yellow-500/30",
+                        application.status === "Interviewing" && "border-purple-500/30",
                         application.status === "Accepted" && "border-green-500/30",
                         application.status === "Rejected" && "border-red-500/30"
                       )}

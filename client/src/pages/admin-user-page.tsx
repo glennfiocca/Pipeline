@@ -735,7 +735,7 @@ export default function AdminUserPage() {
                                     </SelectContent>
                                   </Select>
                                   <Badge className={app.status === "Applied" ? "bg-blue-500/10 text-blue-500" : 
-                                                app.status === "Interviewing" ? "bg-yellow-500/10 text-yellow-500" :
+                                                app.status === "Interviewing" ? "bg-purple-500/10 text-purple-500" :
                                                 app.status === "Accepted" ? "bg-green-500/10 text-green-500" :
                                                 app.status === "Rejected" ? "bg-red-500/10 text-red-500" :
                                                 "bg-gray-500/10 text-gray-500"}>

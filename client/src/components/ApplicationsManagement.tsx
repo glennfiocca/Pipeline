@@ -180,7 +180,7 @@ export function ApplicationsManagement() {
       case "applied":
         return "bg-blue-500/10 text-blue-500";
       case "interviewing":
-        return "bg-yellow-500/10 text-yellow-500";
+        return "bg-purple-500/10 text-purple-500";
       case "accepted":
         return "bg-green-500/10 text-green-500";
       case "rejected":
