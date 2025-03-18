@@ -31,13 +31,18 @@ export function MessageDialog({
 }: MessageDialogProps) {
   const [newMessage, setNewMessage] = useState("");
   const { toast } = useToast();
-  const [isOpen, setIsOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(propIsOpen || false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
-  const { user } = useAuth();
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const messageEndRef = useRef<HTMLDivElement>(null);
+  const { user } = useAuth();
 
+  // Track unread count
+  const [unreadCount, setUnreadCount] = useState(0);
+  
+  // Close dialog from parent
   useEffect(() => {
     if (propIsOpen !== undefined) {
       setIsOpen(propIsOpen);
@@ -47,58 +52,96 @@ export function MessageDialog({
     }
   }, [propIsOpen]);
 
+  // Function to calculate max height for the dialog
+  const getMaxDialogHeight = () => {
+    // Return a value that's responsive to window height
+    const windowHeight = window.innerHeight;
+    return Math.min(700, windowHeight - 80); // 80px buffer from edges
+  };
+
   const queryKey = [`/api/applications/${applicationId}/messages`];
 
-  const { data: messages = [] } = useQuery<Message[]>({
+  const { data: messages = [], isLoading } = useQuery<Message[]>({
     queryKey,
-    enabled: isOpen,
+    enabled: isOpen && applicationId > 0,
+    refetchInterval: isOpen && !isMinimized ? 5000 : false,
   });
 
-  const { data: unreadCount = 0 } = useQuery<number>({
-    queryKey: [`/api/applications/${applicationId}/messages/unread`],
+  // Mark messages as read
+  const markAsReadMutation = useMutation({
+    mutationFn: async (messageId: number) => {
+      const response = await apiRequest(
+        "PATCH",
+        `/api/applications/${applicationId}/messages/${messageId}/read`,
+        {}
+      );
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || "Failed to mark message as read");
+      }
+
+      return response.json();
+    },
+    onSuccess: (updatedMessage) => {
+      queryClient.setQueryData<Message[]>(queryKey, (old) => {
+        if (!old) return old;
+        return old.map(message => 
+          message.id === updatedMessage.id 
+            ? { ...message, isRead: true } 
+            : message
+        );
+      });
+    }
   });
 
+  // Count unread messages
   useEffect(() => {
-    if (scrollRef.current && !isMinimized) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    if (messages) {
+      const count = messages.filter(m => !m.isRead && m.isFromAdmin).length;
+      setUnreadCount(count);
+    }
+  }, [messages]);
+
+  // Auto-scroll to bottom when new messages arrive
+  useEffect(() => {
+    if (messageEndRef.current && !isMinimized) {
+      messageEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   }, [messages, isMinimized]);
 
+  // Auto-focus textarea when opening
   useEffect(() => {
     if (isOpen && !isMinimized && textareaRef.current) {
-      textareaRef.current.focus();
+      setTimeout(() => {
+        textareaRef.current?.focus();
+      }, 100);
     }
   }, [isOpen, isMinimized]);
 
+  // Create a new message
   const createMessageMutation = useMutation({
     mutationFn: async (content: string) => {
-      if (!user?.username) {
-        throw new Error("User not authenticated");
-      }
-
-      const messageData = {
-        applicationId,
-        content,
-        isFromAdmin: false,
-        senderUsername: user.username
-      };
-
-      const res = await apiRequest(
+      const response = await apiRequest(
         "POST",
         `/api/applications/${applicationId}/messages`,
-        messageData
+        {
+          applicationId,
+          content,
+          isFromAdmin: false,
+          senderUsername: user?.username || "You"
+        }
       );
 
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.message || "Failed to send message");
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || "Failed to send message");
       }
-      return res.json();
+
+      return response.json();
     },
     onSuccess: (newMessage) => {
-      queryClient.setQueryData([queryKey],
-        (old: Message[] | undefined) => [...(old || []), newMessage]
-      );
+      queryClient.setQueryData<Message[]>(queryKey, (old) => [...(old || []), newMessage]);
       setNewMessage("");
       toast({
         title: "Message sent",
@@ -108,49 +151,32 @@ export function MessageDialog({
     onError: (error: Error) => {
       toast({
         title: "Error",
-        description: error.message,
+        description: error.message || "Failed to send message",
         variant: "destructive",
       });
-    },
-  });
-
-  const markAsReadMutation = useMutation({
-    mutationFn: async (messageId: number) => {
-      const res = await apiRequest(
-        "PATCH",
-        `/api/messages/${messageId}/read`,
-        {}
-      );
-      if (!res.ok) {
-        throw new Error("Failed to mark message as read");
-      }
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: [`/api/applications/${applicationId}/messages/unread`],
-      });
-    },
+    }
   });
 
   const handleSend = () => {
-    if (!newMessage.trim()) return;
-    createMessageMutation.mutate(newMessage.trim());
+    const trimmedMessage = newMessage.trim();
+    if (trimmedMessage) {
+      createMessageMutation.mutate(trimmedMessage);
+    }
   };
 
   const handleMinimize = () => {
     setIsMinimized(true);
-    setIsExpanded(false);
   };
 
   const handleMaximize = () => {
     setIsExpanded(!isExpanded);
-    setIsMinimized(false);
   };
 
   const handleClose = () => {
     setIsOpen(false);
-    if (onClose) onClose();
+    if (onClose) {
+      onClose();
+    }
   };
 
   const handleOpen = () => {
@@ -168,6 +194,20 @@ export function MessageDialog({
   const handleMouseDown = (e: React.MouseEvent) => {
     e.stopPropagation();
   };
+
+  // Handle window resize
+  useEffect(() => {
+    const handleResize = () => {
+      // Force a re-render when window is resized
+      setIsExpanded(prevExpanded => {
+        // This triggers a re-render without actually changing the value
+        return prevExpanded;
+      });
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   if (!isOpen) {
     return (
@@ -205,10 +245,10 @@ export function MessageDialog({
       {/* Main dialog content - ensure it's above the backdrop */}
       {isMinimized ? (
         <div 
-          className="fixed bottom-4 right-4 w-64 bg-background border rounded-t-lg shadow-lg cursor-pointer z-[9999] pointer-events-auto"
+          className="fixed bottom-4 right-4 w-64 bg-background border rounded-lg shadow-lg cursor-pointer z-[9999] pointer-events-auto overflow-hidden"
           onClick={() => setIsMinimized(false)}
         >
-          <div className="flex items-center justify-between p-2 bg-primary text-primary-foreground rounded-t-lg">
+          <div className="flex items-center justify-between p-2 bg-primary text-primary-foreground">
             <span className="font-medium text-sm truncate">
               Message - {jobTitle} at {company}
             </span>
@@ -216,7 +256,7 @@ export function MessageDialog({
               <Button 
                 variant="ghost" 
                 size="icon" 
-                className="h-6 w-6 text-primary-foreground" 
+                className="h-6 w-6 text-primary-foreground hover:bg-primary-foreground/20" 
                 onClick={(e) => {
                   e.stopPropagation(); // This is needed to prevent the minimized container from expanding
                   handleClose();
@@ -226,46 +266,60 @@ export function MessageDialog({
               </Button>
             </div>
           </div>
+          {unreadCount > 0 && (
+            <div className="p-2 bg-muted/30 text-xs">
+              {unreadCount} unread message{unreadCount !== 1 ? 's' : ''}
+            </div>
+          )}
         </div>
       ) : (
         <div 
           className={cn(
-            "fixed bottom-4 right-4 bg-background border rounded-t-lg shadow-lg flex flex-col z-[9999] pointer-events-auto",
+            "fixed bottom-4 right-4 bg-background border rounded-lg shadow-xl flex flex-col z-[9999] pointer-events-auto",
             isExpanded 
-              ? "w-[600px] h-[80vh]" 
-              : "w-[400px] h-[500px]"
+              ? "w-[min(800px,calc(100vw-32px))]" 
+              : "w-[min(500px,calc(100vw-32px))]"
           )}
           onClick={(e) => e.stopPropagation()}
+          style={{ 
+            height: isExpanded 
+              ? `min(${getMaxDialogHeight()}px, calc(100vh - 32px))` 
+              : `min(600px, calc(100vh - 32px))`,
+            maxHeight: 'calc(100vh - 32px)'
+          }}
         >
           {/* Header - Fixed height */}
-          <div className="flex items-center justify-between p-2 bg-primary text-primary-foreground rounded-t-lg">
-            <span className="font-medium">
-              New Message - {jobTitle} at {company}
+          <div className="flex items-center justify-between p-3 bg-primary text-primary-foreground rounded-t-lg">
+            <span className="font-medium truncate">
+              Message - {jobTitle} at {company}
             </span>
             <div className="flex items-center space-x-1">
               <Button 
                 variant="ghost" 
                 size="icon" 
-                className="h-6 w-6 text-primary-foreground" 
+                className="h-7 w-7 text-primary-foreground hover:bg-primary-foreground/20" 
                 onClick={handleMinimize}
+                title="Minimize"
               >
-                <Minimize2 className="h-3 w-3" />
+                <Minimize2 className="h-4 w-4" />
               </Button>
               <Button 
                 variant="ghost" 
                 size="icon" 
-                className="h-6 w-6 text-primary-foreground" 
+                className="h-7 w-7 text-primary-foreground hover:bg-primary-foreground/20" 
                 onClick={handleMaximize}
+                title={isExpanded ? "Reduce size" : "Expand"}
               >
-                <Maximize2 className="h-3 w-3" />
+                <Maximize2 className="h-4 w-4" />
               </Button>
               <Button 
                 variant="ghost" 
                 size="icon" 
-                className="h-6 w-6 text-primary-foreground" 
+                className="h-7 w-7 text-primary-foreground hover:bg-primary-foreground/20" 
                 onClick={handleClose}
+                title="Close"
               >
-                <X className="h-3 w-3" />
+                <X className="h-4 w-4" />
               </Button>
             </div>
           </div>
@@ -288,62 +342,67 @@ export function MessageDialog({
             </div>
           </div>
 
-          {/* Message container with explicit heights - this is key for scrolling */}
-          <div className="flex flex-col" style={{ height: 'calc(100% - 162px)' }}>
-            {/* Message thread - with explicit height */}
-            <div 
-              className="overflow-y-auto h-full"
-              ref={scrollRef}
-              onClick={(e) => e.stopPropagation()}
-            >
+          {/* Message container - flexible height with proper scrolling */}
+          <div className="flex-1 min-h-0">
+            <ScrollArea className="h-full pr-1">
               <div className="space-y-4 p-4">
-                {messages.length === 0 ? (
-                  <p className="text-center text-muted-foreground py-4">
+                {isLoading ? (
+                  <div className="flex justify-center items-center h-full py-10">
+                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                  </div>
+                ) : messages.length === 0 ? (
+                  <p className="text-center text-muted-foreground py-10">
                     No messages yet. Start the conversation!
                   </p>
                 ) : (
-                  messages.map((message) => (
-                    message.content && (
-                      <div
-                        key={message.id}
-                        className={cn(
-                          "p-4 rounded-lg",
-                          message.isFromAdmin
-                            ? "bg-muted ml-8 border border-border/50"
-                            : "bg-primary/10 mr-8"
-                        )}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (!message.isRead && !message.isFromAdmin) {
-                            markAsReadMutation.mutate(message.id);
-                          }
-                        }}
-                      >
-                        <div className="flex justify-between items-start mb-2">
-                          <span className="font-medium">
-                            {message.isFromAdmin ? company : message.senderUsername}
-                          </span>
-                          <span className="text-xs text-muted-foreground">
-                            {format(new Date(message.createdAt), "MMM d, yyyy h:mm a")}
-                          </span>
+                  <>
+                    {messages.map((message) => (
+                      message.content && (
+                        <div
+                          key={message.id}
+                          className={cn(
+                            "p-4 rounded-lg shadow-sm border border-border/30",
+                            message.isFromAdmin
+                              ? "bg-muted/50 ml-8" 
+                              : "bg-primary/5 mr-8"
+                          )}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (!message.isRead && message.isFromAdmin) {
+                              markAsReadMutation.mutate(message.id);
+                            }
+                          }}
+                        >
+                          <div className="flex justify-between items-start mb-2">
+                            <span className="font-medium">
+                              {message.isFromAdmin ? company : message.senderUsername || "You"}
+                            </span>
+                            <span className="text-xs text-muted-foreground">
+                              {format(new Date(message.createdAt), "MMM d, yyyy h:mm a")}
+                            </span>
+                          </div>
+                          <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                          {!message.isRead && message.isFromAdmin && (
+                            <div className="mt-2 text-xs font-medium text-primary">New</div>
+                          )}
                         </div>
-                        <p className="text-sm whitespace-pre-wrap">{message.content}</p>
-                      </div>
-                    )
-                  ))
+                      )
+                    ))}
+                    <div ref={messageEndRef} />
+                  </>
                 )}
               </div>
-            </div>
+            </ScrollArea>
           </div>
 
-          {/* Compose area - Fixed height */}
-          <div className="p-3 border-t bg-muted/20" style={{ height: '156px' }}>
+          {/* Compose area - Fixed height with responsive design */}
+          <div className="p-3 border-t bg-muted/20">
             <Textarea
               ref={textareaRef}
               placeholder="Type your message..."
               value={newMessage}
               onChange={(e) => setNewMessage(e.target.value)}
-              className="resize-none h-[100px] focus-visible:ring-0 border-0 shadow-none bg-transparent p-0"
+              className="resize-none h-[80px] focus-visible:ring-0 border border-input/50 shadow-sm bg-background p-2 rounded-md"
               onKeyDown={(e) => {
                 e.stopPropagation();
                 if (e.key === "Enter" && !e.shiftKey) {
@@ -364,8 +423,9 @@ export function MessageDialog({
               </div>
               <Button
                 onClick={handleSend}
-                disabled={createMessageMutation.isPending}
+                disabled={!newMessage.trim() || createMessageMutation.isPending}
                 size="sm"
+                className="transition-all"
               >
                 {createMessageMutation.isPending ? (
                   <Loader2 className="h-3 w-3 animate-spin mr-1" />

@@ -41,23 +41,34 @@ export function AdminMessageDialog({
   const [isExpanded, setIsExpanded] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const messageEndRef = useRef<HTMLDivElement>(null);
 
   const queryKey = [`/api/applications/${applicationId}/messages`];
+
+  // Function to calculate max height for the dialog
+  const getMaxDialogHeight = () => {
+    // Return a value that's responsive to window height
+    const windowHeight = window.innerHeight;
+    return Math.min(700, windowHeight - 80); // 80px buffer from edges
+  };
 
   const { data: messages = [], isLoading } = useQuery<Message[]>({
     queryKey,
     enabled: isOpen && applicationId > 0,
+    refetchInterval: isOpen && !isMinimized ? 5000 : false,
   });
 
   useEffect(() => {
-    if (scrollRef.current && !isMinimized) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    if (messageEndRef.current && !isMinimized) {
+      messageEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   }, [messages, isMinimized]);
 
   useEffect(() => {
     if (isOpen && !isMinimized && textareaRef.current) {
-      textareaRef.current.focus();
+      setTimeout(() => {
+        textareaRef.current?.focus();
+      }, 100);
     }
   }, [isOpen, isMinimized]);
 
@@ -84,7 +95,7 @@ export function AdminMessageDialog({
       return response.json();
     },
     onSuccess: (newMessage) => {
-      queryClient.setQueryData([queryKey], (old: Message[] | undefined) => [...(old || []), newMessage]);
+      queryClient.setQueryData<Message[]>(queryKey, (old) => [...(old || []), newMessage]);
       setNewMessage("");
       toast({
         title: "Message sent",
@@ -100,51 +111,34 @@ export function AdminMessageDialog({
     }
   });
 
-  const handleSendMessage = async () => {
-    if (!newMessage.trim()) return;
-    try {
-      await sendMessageMutation.mutateAsync(newMessage.trim());
-    } catch (error) {
-      console.error("Error in handleSendMessage:", error);
-    }
-  };
-
-  const formatMessageDate = (dateString: string) => {
-    if (!dateString) return "";
-    try {
-      const date = parseISO(dateString);
-      if (!isValid(date)) {
-        throw new Error("Invalid date format");
-      }
-      return format(date, "MMM d, h:mm a");
-    } catch (error) {
-      console.error("Date formatting error:", error);
-      return "";
+  const handleSendMessage = () => {
+    const trimmedMessage = newMessage.trim();
+    if (trimmedMessage) {
+      sendMessageMutation.mutate(trimmedMessage);
     }
   };
 
   const handleMinimize = () => {
     setIsMinimized(true);
-    setIsExpanded(false);
   };
 
   const handleMaximize = () => {
     setIsExpanded(!isExpanded);
-    setIsMinimized(false);
   };
 
-  // Add event handlers to stop propagation
-  const handleContentClick = (e: React.MouseEvent) => {
-    // Stop click events from propagating to elements behind the dialog
-    e.stopPropagation();
-  };
+  // Handle window resize
+  useEffect(() => {
+    const handleResize = () => {
+      // Force a re-render when window is resized
+      setIsExpanded(prevExpanded => {
+        // This triggers a re-render without actually changing the value
+        return prevExpanded;
+      });
+    };
 
-  // Add onMouseDown handler to prevent blur events
-  const handleMouseDown = (e: React.MouseEvent) => {
-    e.stopPropagation();
-  };
-
-  if (!isOpen) return null;
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Use createPortal to render this component at the root level
   const content = (
@@ -164,18 +158,18 @@ export function AdminMessageDialog({
       {/* Actual dialog content */}
       {isMinimized ? (
         <div 
-          className="fixed bottom-4 right-4 w-64 bg-background border rounded-t-lg shadow-lg cursor-pointer z-[9999] pointer-events-auto"
+          className="fixed bottom-4 right-4 w-64 bg-background border rounded-lg shadow-lg cursor-pointer z-[9999] pointer-events-auto overflow-hidden"
           onClick={(e) => {
             // This is a separate element, no need to call stopPropagation
             setIsMinimized(false);
           }}
         >
-          <div className="flex items-center justify-between p-2 bg-primary text-primary-foreground rounded-t-lg">
+          <div className="flex items-center justify-between p-2 bg-primary text-primary-foreground">
             <span className="font-medium text-sm truncate">
               Message to {username}
             </span>
             <div className="flex items-center space-x-1">
-              <Button variant="ghost" size="icon" className="h-6 w-6 text-primary-foreground" onClick={(e) => {
+              <Button variant="ghost" size="icon" className="h-6 w-6 text-primary-foreground hover:bg-primary-foreground/20" onClick={(e) => {
                 e.stopPropagation(); // This is needed to prevent the minimized container from expanding
                 onClose();
               }}>
@@ -187,27 +181,33 @@ export function AdminMessageDialog({
       ) : (
         <div 
           className={cn(
-            "fixed bottom-4 right-4 bg-background border rounded-t-lg shadow-lg flex flex-col z-[9999] pointer-events-auto",
+            "fixed bottom-4 right-4 bg-background border rounded-lg shadow-xl flex flex-col z-[9999] pointer-events-auto",
             isExpanded 
-              ? "w-[600px] h-[80vh]" 
-              : "w-[400px] h-[500px]"
+              ? "w-[min(800px,calc(100vw-32px))]" 
+              : "w-[min(500px,calc(100vw-32px))]"
           )}
           onClick={(e) => e.stopPropagation()}
+          style={{ 
+            height: isExpanded 
+              ? `min(${getMaxDialogHeight()}px, calc(100vh - 32px))` 
+              : `min(600px, calc(100vh - 32px))`,
+            maxHeight: 'calc(100vh - 32px)'
+          }}
         >
           {/* Header - Fixed height */}
-          <div className="flex items-center justify-between p-2 bg-primary text-primary-foreground rounded-t-lg">
-            <span className="font-medium">
-              New Message to {username}
+          <div className="flex items-center justify-between p-3 bg-primary text-primary-foreground rounded-t-lg">
+            <span className="font-medium truncate">
+              Message to {username}
             </span>
             <div className="flex items-center space-x-1">
-              <Button variant="ghost" size="icon" className="h-6 w-6 text-primary-foreground" onClick={handleMinimize}>
-                <Minimize2 className="h-3 w-3" />
+              <Button variant="ghost" size="icon" className="h-7 w-7 text-primary-foreground hover:bg-primary-foreground/20" onClick={handleMinimize} title="Minimize">
+                <Minimize2 className="h-4 w-4" />
               </Button>
-              <Button variant="ghost" size="icon" className="h-6 w-6 text-primary-foreground" onClick={handleMaximize}>
-                <Maximize2 className="h-3 w-3" />
+              <Button variant="ghost" size="icon" className="h-7 w-7 text-primary-foreground hover:bg-primary-foreground/20" onClick={handleMaximize} title={isExpanded ? "Reduce size" : "Expand"}>
+                <Maximize2 className="h-4 w-4" />
               </Button>
-              <Button variant="ghost" size="icon" className="h-6 w-6 text-primary-foreground" onClick={onClose}>
-                <X className="h-3 w-3" />
+              <Button variant="ghost" size="icon" className="h-7 w-7 text-primary-foreground hover:bg-primary-foreground/20" onClick={onClose} title="Close">
+                <X className="h-4 w-4" />
               </Button>
             </div>
           </div>
@@ -230,61 +230,58 @@ export function AdminMessageDialog({
             </div>
           </div>
 
-          {/* Message container with explicit heights - this is key for scrolling */}
-          <div className="flex flex-col" style={{ height: 'calc(100% - 162px)' }}>
-            {/* Message thread - with explicit height */}
-            <div 
-              className="overflow-y-auto h-full"
-              ref={scrollRef}
-              onClick={(e) => e.stopPropagation()}
-            >
-              {isLoading ? (
-                <div className="flex items-center justify-center h-full">
-                  <Loader2 className="h-6 w-6 animate-spin" />
-                </div>
-              ) : messages.length === 0 ? (
-                <div className="text-center text-muted-foreground py-8">
-                  No messages yet. Start the conversation!
-                </div>
-              ) : (
-                <div className="space-y-4 p-4">
-                  {messages.map((message) => (
-                    message.content && (
-                      <div
-                        key={message.id}
-                        className={cn(
-                          "p-4 rounded-lg",
-                          message.isFromAdmin
-                            ? "bg-primary/10 mr-8"
-                            : "bg-muted ml-8 border border-border/50"
-                        )}
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <div className="flex justify-between items-start mb-2">
-                          <span className="font-medium">
-                            {message.isFromAdmin ? companyName : username}
-                          </span>
-                          <span className="text-xs text-muted-foreground">
-                            {formatMessageDate(message.createdAt)}
-                          </span>
+          {/* Message container - flexible height with proper scrolling */}
+          <div className="flex-1 min-h-0">
+            <ScrollArea className="h-full pr-1">
+              <div className="space-y-4 p-4">
+                {isLoading ? (
+                  <div className="flex justify-center items-center h-full py-10">
+                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                  </div>
+                ) : messages.length === 0 ? (
+                  <p className="text-center text-muted-foreground py-10">
+                    No messages yet. Start the conversation!
+                  </p>
+                ) : (
+                  <>
+                    {messages.map((message) => (
+                      message.content && (
+                        <div
+                          key={message.id}
+                          className={cn(
+                            "p-4 rounded-lg shadow-sm border border-border/30",
+                            message.isFromAdmin
+                              ? "bg-primary/5 mr-8"
+                              : "bg-muted/50 ml-8"
+                          )}
+                        >
+                          <div className="flex justify-between items-start mb-2">
+                            <span className="font-medium">
+                              {message.isFromAdmin ? companyName : message.senderUsername}
+                            </span>
+                            <span className="text-xs text-muted-foreground">
+                              {format(new Date(message.createdAt), "MMM d, yyyy h:mm a")}
+                            </span>
+                          </div>
+                          <p className="text-sm whitespace-pre-wrap">{message.content}</p>
                         </div>
-                        <p className="text-sm whitespace-pre-wrap">{message.content}</p>
-                      </div>
-                    )
-                  ))}
-                </div>
-              )}
-            </div>
+                      )
+                    ))}
+                    <div ref={messageEndRef} />
+                  </>
+                )}
+              </div>
+            </ScrollArea>
           </div>
 
-          {/* Compose area - Fixed height */}
-          <div className="p-3 border-t bg-muted/20" style={{ height: '156px' }}>
+          {/* Compose area - Fixed height with responsive design */}
+          <div className="p-3 border-t bg-muted/20">
             <Textarea
               ref={textareaRef}
               value={newMessage}
               onChange={(e) => setNewMessage(e.target.value)}
               placeholder="Type your message..."
-              className="resize-none h-[100px] focus-visible:ring-0 border-0 shadow-none bg-transparent p-0"
+              className="resize-none h-[80px] focus-visible:ring-0 border border-input/50 shadow-sm bg-background p-2 rounded-md"
               onKeyDown={(e) => {
                 e.stopPropagation();
                 if (e.key === 'Enter' && !e.shiftKey) {
@@ -307,6 +304,7 @@ export function AdminMessageDialog({
                 onClick={handleSendMessage}
                 disabled={!newMessage.trim() || sendMessageMutation.isPending}
                 size="sm"
+                className="transition-all"
               >
                 {sendMessageMutation.isPending ? (
                   <Loader2 className="h-3 w-3 animate-spin mr-1" />
