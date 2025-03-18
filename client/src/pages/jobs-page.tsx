@@ -604,9 +604,9 @@ export default function JobsPage() {
         </p>
       </motion.div>
 
-      {/* Jobs List Section - Now in 2 columns */}
+      {/* Jobs List Section - Now in 3 columns */}
       <motion.div 
-        className="grid grid-cols-1 md:grid-cols-2 gap-6"
+        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3"
         variants={containerVariants}
       >
         {filteredJobs.map((job: Job, index: number) => (
@@ -614,8 +614,8 @@ export default function JobsPage() {
             key={job.id}
             variants={itemVariants}
             custom={index}
-            whileHover={{ y: -5 }}
-            transition={{ type: "spring", stiffness: 300 }}
+            whileHover={{ y: -3, boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)" }}
+            transition={{ type: "spring", stiffness: 400 }}
             className={cn("h-full")}
           >
             <JobCard
@@ -624,13 +624,14 @@ export default function JobsPage() {
               onViewDetails={() => setSelectedJob(job)}
               isApplying={applyMutation.isPending && selectedJob?.id === job.id}
               isApplied={user ? applications.some((app) => app.jobId === job.id) : false}
+              previouslyApplied={user ? applications.some((app) => app.jobId === job.id && app.status === "Withdrawn") : false}
             />
           </motion.div>
         ))}
 
         {filteredJobs.length === 0 && (
           <motion.div 
-            className="text-center py-8 md:col-span-2"
+            className="text-center py-8 md:col-span-2 lg:col-span-3"
             variants={fadeInVariants}
           >
             <p className="text-muted-foreground">
