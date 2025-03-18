@@ -411,6 +411,32 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Add GET endpoint for fetching referral code next to POST endpoint
+  app.get("/api/users/:id/referral-code", async (req: any, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ error: "Authentication required" });
+      }
+
+      // Users can only access their own referral code
+      if (req.user.id !== parseInt(req.params.id)) {
+        return res.status(403).json({ error: "Unauthorized" });
+      }
+
+      const user = await storage.getUser(parseInt(req.params.id));
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      // Get the existing referral code or return null
+      const referralCode = await storage.getReferralCode(user.id);
+      res.json({ referralCode });
+    } catch (error) {
+      console.error('Error fetching referral code:', error);
+      res.status(500).json({ error: "Failed to fetch referral code" });
+    }
+  });
+
   // Add near other user-related routes
   app.post("/api/users/:id/referral-code", async (req: any, res) => {
     try {
@@ -436,7 +462,6 @@ export function registerRoutes(app: Express): Server {
       res.status(500).json({ error: "Failed to generate referral code" });
     }
   });
-
 
   // Regular routes continue...
   app.post("/api/jobs/scrape", async (_req, res) => {

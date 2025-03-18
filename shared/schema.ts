@@ -18,6 +18,23 @@ export const users = pgTable("users", {
   createdAt: text("created_at").notNull().default(new Date().toISOString())
 });
 
+// Referral codes table to track user referrals
+export const referralCodes = pgTable("referral_codes", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  code: text("code").notNull().unique(),
+  createdAt: text("created_at").notNull().default(new Date().toISOString()),
+  usageCount: integer("usage_count").notNull().default(0)
+});
+
+// Add relations between users and referral codes
+export const referralCodesRelations = relations(referralCodes, ({ one }) => ({
+  user: one(users, {
+    fields: [referralCodes.userId],
+    references: [users.id],
+  }),
+}));
+
 // Update user schema for registration
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
@@ -31,7 +48,8 @@ export const insertUserSchema = createInsertSchema(users).omit({
   confirmPassword: z.string(),
   username: z.string().min(3, "Username must be at least 3 characters").transform(val => val.toLowerCase()),
   email: z.string().email("Invalid email format"),
-  password: z.string().min(6, "Password must be at least 6 characters")
+  password: z.string().min(6, "Password must be at least 6 characters"),
+  referredBy: z.string().optional()
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords don't match",
   path: ["confirmPassword"]
@@ -398,5 +416,10 @@ export const insertNotificationSchema = createInsertSchema(notifications).omit({
   }).optional()
 });
 
+// Define Notification type
 export type Notification = typeof notifications.$inferSelect;
-export type InsertNotification = z.infer<typeof insertNotificationSchema>;
+export type InsertNotification = typeof notifications.$inferInsert;
+
+// Define ReferralCode type
+export type ReferralCode = typeof referralCodes.$inferSelect;
+export type InsertReferralCode = typeof referralCodes.$inferInsert;

@@ -1,11 +1,12 @@
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { BriefcaseIcon, HomeIcon, UserCircleIcon, BarChartIcon, LogOutIcon, ShieldIcon, Menu, InfoIcon } from "lucide-react";
-import { useAuth } from "@/hooks/use-auth";
+import { BriefcaseIcon, HomeIcon, UserCircleIcon, BarChartIcon, LogOutIcon, ShieldIcon, Menu, InfoIcon, Gift } from "lucide-react";
+import { useAuth } from "../hooks/use-auth";
 import { NotificationsDialog } from "@/components/NotificationsDialog";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { NavCreditsCard } from "@/components/NavCreditsCard";
+import { NavReferralButton } from "@/components/NavReferralButton";
 
 export function NavBar() {
   const { user, logoutMutation } = useAuth();
@@ -56,6 +57,9 @@ export function NavBar() {
           How It Works
         </Button>
       </Link>
+      {user && (
+        <NavReferralButton />
+      )}
     </div>
   );
 

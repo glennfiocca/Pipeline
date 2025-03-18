@@ -4,12 +4,13 @@ import { eq, desc, and, ilike } from "drizzle-orm";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
 import { 
-  messages, applications, jobs, profiles, users, feedback, notifications,
+  messages, applications, jobs, profiles, users, feedback, notifications, referralCodes,
   type Message, type InsertMessage,
   type Job, type Profile, type Application, type User,
   type InsertJob, type InsertProfile, type InsertApplication, type InsertUser,
   type Feedback, type InsertFeedback,
-  type Notification, type InsertNotification
+  type Notification, type InsertNotification,
+  type ReferralCode, type InsertReferralCode
 } from "@shared/schema";
 import { db } from "./db";
 import { nanoid } from 'nanoid';
@@ -94,6 +95,10 @@ export interface IStorage {
   markNotificationAsRead(id: number): Promise<Notification>;
   markAllNotificationsAsRead(userId: number): Promise<void>;
   deleteNotification(id: number): Promise<boolean>;
+
+  // Referral code methods
+  getReferralCode(userId: number): Promise<string | null>;
+  generateReferralCode(userId: number): Promise<string>;
 
   // New method
   getApplicationUnreadMessageCount(applicationId: number, forAdmin: boolean): Promise<number>;
@@ -880,6 +885,42 @@ export class DatabaseStorage implements IStorage {
       console.error('Error creating message:', error);
       throw error;
     }
+  }
+
+  async getReferralCode(userId: number): Promise<string | null> {
+    const [referralCode] = await db
+      .select()
+      .from(referralCodes)
+      .where(eq(referralCodes.userId, userId));
+    return referralCode ? referralCode.code : null;
+  }
+
+  async generateReferralCode(userId: number): Promise<string> {
+    let isUnique = false;
+    let referralCode = '';
+
+    while (!isUnique) {
+      referralCode = nanoid(8);
+
+      const [existingReferralCode] = await db
+        .select()
+        .from(referralCodes)
+        .where(eq(referralCodes.code, referralCode));
+
+      if (!existingReferralCode) {
+        isUnique = true;
+      }
+    }
+
+    await db
+      .insert(referralCodes)
+      .values({
+        userId,
+        code: referralCode
+      })
+      .execute();
+
+    return referralCode;
   }
 }
 

@@ -3,7 +3,7 @@ import { formatDistanceToNow, startOfTomorrow } from "date-fns";
 import { toZonedTime } from "date-fns-tz";
 import { CreditCard } from "lucide-react";
 import type { Application } from "@shared/schema";
-import { useAuth } from "@/hooks/use-auth";
+import { useAuth } from "../hooks/use-auth";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";

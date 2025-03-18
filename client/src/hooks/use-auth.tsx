@@ -1,8 +1,16 @@
 import { createContext, ReactNode, useContext } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { insertUserSchema, type User, type InsertUser } from "@shared/schema";
+import { insertUserSchema, type InsertUser } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+
+// Import User type from schema but extend it with referralCode
+import type { User as BaseUser } from "@shared/schema";
+
+// Extend the base User type with the referralCode property
+export type User = BaseUser & {
+  referralCode?: string | null;
+};
 
 type AuthContextType = {
   user: User | null;
