@@ -180,7 +180,7 @@ const ApplicationProgressTracker = ({
         {/* Stage markers and progress bar */}
         <div className="flex justify-between relative">
           {/* Start marker */}
-          <div className="flex flex-col items-center z-10">
+          <div className="flex flex-col items-center z-10 ml-[-5px]">
             <div className={cn(
               "w-10 h-10 rounded-full flex items-center justify-center bg-background shadow-sm transition-all duration-300",
               currentStatus === "Rejected" 
@@ -261,9 +261,16 @@ const ApplicationProgressTracker = ({
             const hoverEffect = currentStatus !== "Rejected" && currentStatus !== "Withdrawn"
               ? stageColorMap[stage as keyof typeof stageColorMap] || ""
               : "";
+
+            // Add positioning adjustment for Accepted stage
+            const positionStyle = stage === "Accepted" ? { marginRight: "-10px" } : {};
               
             return (
-              <div key={stage} className="flex flex-col items-center z-10">
+              <div 
+                key={stage} 
+                className="flex flex-col items-center z-10"
+                style={positionStyle}
+              >
                 <div className={cn(
                   "w-10 h-10 rounded-full flex items-center justify-center bg-background shadow-sm transition-all duration-300 cursor-pointer",
                   getStageTextColor(stage, index),
