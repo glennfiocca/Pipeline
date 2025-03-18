@@ -557,22 +557,7 @@ export default function DashboardPage() {
     }
   };
 
-  // Parse query parameters
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const messageId = params.get('messageId');
-    const feedbackId = params.get('feedbackId');
-    const readonly = params.get('readonly');
-
-    if (messageId) {
-      setActiveMessageId(parseInt(messageId));
-    }
-    if (feedbackId) {
-      setActiveFeedbackId(parseInt(feedbackId));
-      setIsReadOnly(readonly === 'true');
-    }
-  }, [location]);
-
+  // Get applications and jobs data
   const { data: applications = [], isLoading: isLoadingApps } = useQuery<Application[]>({
     queryKey: ["/api/applications"],
   });
@@ -581,7 +566,39 @@ export default function DashboardPage() {
     queryKey: ["/api/jobs"],
   });
 
-  const getJob = (jobId: number) => jobs.find((job) => job.id === jobId);
+  // Create a stable getJob function with useCallback
+  const getJob = useCallback(
+    (jobId: number) => jobs.find((job) => job.id === jobId),
+    [jobs]
+  );
+
+  // Parse query parameters
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const messageId = params.get('messageId');
+    const feedbackId = params.get('feedbackId');
+    const readonly = params.get('readonly');
+    const applicationId = params.get('applicationId');
+
+    if (messageId) {
+      setActiveMessageId(parseInt(messageId));
+    }
+    if (feedbackId) {
+      setActiveFeedbackId(parseInt(feedbackId));
+      setIsReadOnly(readonly === 'true');
+    }
+    // Handle applicationId from notifications to pop up the application card
+    if (applicationId && applications.length > 0 && jobs.length > 0) {
+      const appId = parseInt(applicationId);
+      const application = applications.find(app => app.id === appId);
+      if (application) {
+        const job = getJob(application.jobId);
+        if (job) {
+          setSelectedJob(job);
+        }
+      }
+    }
+  }, [location, applications, jobs, getJob]);
 
   // Function to check if an application is for an archived job
   const isArchivedJob = (application: Application) => {
