@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
-import { Loader2, ArrowLeft, User as UserIcon, Mail, CreditCard, Calendar, FileText, Trash2, Send, NotebookIcon, ArrowRightIcon, FileDown, Search, CheckCircle2, XCircle, PlusCircle, AlertCircle, Clock, CalendarIcon, ListTodo, FileEdit, Save, CheckIcon } from "lucide-react";
+import { Loader2, ArrowLeft, User as UserIcon, Mail, CreditCard, Calendar, FileText, Trash2, Send, NotebookIcon, ArrowRightIcon, FileDown, Search, CheckCircle2, XCircle, PlusCircle, AlertCircle, Clock, CalendarIcon, ListTodo, FileEdit, Save, CheckIcon, Paperclip, Users } from "lucide-react";
 import { useLocation } from "wouter";
 import { Separator } from "@/components/ui/separator";
 import { useState, useRef, useEffect } from "react";
@@ -34,6 +34,7 @@ import { DatePicker } from "@/components/ui/date-picker";
 import { cn } from "@/lib/utils";
 import { jsPDF } from "jspdf";
 import "jspdf-autotable";
+import { AdminMessageDialog } from "@/components/AdminMessageDialog";
 
 // Add these interfaces at the top of the file, after imports
 interface Application {
@@ -110,14 +111,18 @@ export default function AdminUserPage() {
   
   const [showEditUserDialog, setShowEditUserDialog] = useState(false);
   const [showManageCreditsDialog, setShowManageCreditsDialog] = useState(false);
-  const [newMessage, setNewMessage] = useState("");
-  const scrollRef = useRef<HTMLDivElement>(null);
-  
-  const [chatDialogOpen, setChatDialogOpen] = useState(false);
   const [selectedApplication, setSelectedApplication] = useState<Application | null>(null);
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [applicationDetailsDialogOpen, setApplicationDetailsDialogOpen] = useState(false);
   const [selectedDueDate, setSelectedDueDate] = useState<Date | undefined>(undefined);
+  
+  // Add this state for AdminMessageDialog
+  const [chatDialogProps, setChatDialogProps] = useState<{
+    isOpen: boolean;
+    applicationId: number;
+    companyName: string;
+    username: string;
+  } | null>(null);
   
   // Add search state for applications
   const [applicationsSearch, setApplicationsSearch] = useState("");
@@ -746,9 +751,12 @@ export default function AdminUserPage() {
                                     size="sm" 
                                     className="flex items-center gap-1 mt-1 w-full"
                                     onClick={() => {
-                                      setSelectedApplication(app);
-                                      setSelectedJob(job);
-                                      setChatDialogOpen(true);
+                                      setChatDialogProps({
+                                        isOpen: true,
+                                        applicationId: app.id,
+                                        companyName: job?.company || '',
+                                        username: user?.username || ''
+                                      });
                                     }}
                                   >
                                     <Send className="h-3 w-3" />
@@ -914,33 +922,16 @@ export default function AdminUserPage() {
         />
       )}
       
-      <Dialog open={chatDialogOpen} onOpenChange={setChatDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>
-              {selectedJob ? `Chat - ${selectedJob.title} at ${selectedJob.company}` : 'Chat'}
-            </DialogTitle>
-            <DialogDescription>
-              Chat with {user?.username || 'user'} about their application
-            </DialogDescription>
-          </DialogHeader>
-          
-          {selectedApplication && selectedJob && (
-            <MessageThread 
-              applicationId={selectedApplication.id} 
-              companyName={selectedJob.company} 
-              username={user?.username || ''} 
-              queryClient={queryClient}
-            />
-          )}
-          
-          <div className="flex justify-end mt-4">
-            <Button variant="outline" onClick={() => setChatDialogOpen(false)}>
-              Close
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      {/* Add AdminMessageDialog here */}
+      {chatDialogProps && (
+        <AdminMessageDialog
+          isOpen={chatDialogProps.isOpen}
+          onClose={() => setChatDialogProps(null)}
+          applicationId={chatDialogProps.applicationId}
+          companyName={chatDialogProps.companyName}
+          username={chatDialogProps.username}
+        />
+      )}
 
       {/* Application Details Dialog */}
       {applicationDetailsDialogOpen && selectedApplication && selectedJob && (
@@ -1153,181 +1144,6 @@ export default function AdminUserPage() {
           </DialogContent>
         </Dialog>
       )}
-    </div>
-  );
-}
-
-interface Message {
-  id: number;
-  applicationId: number;
-  content: string;
-  isFromAdmin: boolean;
-  isRead: boolean;
-  createdAt: string;
-  senderUsername: string;
-}
-
-interface MessageThreadProps {
-  applicationId: number;
-  companyName: string;
-  username: string;
-  queryClient: any;
-}
-
-function MessageThread({ applicationId, companyName, username, queryClient }: MessageThreadProps) {
-  const [newMessage, setNewMessage] = useState("");
-  const { toast } = useToast();
-  const scrollRef = useRef<HTMLDivElement>(null);
-  
-  const queryKey = [`/api/applications/${applicationId}/messages`];
-
-  const { data: messages = [], isLoading } = useQuery<Message[]>({
-    queryKey,
-    queryFn: async () => {
-      const res = await apiRequest("GET", `/api/applications/${applicationId}/messages`);
-      if (!res.ok) {
-        return [];
-      }
-      return res.json();
-    },
-    refetchInterval: 10000, // Auto-refresh messages every 10 seconds
-  });
-
-  useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
-  }, [messages]);
-
-  const sendMessageMutation = useMutation({
-    mutationFn: async (content: string) => {
-      const messageData = {
-        applicationId,
-        content,
-        isFromAdmin: true,
-        senderUsername: companyName
-      };
-
-      const response = await apiRequest(
-        "POST",
-        `/api/applications/${applicationId}/messages`,
-        messageData
-      );
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(errorText || "Failed to send message");
-      }
-
-      return response.json();
-    },
-    onSuccess: (newMessage) => {
-      queryClient.setQueryData([queryKey], (old: Message[] | undefined) => [...(old || []), newMessage]);
-      setNewMessage("");
-      toast({
-        title: "Message sent",
-        description: "Your message has been sent successfully.",
-      });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to send message",
-        variant: "destructive",
-      });
-    }
-  });
-
-  const handleSendMessage = async () => {
-    if (!newMessage.trim()) return;
-    try {
-      await sendMessageMutation.mutateAsync(newMessage.trim());
-    } catch (error) {
-      console.error("Error in handleSendMessage:", error);
-    }
-  };
-
-  const formatMessageDate = (dateString: string) => {
-    if (!dateString) return "";
-    try {
-      const date = new Date(dateString);
-      return format(date, "MMM d, h:mm a");
-    } catch (error) {
-      console.error("Date formatting error:", error);
-      return "";
-    }
-  };
-
-  return (
-    <div className="border rounded-lg overflow-hidden">
-      <div className="h-[400px] flex flex-col">
-        <ScrollArea className="flex-1" ref={scrollRef}>
-          <div className="p-4 space-y-4">
-            {isLoading ? (
-              <div className="flex items-center justify-center h-full">
-                <Loader2 className="h-6 w-6 animate-spin" />
-              </div>
-            ) : messages.length === 0 ? (
-              <div className="text-center text-muted-foreground py-8">
-                No messages yet. Start the conversation!
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {messages.map((message) => (
-                  message.content && (
-                    <div
-                      key={message.id}
-                      className={cn(
-                        "p-4 rounded-lg",
-                        message.isFromAdmin
-                          ? "bg-primary text-primary-foreground ml-8"
-                          : "bg-muted mr-8"
-                      )}
-                    >
-                      <div className="flex justify-between items-start mb-2">
-                        <span className="font-medium">
-                          {message.isFromAdmin ? companyName : username}
-                        </span>
-                        <span className="text-xs text-muted-foreground">
-                          {formatMessageDate(message.createdAt)}
-                        </span>
-                      </div>
-                      <p className="text-sm whitespace-pre-wrap">{message.content}</p>
-                    </div>
-                  )
-                ))}
-              </div>
-            )}
-          </div>
-        </ScrollArea>
-        <div className="p-3 border-t">
-          <div className="flex items-end gap-2">
-            <Textarea
-              value={newMessage}
-              onChange={(e) => setNewMessage(e.target.value)}
-              placeholder="Type your message as the employer..."
-              className="min-h-[80px] flex-1"
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  handleSendMessage();
-                }
-              }}
-            />
-            <Button
-              size="icon"
-              onClick={handleSendMessage}
-              disabled={!newMessage.trim() || sendMessageMutation.isPending}
-            >
-              {sendMessageMutation.isPending ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Send className="h-4 w-4" />
-              )}
-            </Button>
-          </div>
-        </div>
-      </div>
     </div>
   );
 } 
