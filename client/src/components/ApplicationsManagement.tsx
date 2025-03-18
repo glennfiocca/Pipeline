@@ -12,7 +12,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { ChevronRight, Loader2, MessageSquare, AlertCircle, Search, CalendarIcon, Filter } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { AdminMessageDialog } from "./AdminMessageDialog";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -37,6 +37,8 @@ export function ApplicationsManagement() {
   const [statusFilter, setStatusFilter] = useState<string>("all"); // Updated
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
   const [currentApplication, setCurrentApplication] = useState<(Application & { job: Job, user: User }) | null>(null);
+  // Track unread message counts by application ID
+  const [unreadMessageCounts, setUnreadMessageCounts] = useState<{[applicationId: number]: number}>({});
 
   const { data: applications = [], isLoading: isLoadingApps } = useQuery<Application[]>({
     queryKey: ["/api/admin/applications"],
@@ -256,6 +258,43 @@ export function ApplicationsManagement() {
     setShowDetailsDialog(true);
   };
 
+  // Get unread message counts for all applications
+  useEffect(() => {
+    if (enrichedApplications.length > 0) {
+      // Create a set of promises to fetch unread message counts for each application
+      const fetchUnreadCounts = async () => {
+        const counts: {[applicationId: number]: number} = {};
+        
+        for (const app of enrichedApplications) {
+          try {
+            const response = await apiRequest(
+              "GET", 
+              `/api/applications/${app.id}/messages/unread-count?forAdmin=true`
+            );
+            
+            if (response.ok) {
+              const count = await response.json();
+              if (count > 0) {
+                counts[app.id] = count as number;
+              }
+            }
+          } catch (error) {
+            console.error(`Error fetching unread count for application ${app.id}:`, error);
+          }
+        }
+        
+        setUnreadMessageCounts(counts);
+      };
+      
+      fetchUnreadCounts();
+      
+      // Set up polling to refresh counts every 30 seconds
+      const intervalId = setInterval(fetchUnreadCounts, 30000);
+      
+      return () => clearInterval(intervalId);
+    }
+  }, [enrichedApplications]);
+
   const renderApplicationCard = (app: Application & { job: Job, user: User }) => (
     <div
       key={app.id}
@@ -307,9 +346,17 @@ export function ApplicationsManagement() {
                 username: app.user.username,
                 companyName: app.job.company
               })}
-              className="text-primary hover:text-primary-foreground"
+              className="relative text-primary hover:text-primary-foreground"
             >
               <MessageSquare className="h-4 w-4" />
+              {unreadMessageCounts[app.id] > 0 && (
+                <Badge 
+                  variant="destructive" 
+                  className="absolute -top-1 -right-1 h-4 w-4 p-0 text-xs flex items-center justify-center"
+                >
+                  {unreadMessageCounts[app.id]}
+                </Badge>
+              )}
             </Button>
           </div>
         </div>
@@ -512,9 +559,9 @@ export function ApplicationsManagement() {
                     console.error("Error updating application:", error);
                   }
                 }}
-                disabled={updateApplicationMutation.isLoading}
+                disabled={updateApplicationMutation.isPending}
               >
-                {updateApplicationMutation.isLoading ? (
+                {updateApplicationMutation.isPending ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Saving...

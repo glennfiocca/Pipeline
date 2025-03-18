@@ -6,9 +6,10 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { format, parseISO, isValid } from "date-fns";
-import { Send, Loader2, Minimize2, Maximize2, X, Users, Paperclip } from "lucide-react";
+import { Send, Loader2, Minimize2, Maximize2, X, Users, Paperclip, Mail, MessageSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { createPortal } from "react-dom";
+import { Badge } from "@/components/ui/badge";
 
 interface Message {
   id: number;
@@ -42,6 +43,8 @@ export function AdminMessageDialog({
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const messageEndRef = useRef<HTMLDivElement>(null);
+  // Track unread count
+  const [unreadCount, setUnreadCount] = useState(0);
 
   const queryKey = [`/api/applications/${applicationId}/messages`];
 
@@ -58,12 +61,54 @@ export function AdminMessageDialog({
     refetchInterval: isOpen && !isMinimized ? 5000 : false,
   });
 
+  // Mark messages as read
+  const markAsReadMutation = useMutation({
+    mutationFn: async (messageId: number) => {
+      const response = await apiRequest(
+        "PATCH",
+        `/api/applications/${applicationId}/messages/${messageId}/read`,
+        {}
+      );
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || "Failed to mark message as read");
+      }
+
+      return response.json();
+    },
+    onSuccess: (updatedMessage) => {
+      queryClient.setQueryData<Message[]>(queryKey, (old) => {
+        if (!old) return old;
+        return old.map(message => 
+          message.id === updatedMessage.id 
+            ? { ...message, isRead: true } 
+            : message
+        );
+      });
+      
+      // Also invalidate the unread count query to update message badges
+      queryClient.invalidateQueries({ 
+        queryKey: [`/api/applications/${applicationId}/messages/unread-count`] 
+      });
+    }
+  });
+
+  // Count unread messages from the user
+  useEffect(() => {
+    if (messages) {
+      const count = messages.filter(m => !m.isRead && !m.isFromAdmin).length;
+      setUnreadCount(count);
+    }
+  }, [messages]);
+
   useEffect(() => {
     if (messageEndRef.current && !isMinimized) {
       messageEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   }, [messages, isMinimized]);
 
+  // Auto-focus textarea when opening
   useEffect(() => {
     if (isOpen && !isMinimized && textareaRef.current) {
       setTimeout(() => {
@@ -71,6 +116,18 @@ export function AdminMessageDialog({
       }, 100);
     }
   }, [isOpen, isMinimized]);
+
+  // When opening minimized dialog or main dialog, mark messages as read
+  useEffect(() => {
+    if (isOpen && !isMinimized && messages) {
+      // Mark all unread messages from the user as read when opening the dialog
+      messages.forEach(message => {
+        if (!message.isRead && !message.isFromAdmin) {
+          markAsReadMutation.mutate(message.id);
+        }
+      });
+    }
+  }, [isOpen, isMinimized, messages]);
 
   const sendMessageMutation = useMutation({
     mutationFn: async (content: string) => {
@@ -177,6 +234,11 @@ export function AdminMessageDialog({
               </Button>
             </div>
           </div>
+          {unreadCount > 0 && (
+            <div className="p-2 bg-muted/30 text-xs">
+              {unreadCount} unread message{unreadCount !== 1 ? 's' : ''}
+            </div>
+          )}
         </div>
       ) : (
         <div 
@@ -254,6 +316,12 @@ export function AdminMessageDialog({
                               ? "bg-primary/5 mr-8"
                               : "bg-muted/50 ml-8"
                           )}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (!message.isRead && !message.isFromAdmin) {
+                              markAsReadMutation.mutate(message.id);
+                            }
+                          }}
                         >
                           <div className="flex justify-between items-start mb-2">
                             <span className="font-medium">
@@ -264,6 +332,9 @@ export function AdminMessageDialog({
                             </span>
                           </div>
                           <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                          {!message.isRead && !message.isFromAdmin && (
+                            <div className="mt-2 text-xs font-medium text-primary">New</div>
+                          )}
                         </div>
                       )
                     ))}

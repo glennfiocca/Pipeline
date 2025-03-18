@@ -94,6 +94,13 @@ export interface IStorage {
   markNotificationAsRead(id: number): Promise<Notification>;
   markAllNotificationsAsRead(userId: number): Promise<void>;
   deleteNotification(id: number): Promise<boolean>;
+
+  // New method
+  getApplicationUnreadMessageCount(applicationId: number, forAdmin: boolean): Promise<number>;
+
+  // New method
+  getApplicationMessages(applicationId: number): Promise<Message[]>;
+  createApplicationMessage(message: InsertMessage): Promise<Message>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -777,6 +784,102 @@ export class DatabaseStorage implements IStorage {
       .returning();
     
     return updatedUser;
+  }
+
+  async getApplicationUnreadMessageCount(applicationId: number, forAdmin: boolean): Promise<number> {
+    try {
+      // For admin: Count unread messages FROM user (where isFromAdmin is false)
+      // For user: Count unread messages FROM admin (where isFromAdmin is true)
+      const unreadMessages = await db
+        .select()
+        .from(messages)
+        .where(
+          and(
+            eq(messages.applicationId, applicationId),
+            eq(messages.isRead, false),
+            eq(messages.isFromAdmin, !forAdmin) // Invert based on who's checking
+          )
+        );
+      return unreadMessages.length;
+    } catch (error) {
+      console.error('Error getting unread message count:', error);
+      return 0;
+    }
+  }
+
+  async getApplicationMessages(applicationId: number): Promise<Message[]> {
+    try {
+      const [application] = await db
+        .select()
+        .from(applications)
+        .where(eq(applications.id, applicationId));
+
+      if (!application) {
+        console.error(`Application not found for ID: ${applicationId}`);
+        return [];
+      }
+
+      const [job] = await db
+        .select()
+        .from(jobs)
+        .where(eq(jobs.id, application.jobId));
+
+      if (!job) {
+        console.error(`Job not found for ID: ${application.jobId}`);
+        return [];
+      }
+
+      const applicationMessages = await db
+        .select()
+        .from(messages)
+        .where(eq(messages.applicationId, applicationId))
+        .orderBy(messages.createdAt);
+
+      return applicationMessages.map(message => ({
+        ...message,
+        senderUsername: message.isFromAdmin ? job.company : message.senderUsername
+      }));
+    } catch (error) {
+      console.error('Error fetching messages:', error);
+      throw error;
+    }
+  }
+
+  async createApplicationMessage(message: InsertMessage): Promise<Message> {
+    try {
+      if (message.isFromAdmin) {
+        const [application] = await db
+          .select()
+          .from(applications)
+          .where(eq(applications.id, message.applicationId));
+
+        if (!application) {
+          throw new Error(`Application not found for ID: ${message.applicationId}`);
+        }
+
+        const [job] = await db
+          .select()
+          .from(jobs)
+          .where(eq(jobs.id, application.jobId));
+
+        if (!job) {
+          throw new Error(`Job not found for ID: ${application.jobId}`);
+        }
+      }
+
+      const [createdMessage] = await db
+        .insert(messages)
+        .values({
+          ...message,
+          createdAt: new Date().toISOString()
+        })
+        .returning();
+
+      return createdMessage;
+    } catch (error) {
+      console.error('Error creating message:', error);
+      throw error;
+    }
   }
 }
 

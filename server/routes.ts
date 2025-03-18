@@ -1206,6 +1206,79 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Get messages for an application
+  app.get("/api/applications/:applicationId/messages", async (req: any, res) => {
+    try {
+      const applicationId = parseInt(req.params.applicationId, 10);
+      
+      // Get messages
+      const appMessages = await storage.getApplicationMessages(applicationId);
+      
+      return res.json(appMessages);
+    } catch (error) {
+      console.error("Error fetching application messages:", error);
+      return res.status(500).json({ error: "Failed to fetch messages" });
+    }
+  });
+
+  // Get unread message count for an application
+  app.get("/api/applications/:applicationId/messages/unread-count", async (req: any, res) => {
+    try {
+      const applicationId = parseInt(req.params.applicationId, 10);
+      const forAdmin = req.query.forAdmin === 'true';
+      
+      // Get unread message count
+      const unreadCount = await storage.getApplicationUnreadMessageCount(applicationId, forAdmin);
+      
+      return res.json(unreadCount);
+    } catch (error) {
+      console.error("Error fetching unread message count:", error);
+      return res.status(500).json({ error: "Failed to fetch unread message count" });
+    }
+  });
+
+  // Send a message for an application
+  app.post("/api/applications/:applicationId/messages", async (req: any, res) => {
+    try {
+      const applicationId = parseInt(req.params.applicationId, 10);
+      const { content, isFromAdmin = false, senderUsername } = req.body;
+      
+      // Validate inputs
+      if (!content) {
+        return res.status(400).json({ error: "Message content is required" });
+      }
+      
+      // Create the message
+      const message = await storage.createApplicationMessage({
+        applicationId,
+        content, 
+        isFromAdmin,
+        isRead: false,
+        senderUsername: senderUsername || req.user?.username,
+      });
+      
+      return res.json(message);
+    } catch (error) {
+      console.error("Error creating application message:", error);
+      return res.status(500).json({ error: "Failed to create message" });
+    }
+  });
+
+  // Mark a message as read for an application
+  app.patch("/api/applications/:applicationId/messages/:messageId/read", async (req: any, res) => {
+    try {
+      const messageId = parseInt(req.params.messageId, 10);
+      
+      // Mark message as read
+      const updatedMessage = await storage.markMessageAsRead(messageId);
+      
+      return res.json(updatedMessage);
+    } catch (error) {
+      console.error("Error marking message as read:", error);
+      return res.status(500).json({ error: "Failed to mark message as read" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
