@@ -287,19 +287,6 @@ export default function JobsPage() {
       animate="visible"
       variants={containerVariants}
     >
-      {/* Header with title */}
-      <motion.div 
-        className="flex items-center justify-between mb-4"
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-      >
-        <div className="flex items-center gap-2">
-          <Briefcase className="h-6 w-6 text-primary" />
-          <h1 className="text-3xl font-bold">Jobs</h1>
-        </div>
-      </motion.div>
-
       {/* Filters Section */}
       <motion.div 
         variants={itemVariants}
