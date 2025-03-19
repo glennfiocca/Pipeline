@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
-import { UserPlus, FileText, Send, ChevronRight, Star, ArrowRight } from "lucide-react";
+import { Star, ArrowRight } from "lucide-react";
 import { motion } from "framer-motion";
 import { HoverCard, HoverCardTrigger, HoverCardContent } from "@/components/ui/hover-card";
 import { cn } from "@/lib/utils";
@@ -152,68 +152,6 @@ export default function HomePage() {
                 >
                   <p className="text-3xl md:text-4xl font-bold text-primary mb-2">{stat.value}</p>
                   <p className="text-sm text-muted-foreground">{stat.label}</p>
-                </motion.div>
-              ))}
-            </motion.div>
-          </div>
-        </section>
-        
-        {/* Simplified steps section */}
-        <section className="py-16">
-          <div className="container mx-auto px-4">
-            <div className="text-center mb-12">
-              <h2 className="text-3xl font-bold mb-4">How Pipeline Works</h2>
-              <p className="text-muted-foreground max-w-2xl mx-auto">
-                Our streamlined process gets you from sign-up to job offers faster than ever before
-              </p>
-            </div>
-            
-            <motion.div 
-              className="grid grid-cols-1 sm:grid-cols-3 gap-8 max-w-4xl mx-auto"
-              variants={containerVariants}
-              initial="hidden"
-              animate="visible"
-            >
-              {[
-                { 
-                  number: 1, 
-                  text: "Create Profile", 
-                  description: "One profile, unlimited opportunities",
-                  icon: "UserPlus",
-                },
-                { 
-                  number: 2, 
-                  text: "Match", 
-                  description: "AI finds your perfect fit",
-                  icon: "FileText",
-                },
-                { 
-                  number: 3, 
-                  text: "Apply", 
-                  description: "One click, done",
-                  icon: "Send",
-                },
-              ].map((step) => (
-                <motion.div 
-                  key={step.number}
-                  variants={itemVariants}
-                  className="flex flex-col items-center text-center p-6"
-                >
-                  <motion.div 
-                    className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4"
-                    whileHover={{ scale: 1.05 }}
-                  >
-                    {step.icon === "UserPlus" && <UserPlus className="h-8 w-8 text-primary" />}
-                    {step.icon === "FileText" && <FileText className="h-8 w-8 text-primary" />}
-                    {step.icon === "Send" && <Send className="h-8 w-8 text-primary" />}
-                  </motion.div>
-                  
-                  <h3 className="text-xl font-semibold mb-2">{step.text}</h3>
-                  <p className="text-muted-foreground">{step.description}</p>
-                  
-                  <Link href="/how-it-works" className="mt-4 text-sm text-primary hover:underline inline-flex items-center">
-                    Learn more <ChevronRight className="h-3 w-3 ml-1" />
-                  </Link>
                 </motion.div>
               ))}
             </motion.div>
