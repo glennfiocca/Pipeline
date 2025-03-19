@@ -7,54 +7,121 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { NavCreditsCard } from "@/components/NavCreditsCard";
 import { NavReferralButton } from "@/components/NavReferralButton";
+import { cn } from "@/lib/utils";
 
 export function NavBar() {
   const { user, logoutMutation } = useAuth();
-  const [, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
   const isMobile = useIsMobile();
 
   const NavLinks = () => (
     <div className="flex flex-col md:flex-row md:items-center space-y-2 md:space-y-0 md:space-x-2">
       <Link href="/">
-        <Button variant="ghost" size="sm" className="w-full md:w-auto justify-start md:justify-center">
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          className={cn(
+            "w-full md:w-auto justify-start md:justify-center relative group",
+            location === "/" && "font-medium"
+          )}
+        >
           <HomeIcon className="h-4 w-4 mr-2" />
           Home
+          <span className={cn(
+            "absolute bottom-0 left-0 h-0.5 bg-primary transition-all duration-300 ease-out",
+            location === "/" ? "w-full" : "w-0 group-hover:w-full"
+          )}></span>
         </Button>
       </Link>
       <Link href="/jobs">
-        <Button variant="ghost" size="sm" className="w-full md:w-auto justify-start md:justify-center">
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          className={cn(
+            "w-full md:w-auto justify-start md:justify-center relative group",
+            location === "/jobs" && "font-medium"
+          )}
+        >
           <BriefcaseIcon className="h-4 w-4 mr-2" />
           Jobs
+          <span className={cn(
+            "absolute bottom-0 left-0 h-0.5 bg-primary transition-all duration-300 ease-out",
+            location === "/jobs" ? "w-full" : "w-0 group-hover:w-full"
+          )}></span>
         </Button>
       </Link>
       {user && (
         <>
           <Link href="/profile">
-            <Button variant="ghost" size="sm" className="w-full md:w-auto justify-start md:justify-center">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className={cn(
+                "w-full md:w-auto justify-start md:justify-center relative group",
+                location === "/profile" && "font-medium"
+              )}
+            >
               <UserCircleIcon className="h-4 w-4 mr-2" />
               Profile
+              <span className={cn(
+                "absolute bottom-0 left-0 h-0.5 bg-primary transition-all duration-300 ease-out",
+                location === "/profile" ? "w-full" : "w-0 group-hover:w-full"
+              )}></span>
             </Button>
           </Link>
           <Link href="/dashboard">
-            <Button variant="ghost" size="sm" className="w-full md:w-auto justify-start md:justify-center">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className={cn(
+                "w-full md:w-auto justify-start md:justify-center relative group",
+                location === "/dashboard" && "font-medium"
+              )}
+            >
               <BarChartIcon className="h-4 w-4 mr-2" />
               Dashboard
+              <span className={cn(
+                "absolute bottom-0 left-0 h-0.5 bg-primary transition-all duration-300 ease-out",
+                location === "/dashboard" ? "w-full" : "w-0 group-hover:w-full"
+              )}></span>
             </Button>
           </Link>
           {user.isAdmin && (
             <Link href="/admin/dashboard">
-              <Button variant="ghost" size="sm" className="w-full md:w-auto justify-start md:justify-center">
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className={cn(
+                  "w-full md:w-auto justify-start md:justify-center relative group",
+                  location === "/admin/dashboard" && "font-medium"
+                )}
+              >
                 <ShieldIcon className="h-4 w-4 mr-2" />
                 Admin
+                <span className={cn(
+                  "absolute bottom-0 left-0 h-0.5 bg-primary transition-all duration-300 ease-out",
+                  location === "/admin/dashboard" ? "w-full" : "w-0 group-hover:w-full"
+                )}></span>
               </Button>
             </Link>
           )}
         </>
       )}
       <Link href="/how-it-works">
-        <Button variant="ghost" size="sm" className="w-full md:w-auto justify-start md:justify-center">
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          className={cn(
+            "w-full md:w-auto justify-start md:justify-center relative group",
+            location === "/how-it-works" && "font-medium"
+          )}
+        >
           <InfoIcon className="h-4 w-4 mr-2" />
           How It Works
+          <span className={cn(
+            "absolute bottom-0 left-0 h-0.5 bg-primary transition-all duration-300 ease-out",
+            location === "/how-it-works" ? "w-full" : "w-0 group-hover:w-full"
+          )}></span>
         </Button>
       </Link>
       {user && (
@@ -106,18 +173,46 @@ export function NavBar() {
               variant="ghost" 
               size="sm"
               onClick={() => logoutMutation.mutate()}
-              className="ml-2"
+              className={cn(
+                "ml-2 relative group"
+              )}
             >
               <LogOutIcon className="h-4 w-4 mr-2" />
               Logout
+              <span className="absolute bottom-0 left-0 h-0.5 bg-primary w-0 group-hover:w-full transition-all duration-300 ease-out"></span>
             </Button>
           ) : (
             <div className="flex items-center space-x-2">
               <Link href="/auth/login">
-                <Button variant="ghost" size="sm">Login</Button>
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  className={cn(
+                    "relative group",
+                    location === "/auth/login" && "font-medium"
+                  )}
+                >
+                  Login
+                  <span className={cn(
+                    "absolute bottom-0 left-0 h-0.5 bg-primary transition-all duration-300 ease-out",
+                    location === "/auth/login" ? "w-full" : "w-0 group-hover:w-full"
+                  )}></span>
+                </Button>
               </Link>
               <Link href="/auth/register">
-                <Button size="sm">Sign Up</Button>
+                <Button 
+                  size="sm"
+                  className={cn(
+                    "relative group",
+                    location === "/auth/register" && "font-medium"
+                  )}
+                >
+                  Sign Up
+                  <span className={cn(
+                    "absolute bottom-0 left-0 h-0.5 bg-white transition-all duration-300 ease-out",
+                    location === "/auth/register" ? "w-full" : "w-0 group-hover:w-full"
+                  )}></span>
+                </Button>
               </Link>
             </div>
           )}
