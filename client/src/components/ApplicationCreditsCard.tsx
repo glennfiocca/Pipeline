@@ -62,7 +62,7 @@ export function ApplicationCreditsCard() {
           <CreditCard className="h-4 w-4 text-primary" />
         </div>
         <span className="text-sm">
-          <span className="font-medium">{remainingDailyCredits}</span> daily credits
+          <span className="font-medium">{remainingDailyCredits}/{user.bankedCredits}</span> credits
           <span className="text-muted-foreground"> · Resets {timeToReset}</span>
         </span>
         <TooltipProvider delayDuration={0}>
@@ -72,7 +72,7 @@ export function ApplicationCreditsCard() {
             </TooltipTrigger>
             <TooltipContent className="bg-card border shadow-md">
               <p className="max-w-xs p-1">
-                You get 10 free application credits every day at midnight in your timezone. Use them wisely!
+                You have {remainingDailyCredits} daily credits and {user.bankedCredits} banked credits. Daily credits reset at midnight in your timezone, while banked credits never expire and can be used when daily credits are depleted.
               </p>
             </TooltipContent>
           </Tooltip>

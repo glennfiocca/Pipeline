@@ -61,20 +61,21 @@ export function NavCreditsCard() {
           <div className="flex items-center gap-1.5 px-2 py-1 rounded-md hover:bg-accent/50 transition-colors">
             <CreditCard className="h-4 w-4 text-primary" />
             <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20 font-medium px-2 py-0 h-5">
-              {remainingDailyCredits}
+              {remainingDailyCredits}/{user.bankedCredits}
             </Badge>
           </div>
         </TooltipTrigger>
         <TooltipContent side="bottom" className="bg-card border shadow-md">
           <div className="p-2 max-w-xs">
             <p className="font-medium text-sm">
-              {remainingDailyCredits} daily credits remaining
+              {remainingDailyCredits} daily credits / {user.bankedCredits} banked credits
             </p>
             <p className="text-xs text-muted-foreground mt-1">
-              Resets {timeToReset}
+              Daily credits reset {timeToReset}
             </p>
             <p className="text-xs text-muted-foreground mt-2">
-              You get 10 free application credits every day at midnight in your timezone.
+              You get 10 free application credits every day at midnight in your timezone. 
+              Banked credits never expire and can be used when you run out of daily credits.
             </p>
           </div>
         </TooltipContent>
