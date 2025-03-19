@@ -272,7 +272,12 @@ export class DatabaseStorage implements IStorage {
 
       const [newProfile] = await db
         .insert(profiles)
-        .values(dataToCreate)
+        .values({
+          ...dataToCreate,
+          skills: dataToCreate.skills || [],
+          preferredLocations: dataToCreate.preferredLocations || [],
+          referenceList: dataToCreate.referenceList || []
+        } as any) // Type assertion needed due to complex schema
         .returning();
 
       console.log("Created profile:", newProfile);
@@ -311,9 +316,14 @@ export class DatabaseStorage implements IStorage {
         referenceList: Array.isArray(profile.referenceList) ? profile.referenceList : existingProfile.referenceList,
       };
 
-      const [updatedProfile] = await db  
+      const [updatedProfile] = await db
         .update(profiles)
-        .set(updateData)
+        .set({
+          ...updateData,
+          skills: updateData.skills || existingProfile.skills || [],
+          preferredLocations: updateData.preferredLocations || existingProfile.preferredLocations || [],
+          referenceList: updateData.referenceList || existingProfile.referenceList || []
+        } as any) // Type assertion needed due to complex schema
         .where(eq(profiles.id, id))
         .returning();
 
@@ -669,7 +679,7 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(notifications)
       .where(eq(notifications.id, id));
-    
+
     return results.length > 0 ? results[0] : undefined;
   }
 
@@ -712,37 +722,37 @@ export class DatabaseStorage implements IStorage {
       .set({ isRead: true })
       .where(eq(notifications.userId, userId));
   }
-  
+
   async deleteNotification(id: number): Promise<boolean> {
     try {
       console.log(`[Storage] Attempting to delete notification with ID: ${id}`);
-      
+
       // First check if the notification exists
       const notification = await this.getNotificationById(id);
       if (!notification) {
         console.warn(`[Storage] No notification found with ID ${id} to delete`);
         return false;
       }
-      
+
       // Execute a hard delete without any soft delete functionality
       const result = await db
         .delete(notifications)
         .where(eq(notifications.id, id))
         .returning();
-      
+
       // Check if the delete operation was successful
       if (result.length === 0) {
         console.warn(`[Storage] Delete operation completed but no notification was deleted for ID ${id}`);
         return false;
       }
-      
+
       // Verify that the notification is actually gone
       const checkDeleted = await this.getNotificationById(id);
       if (checkDeleted) {
         console.error(`[Storage] Deletion verification failed - notification with ID ${id} still exists`);
         return false;
       }
-      
+
       console.log(`[Storage] Successfully deleted notification with ID: ${id}`);
       return true;
     } catch (error) {
@@ -779,15 +789,15 @@ export class DatabaseStorage implements IStorage {
     if (!user) {
       throw new Error("User not found");
     }
-    
+
     const newCreditAmount = user.bankedCredits + amount;
-    
+
     const [updatedUser] = await db
       .update(users)
       .set({ bankedCredits: newCreditAmount })
       .where(eq(users.id, userId))
       .returning();
-    
+
     return updatedUser;
   }
 
