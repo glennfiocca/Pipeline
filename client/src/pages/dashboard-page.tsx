@@ -870,25 +870,7 @@ export default function DashboardPage() {
 
   return (
     <div className="container mx-auto px-4 py-2 max-w-7xl flex flex-col min-h-[calc(100vh-4rem)]">
-      {/* Header section with title and filter button */}
-      <motion.div 
-        className="flex items-center justify-between mb-4"
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-      >
-        <div className="flex items-center gap-2">
-          <LayoutDashboard className="h-6 w-6 text-primary" />
-          <h1 className="text-3xl font-bold">Application Dashboard</h1>
-        </div>
-        {selectedStatus && (
-          <Button variant="outline" size="sm" onClick={() => setSelectedStatus(null)} className="h-9">
-            <XCircleIcon className="h-4 w-4 mr-1" />
-            Clear Filter
-          </Button>
-        )}
-      </motion.div>
-
+      {/* Status statistics section */}
       <motion.div 
         className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 mb-6"
         variants={containerVariants}
@@ -945,10 +927,16 @@ export default function DashboardPage() {
         className="flex-1 flex flex-col"
       >
         <div className="bg-card rounded-t-lg shadow-sm border border-b-0">
-          <div className="p-4 border-b">
+          <div className="p-4 border-b flex items-center justify-between">
             <h2 className="text-xl font-semibold">
               {selectedStatus ? `${selectedStatus} Applications` : "Your Applications"}
             </h2>
+            {selectedStatus && (
+              <Button variant="outline" size="sm" onClick={() => setSelectedStatus(null)} className="h-8">
+                <XCircleIcon className="h-4 w-4 mr-1" />
+                Clear Filter
+              </Button>
+            )}
           </div>
         </div>
         
