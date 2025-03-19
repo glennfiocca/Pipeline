@@ -28,8 +28,15 @@ export default function AuthPage() {
   useEffect(() => {
     if (referredBy) {
       setActiveTab('register');
+      
+      // Explicitly set the referredBy value in the form
+      registerForm.setValue('referredBy', referredBy);
+      
+      // Debug information
+      console.log("Referral code detected:", referredBy);
+      console.log("Form values after setting referredBy:", registerForm.getValues());
     }
-  }, [referredBy]);
+  }, [referredBy, registerForm]);
 
   const loginForm = useForm({
     defaultValues: {
@@ -58,7 +65,16 @@ export default function AuthPage() {
 
   async function onSubmit(values: InsertUser) {
     try {
-      await registerMutation.mutateAsync(values);
+      // Make sure referredBy is explicitly included in the request payload
+      console.log("Registering with values:", values);
+      console.log("Referral code:", values.referredBy);
+      
+      // Ensure referredBy is included in the registration data
+      await registerMutation.mutateAsync({
+        ...values,
+        referredBy: values.referredBy // Explicitly pass the referredBy parameter
+      });
+      
       toast({
         title: "Account created",
         description: "You can now log in with your credentials.",
@@ -301,6 +317,15 @@ export default function AuthPage() {
                           </FormControl>
                           <FormMessage />
                         </FormItem>
+                      )}
+                    />
+
+                    {/* Hidden field for referral code */}
+                    <FormField
+                      control={registerForm.control}
+                      name="referredBy"
+                      render={({ field }) => (
+                        <input type="hidden" {...field} />
                       )}
                     />
 

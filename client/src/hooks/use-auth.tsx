@@ -100,8 +100,19 @@ function useRegisterMutation() {
   return useMutation({
     mutationFn: async (userData: InsertUser) => {
       try {
+        // Log registration data for debugging
+        console.log("Registration data:", userData);
+        console.log("Referral code from form:", userData.referredBy);
+        
+        // Validate data
         const validated = insertUserSchema.parse(userData);
-        const res = await apiRequest("POST", "/api/register", validated);
+        
+        // Log data after validation
+        console.log("Validated data:", validated);
+        console.log("Validated referral code:", validated.referredBy);
+        
+        // Make API request with validated data
+        const res = await apiRequest("POST", "/api/auth/register", validated);
 
         if (!res.ok) {
           const error = await res.json();

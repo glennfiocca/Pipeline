@@ -5,14 +5,14 @@ import session from "express-session";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 import { storage } from "./storage";
-import { insertUserSchema, type User } from "@shared/schema";
+import { insertUserSchema, type User as SchemaUser } from "@shared/schema";
 import { fromZodError } from "zod-validation-error";
 import { ZodError } from "zod";
 
 // Correctly extend Express.User interface
 declare global {
   namespace Express {
-    interface User extends User {}
+    interface User extends SchemaUser {}
   }
 }
 
@@ -71,7 +71,8 @@ export function setupAuth(app: Express) {
   );
 
   passport.serializeUser((user, done) => {
-    done(null, user.id);
+    // Access with type safety since we know user has an 'id' property
+    done(null, (user as SchemaUser & { id: number }).id);
   });
 
   passport.deserializeUser(async (id: number, done) => {
@@ -86,47 +87,21 @@ export function setupAuth(app: Express) {
     }
   });
 
-  // Register endpoint with proper error handling
+  // Register endpoint that redirects to the standard endpoint
   app.post("/api/register", async (req, res) => {
     try {
-      // Validate request body against schema
-      const validatedData = insertUserSchema.parse(req.body);
-
-      // Check if username already exists
-      const existingUser = await storage.getUserByUsername(validatedData.username);
-      if (existingUser) {
-        return res.status(400).json({
-          error: "Registration failed",
-          details: "Username already exists"
-        });
-      }
-
-      // Hash password and create user
-      const hashedPassword = await hashPassword(validatedData.password);
-      const user = await storage.createUser({
-        ...validatedData,
-        password: hashedPassword
-      });
-
-      // Login the user after successful registration
-      req.login(user, (err) => {
-        if (err) {
-          console.error("Login error after registration:", err);
-          return res.status(500).json({
-            error: "Registration successful but login failed",
-            details: err.message
-          });
-        }
-        return res.status(201).json(user);
-      });
+      // Log incoming registration data
+      console.log("Received registration request at /api/register:", req.body);
+      console.log("Referral code in request:", req.body.referredBy);
+      
+      // Simply redirect to the standard endpoint in routes.ts
+      // by modifying the URL and forwarding the request
+      req.url = "/api/auth/register";
+      
+      console.log("Redirecting to /api/auth/register with body:", req.body);
+      app._router.handle(req, res);
     } catch (error) {
-      console.error("Registration error:", error);
-      if (error instanceof ZodError) {
-        return res.status(400).json({
-          error: "Validation failed",
-          details: fromZodError(error).message
-        });
-      }
+      console.error("Registration redirect error:", error);
       return res.status(500).json({
         error: "Registration failed",
         details: error instanceof Error ? error.message : "Unknown error occurred"

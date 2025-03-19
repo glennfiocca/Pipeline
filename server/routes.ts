@@ -1168,12 +1168,22 @@ export function registerRoutes(app: Express): Server {
 
   app.post("/api/auth/register", async (req, res) => {
     try {
+      console.log("Registration request received:", req.body);
+      console.log("Referral parameter in request:", req.body.referredBy);
+      
       const parsed = insertUserSchema.safeParse(req.body);
       if (!parsed.success) {
+        console.log("Validation error:", parsed.error);
         return res.status(400).json({ error: "Invalid user data" });
       }
 
+      console.log("Parsed data:", parsed.data);
+      console.log("Referral parameter after parsing:", parsed.data.referredBy);
+
       const { username, email, password, referredBy } = parsed.data;
+
+      // Log the extracted variables for debugging
+      console.log("Extracted referredBy:", referredBy);
 
       // Check if username exists
       const existingUser = await storage.getUserByUsername(username);
@@ -1184,25 +1194,65 @@ export function registerRoutes(app: Express): Server {
       // Hash password
       const hashedPassword = await hashPassword(password);
 
-      // Create new user with default 5 credits
+      const now = new Date().toISOString();
+      
+      // Create new user with 10 daily credits (which reset at midnight)
+      // These are separate from banked credits
       const user = await storage.createUser({
         username,
         email,
         password: hashedPassword,
-        referredBy,
-        bankedCredits: 5 // Default credits for new users
+        bankedCredits: 0, // Start with 0 banked credits (referral bonuses go here)
+        lastCreditReset: now,
+        createdAt: now
       });
-
-      // If user was referred, add bonus credits to referrer
-      if (referredBy) {
-        const referrer = await storage.getUserByUsername(referredBy);
-        if (referrer) {
-          await storage.addBankedCredits(referrer.id, 5);
-        }
-      }
 
       // Generate referral code for new user
       await storage.generateReferralCode(user.id);
+
+      // Process referral if a referral code was provided
+      if (referredBy) {
+        console.log("Processing referral for:", referredBy);
+        try {
+          // First try to look up by referral code
+          const referralCode = await storage.getReferralByCode(referredBy);
+          
+          if (referralCode) {
+            console.log("Found referral code:", referralCode);
+            // Add 5 banked credits to the referrer
+            await storage.addBankedCredits(referralCode.userId, 5);
+            
+            // Add 5 banked credits to the new user (referee)
+            await storage.addBankedCredits(user.id, 5);
+            
+            // Increment usage count on the referral code
+            await storage.incrementReferralUsage(referralCode.id);
+            
+            console.log("Added 5 banked credits to both referrer and referee");
+          } else {
+            console.log("Referral code not found, trying username lookup");
+            // Fallback to username lookup for backward compatibility
+            const referrer = await storage.getUserByUsername(referredBy);
+            if (referrer) {
+              console.log("Found referrer by username:", referrer.username);
+              // Add 5 banked credits to the referrer
+              await storage.addBankedCredits(referrer.id, 5);
+              
+              // Add 5 banked credits to the new user (referee)
+              await storage.addBankedCredits(user.id, 5);
+              
+              console.log("Added 5 banked credits to both referrer and referee");
+            } else {
+              console.log("Could not find referrer with username:", referredBy);
+            }
+          }
+        } catch (err) {
+          console.error('Error processing referral:', err);
+          // Continue with registration even if referral processing fails
+        }
+      } else {
+        console.log("No referral code provided");
+      }
 
       res.status(201).json(user);
     } catch (error) {
@@ -1301,6 +1351,51 @@ export function registerRoutes(app: Express): Server {
     } catch (error) {
       console.error("Error marking message as read:", error);
       return res.status(500).json({ error: "Failed to mark message as read" });
+    }
+  });
+
+  // User info endpoint
+  app.get("/api/user", (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+    res.json(req.user);
+  });
+
+  // User credits endpoint
+  app.get("/api/users/:id/credits", async (req: any, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ error: "Authentication required" });
+      }
+
+      // Users can only access their own credit info
+      if (req.user.id !== parseInt(req.params.id) && !req.user.isAdmin) {
+        return res.status(403).json({ error: "Unauthorized" });
+      }
+
+      const userId = parseInt(req.params.id);
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      // Reset daily credits if needed (past midnight)
+      await storage.resetDailyCreditsIfNeeded(userId);
+      
+      // Get daily credits (10 by default)
+      const dailyCredits = await storage.getDailyCredits(userId);
+      
+      // Return credit information
+      res.json({
+        dailyCredits,
+        bankedCredits: user.bankedCredits,
+        lastCreditReset: user.lastCreditReset
+      });
+    } catch (error) {
+      console.error('Error fetching user credits:', error);
+      res.status(500).json({ error: "Failed to fetch credit information" });
     }
   });
 

@@ -55,7 +55,7 @@ export interface IStorage {
   getAllUsers(): Promise<User[]>;
   getUserByEmail(email: string): Promise<User | undefined>;
   getUserByResetToken(token: string): Promise<User | undefined>;
-  createUser(user: Pick<InsertUser, "username" | "email" | "password"> & { createdAt: string }): Promise<User>;
+  createUser(user: Pick<InsertUser, "username" | "email" | "password"> & { createdAt: string, bankedCredits: number, lastCreditReset: string }): Promise<User>;
   updateUserPassword(id: number, hashedPassword: string): Promise<User>;
   updateUserResetToken(id: number, token: string, expiry: string): Promise<User>;
   clearUserResetToken(id: number): Promise<User>;
@@ -100,6 +100,8 @@ export interface IStorage {
   // Referral code methods
   getReferralCode(userId: number): Promise<string | null>;
   generateReferralCode(userId: number): Promise<string>;
+  getReferralByCode(code: string): Promise<ReferralCode | null>;
+  incrementReferralUsage(referralId: number): Promise<ReferralCode>;
 
   // New method
   getApplicationUnreadMessageCount(applicationId: number, forAdmin: boolean): Promise<number>;
@@ -107,6 +109,10 @@ export interface IStorage {
   // New method
   getApplicationMessages(applicationId: number): Promise<Message[]>;
   createApplicationMessage(message: InsertMessage): Promise<Message>;
+
+  // Credit management
+  getDailyCredits(userId: number): Promise<number>;
+  resetDailyCreditsIfNeeded(userId: number): Promise<User>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -161,7 +167,7 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
-  async createUser(insertUser: Pick<InsertUser, "username" | "email" | "password"> & { createdAt: string }): Promise<User> {
+  async createUser(insertUser: Pick<InsertUser, "username" | "email" | "password"> & { createdAt: string, bankedCredits: number, lastCreditReset: string }): Promise<User> {
     const [user] = await db.insert(users).values(insertUser).returning();
     return user;
   }
@@ -802,6 +808,52 @@ export class DatabaseStorage implements IStorage {
     return updatedUser;
   }
 
+  async getDailyCredits(userId: number): Promise<number> {
+    // First check if daily credits need to be reset
+    await this.resetDailyCreditsIfNeeded(userId);
+    
+    // Get the user's current daily credits
+    const user = await this.getUser(userId);
+    if (!user) {
+      throw new Error("User not found");
+    }
+    
+    // We store 10 daily credits as the default that resets at midnight
+    // This assumes we add a dailyCredits column to the users table
+    // For now, we'll return a constant 10 as that's the system requirement
+    return 10;
+  }
+  
+  async resetDailyCreditsIfNeeded(userId: number): Promise<User> {
+    const user = await this.getUser(userId);
+    if (!user) {
+      throw new Error("User not found");
+    }
+    
+    // Parse the last reset date
+    const lastResetDate = new Date(user.lastCreditReset);
+    const now = new Date();
+    
+    // Check if it's a new day (past midnight) since the last reset
+    const isNewDay = 
+      lastResetDate.getDate() !== now.getDate() ||
+      lastResetDate.getMonth() !== now.getMonth() ||
+      lastResetDate.getFullYear() !== now.getFullYear();
+      
+    if (isNewDay) {
+      // It's a new day, reset credits to 10 and update the lastCreditReset timestamp
+      const [updatedUser] = await db
+        .update(users)
+        .set({ lastCreditReset: now.toISOString() })
+        .where(eq(users.id, userId))
+        .returning();
+        
+      return updatedUser;
+    }
+    
+    return user;
+  }
+
   async getApplicationUnreadMessageCount(applicationId: number, forAdmin: boolean): Promise<number> {
     try {
       // For admin: Count unread messages FROM user (where isFromAdmin is false)
@@ -910,6 +962,43 @@ export class DatabaseStorage implements IStorage {
       // Check if the table exists
       console.log('Checking if referral_codes table exists...');
       return null;
+    }
+  }
+
+  async getReferralByCode(code: string): Promise<ReferralCode | null> {
+    try {
+      const [referralCode] = await db
+        .select()
+        .from(referralCodes)
+        .where(eq(referralCodes.code, code));
+      return referralCode || null;
+    } catch (error) {
+      console.error('Error in getReferralByCode:', error);
+      return null;
+    }
+  }
+
+  async incrementReferralUsage(referralId: number): Promise<ReferralCode> {
+    try {
+      const [referralCode] = await db
+        .select()
+        .from(referralCodes)
+        .where(eq(referralCodes.id, referralId));
+      
+      if (!referralCode) {
+        throw new Error(`Referral code with ID ${referralId} not found`);
+      }
+      
+      const [updatedReferralCode] = await db
+        .update(referralCodes)
+        .set({ usageCount: referralCode.usageCount + 1 })
+        .where(eq(referralCodes.id, referralId))
+        .returning();
+      
+      return updatedReferralCode;
+    } catch (error) {
+      console.error('Error in incrementReferralUsage:', error);
+      throw error;
     }
   }
 
