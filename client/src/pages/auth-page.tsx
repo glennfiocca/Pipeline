@@ -80,16 +80,24 @@ export default function AuthPage() {
       console.log("Referral code:", values.referredBy);
       
       // Ensure referredBy is included in the registration data
-      await registerMutation.mutateAsync({
+      const userData = await registerMutation.mutateAsync({
         ...values,
         referredBy: values.referredBy // Explicitly pass the referredBy parameter
       });
       
+      console.log("Registration complete, user data:", userData);
+      
       toast({
         title: "Account created",
-        description: "You can now log in with your credentials.",
+        description: "Registration successful! You'll be redirected in a moment...",
       });
-      setLocation("/");
+      
+      // Small delay to let the user see the success message and for session to be properly established
+      setTimeout(() => {
+        console.log("Redirecting to home page...");
+        // Use window.location for a full page refresh to ensure clean session state
+        window.location.href = "/";
+      }, 1500);
     } catch (error) {
       console.error("Registration error:", error);
       toast({

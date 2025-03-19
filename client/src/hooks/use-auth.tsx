@@ -119,14 +119,44 @@ function useRegisterMutation() {
           throw new Error(error.error || error.details || "Registration failed");
         }
 
-        return res.json();
+        // Get the user data from the response
+        const user = await res.json();
+        console.log("Registration successful, user data:", user);
+        
+        // Perform automatic login after successful registration
+        try {
+          console.log("Attempting automatic login with credentials");
+          const loginRes = await apiRequest("POST", "/api/login", {
+            username: validated.username,
+            password: validated.password
+          });
+          
+          if (loginRes.ok) {
+            const loggedInUser = await loginRes.json();
+            console.log("Auto-login successful:", loggedInUser);
+            return loggedInUser;
+          } else {
+            console.warn("Auto-login failed, returning registration data");
+            return user; // Return registration data if auto-login fails
+          }
+        } catch (loginError) {
+          console.error("Auto-login error:", loginError);
+          return user; // Return registration data if auto-login fails
+        }
       } catch (error: any) {
         console.error("Registration error:", error);
         throw new Error(error.message || "Registration failed");
       }
     },
     onSuccess: (user) => {
+      // Update the user data in the cache
       queryClient.setQueryData(["/api/user"], user);
+      
+      // Invalidate the query to force a fresh fetch of user data (to get credits)
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+      }, 1000);
+      
       toast({
         title: "Welcome!",
         description: "Your account has been created successfully.",
@@ -149,7 +179,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isLoading,
   } = useQuery<User>({
     queryKey: ["/api/user"],
-    retry: false,
+    retry: 2, // Retry failed requests up to 2 times
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000), // Exponential backoff
   });
 
   const loginMutation = useLoginMutation();

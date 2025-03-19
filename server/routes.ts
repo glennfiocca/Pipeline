@@ -1196,21 +1196,34 @@ export function registerRoutes(app: Express): Server {
 
       const now = new Date().toISOString();
       
+      // Start with default credits (will be increased later if there's a valid referral)
+      const startingBankedCredits = 0;
+      
       // Create new user with 10 daily credits (which reset at midnight)
       // These are separate from banked credits
-      const user = await storage.createUser({
+      let user = await storage.createUser({
         username,
         email,
         password: hashedPassword,
-        bankedCredits: 0, // Start with 0 banked credits (referral bonuses go here)
+        bankedCredits: startingBankedCredits, // Start with 0 banked credits (referral bonuses go here)
         lastCreditReset: now,
         createdAt: now
       });
 
+      console.log("User created:", user);
+
       // Generate referral code for new user
-      await storage.generateReferralCode(user.id);
+      try {
+        const referralCode = await storage.generateReferralCode(user.id);
+        console.log("Generated referral code for new user:", referralCode);
+      } catch (err) {
+        console.error("Error generating referral code:", err);
+        // Continue even if referral code generation fails
+      }
 
       // Process referral if a referral code was provided
+      let referralProcessed = false;
+      
       if (referredBy) {
         console.log("Processing referral for:", referredBy);
         try {
@@ -1219,29 +1232,43 @@ export function registerRoutes(app: Express): Server {
           
           if (referralCode) {
             console.log("Found referral code:", referralCode);
-            // Add 5 banked credits to the referrer
-            await storage.addBankedCredits(referralCode.userId, 5);
-            
-            // Add 5 banked credits to the new user (referee)
-            await storage.addBankedCredits(user.id, 5);
-            
-            // Increment usage count on the referral code
-            await storage.incrementReferralUsage(referralCode.id);
-            
-            console.log("Added 5 banked credits to both referrer and referee");
+            try {
+              // Add 5 banked credits to the referrer
+              const updatedReferrer = await storage.addBankedCredits(referralCode.userId, 5);
+              console.log("Added 5 credits to referrer. New total:", updatedReferrer.bankedCredits);
+              
+              // Add 5 banked credits to the new user (referee)
+              user = await storage.addBankedCredits(user.id, 5);
+              console.log("Added 5 credits to new user. New total:", user.bankedCredits);
+              
+              // Increment usage count on the referral code
+              await storage.incrementReferralUsage(referralCode.id);
+              
+              console.log("Added 5 banked credits to both referrer and referee");
+              referralProcessed = true;
+            } catch (creditErr) {
+              console.error("Error adding banked credits:", creditErr);
+            }
           } else {
             console.log("Referral code not found, trying username lookup");
             // Fallback to username lookup for backward compatibility
             const referrer = await storage.getUserByUsername(referredBy);
             if (referrer) {
               console.log("Found referrer by username:", referrer.username);
-              // Add 5 banked credits to the referrer
-              await storage.addBankedCredits(referrer.id, 5);
-              
-              // Add 5 banked credits to the new user (referee)
-              await storage.addBankedCredits(user.id, 5);
-              
-              console.log("Added 5 banked credits to both referrer and referee");
+              try {
+                // Add 5 banked credits to the referrer
+                const updatedReferrer = await storage.addBankedCredits(referrer.id, 5);
+                console.log("Added 5 credits to referrer. New total:", updatedReferrer.bankedCredits);
+                
+                // Add 5 banked credits to the new user (referee)
+                user = await storage.addBankedCredits(user.id, 5);
+                console.log("Added 5 credits to new user. New total:", user.bankedCredits);
+                
+                console.log("Added 5 banked credits to both referrer and referee");
+                referralProcessed = true;
+              } catch (creditErr) {
+                console.error("Error adding banked credits:", creditErr);
+              }
             } else {
               console.log("Could not find referrer with username:", referredBy);
             }
@@ -1254,6 +1281,20 @@ export function registerRoutes(app: Express): Server {
         console.log("No referral code provided");
       }
 
+      // Get the final user data with updated credits before sending the response
+      if (referralProcessed) {
+        try {
+          const updatedUser = await storage.getUser(user.id);
+          if (updatedUser) {
+            console.log("Final user data with updated credits:", updatedUser);
+            user = updatedUser;
+          }
+        } catch (err) {
+          console.error("Error getting updated user data:", err);
+        }
+      }
+
+      // Return the user data, including updated bankedCredits if the referral was processed
       res.status(201).json(user);
     } catch (error) {
       console.error('Error creating user:', error);
