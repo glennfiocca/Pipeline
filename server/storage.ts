@@ -14,6 +14,7 @@ import {
 } from "@shared/schema";
 import { db } from "./db";
 import { nanoid } from 'nanoid';
+import { createReferralCodesTable } from './db';
 
 const PostgresSessionStore = connectPg(session);
 
@@ -898,39 +899,54 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getReferralCode(userId: number): Promise<string | null> {
-    const [referralCode] = await db
-      .select()
-      .from(referralCodes)
-      .where(eq(referralCodes.userId, userId));
-    return referralCode ? referralCode.code : null;
+    try {
+      const [referralCode] = await db
+        .select()
+        .from(referralCodes)
+        .where(eq(referralCodes.userId, userId));
+      return referralCode ? referralCode.code : null;
+    } catch (error) {
+      console.error('Error in getReferralCode:', error);
+      // Check if the table exists
+      console.log('Checking if referral_codes table exists...');
+      return null;
+    }
   }
 
   async generateReferralCode(userId: number): Promise<string> {
-    let isUnique = false;
-    let referralCode = '';
+    try {
+      let isUnique = false;
+      let referralCode = '';
 
-    while (!isUnique) {
-      referralCode = nanoid(8);
+      while (!isUnique) {
+        referralCode = nanoid(8);
 
-      const [existingReferralCode] = await db
-        .select()
-        .from(referralCodes)
-        .where(eq(referralCodes.code, referralCode));
+        const [existingReferralCode] = await db
+          .select()
+          .from(referralCodes)
+          .where(eq(referralCodes.code, referralCode));
 
-      if (!existingReferralCode) {
-        isUnique = true;
+        if (!existingReferralCode) {
+          isUnique = true;
+        }
       }
+
+      await db
+        .insert(referralCodes)
+        .values({
+          userId,
+          code: referralCode
+        })
+        .execute();
+
+      return referralCode;
+    } catch (error) {
+      console.error('Error in generateReferralCode:', error);
+      // If this is a "relation does not exist" error, create the table
+      await createReferralCodesTable();
+      // Retry once after creating the table
+      return this.generateReferralCode(userId);
     }
-
-    await db
-      .insert(referralCodes)
-      .values({
-        userId,
-        code: referralCode
-      })
-      .execute();
-
-    return referralCode;
   }
 }
 
