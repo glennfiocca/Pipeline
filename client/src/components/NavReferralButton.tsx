@@ -74,7 +74,7 @@ export function NavReferralButton() {
 
     // Create the referral link using either the referral code or username as fallback
     const codeToUse = referralCode || user.username;
-    const referralLink = `${window.location.origin}/auth?ref=${codeToUse}`;
+    const referralLink = `${window.location.origin}/auth/register?ref=${codeToUse}`;
 
     try {
       await navigator.clipboard.writeText(referralLink);

@@ -16,12 +16,33 @@ import { AuthProvider } from "@/hooks/use-auth";
 import { NotificationsProvider } from "@/hooks/use-notifications";
 import HowItWorksPage from "@/pages/how-it-works-page";
 import AdminUserPage from "@/pages/admin-user-page";
+import { useLocation, useSearch } from "wouter";
+import { useEffect } from "react";
 
 function Router() {
   return (
     <Switch>
       <Route path="/auth/login" component={LoginPage} />
       <Route path="/auth/register" component={RegisterPage} />
+      <Route path="/auth" component={() => {
+        const [, navigate] = useLocation();
+        const [search] = useSearch(); // Get search params
+        
+        useEffect(() => {
+          // If there's a ref parameter, preserve it
+          const params = new URLSearchParams(search);
+          const refCode = params.get('ref');
+          
+          const target = refCode 
+            ? `/auth/register?ref=${refCode}` 
+            : '/auth/register';
+            
+          console.log(`Redirecting /auth to ${target}`);
+          navigate(target);
+        }, [navigate, search]);
+        
+        return <div>Redirecting...</div>;
+      }} />
       <Route path="/" component={HomePage} />
       <Route path="/jobs" component={JobsPage} />
       <Route path="/profile" component={ProfilePage} />
