@@ -55,7 +55,7 @@ export function NavCreditsCard() {
   if (!user) return null;
 
   return (
-    <TooltipProvider delayDuration={300}>
+    <TooltipProvider delayDuration={0} skipDelayDuration={0}>
       <Tooltip>
         <TooltipTrigger asChild>
           <div className="flex items-center gap-1.5 px-2 py-1 rounded-md hover:bg-accent/50 transition-colors">
@@ -65,7 +65,7 @@ export function NavCreditsCard() {
             </Badge>
           </div>
         </TooltipTrigger>
-        <TooltipContent side="bottom" className="bg-card border shadow-md">
+        <TooltipContent side="bottom" className="bg-card border shadow-md" sideOffset={5}>
           <div className="p-2 max-w-xs">
             <p className="font-medium text-sm">
               {remainingDailyCredits} daily credits / {user.bankedCredits} banked credits

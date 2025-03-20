@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Gift, Copy } from "lucide-react";
+import { Gift, Copy, Check } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "../hooks/use-auth";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,7 @@ import {
   TooltipProvider, 
   TooltipTrigger 
 } from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
 
 export function NavReferralButton() {
   const { user } = useAuth();
@@ -67,6 +68,7 @@ export function NavReferralButton() {
           title: "Error",
           description: "Could not generate your referral link. Please try again.",
           variant: "destructive",
+          duration: 0,
         });
         return;
       }
@@ -82,6 +84,7 @@ export function NavReferralButton() {
       toast({
         title: "Copied!",
         description: "Referral link copied to clipboard",
+        duration: 2000,
       });
       setTimeout(() => setCopied(false), 2000);
     } catch (error) {
@@ -89,31 +92,39 @@ export function NavReferralButton() {
         title: "Error",
         description: "Could not copy to clipboard. Try again later.",
         variant: "destructive",
+        duration: 0,
       });
     }
   };
 
   return (
-    <TooltipProvider delayDuration={300}>
+    <TooltipProvider delayDuration={0} skipDelayDuration={0}>
       <Tooltip>
         <TooltipTrigger asChild>
           <Button 
-            variant="ghost" 
+            variant="outline" 
             size="sm" 
-            className="w-full md:w-auto justify-start md:justify-center"
+            className={cn(
+              "w-full md:w-auto justify-start md:justify-center border-primary/30 bg-primary/5 hover:bg-primary/10 hover:border-primary/50 transition-all",
+              copied && "bg-green-100 border-green-300 text-green-700 hover:bg-green-100 hover:border-green-300"
+            )}
             onClick={copyReferralLink}
           >
-            <Gift className="h-4 w-4 mr-2" />
-            Refer a Friend
+            {copied ? (
+              <Check className="h-4 w-4 mr-2 text-green-600" />
+            ) : (
+              <Copy className="h-4 w-4 mr-2" />
+            )}
+            {copied ? "Copied!" : "Copy Referral Code"}
           </Button>
         </TooltipTrigger>
-        <TooltipContent side="bottom" className="bg-card border shadow-md">
+        <TooltipContent side="bottom" className="bg-card border shadow-md" sideOffset={5}>
           <div className="p-2 max-w-xs">
             <p className="font-medium text-sm">
               Share with friends & earn rewards
             </p>
             <p className="text-xs text-muted-foreground mt-1">
-              You both get 5 bonus credits when they sign up!
+              You both get 5 banked credits when they sign up!
             </p>
           </div>
         </TooltipContent>
