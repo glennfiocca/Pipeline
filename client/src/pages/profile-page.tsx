@@ -1670,34 +1670,20 @@ export default function ProfilePage() {
             className="flex justify-end mt-6 pb-8"
             variants={itemVariants}
           >
-            <div className="flex gap-4">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => {
-                  if (formRef.current) {
-                    formRef.current.reset();
-                  }
-                }}
-                className="min-w-[120px]"
-              >
-                Reset
-              </Button>
-              <Button
-                type="submit"
-                disabled={form.formState.isSubmitting}
-                className="min-w-[120px]"
-              >
-                {form.formState.isSubmitting ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Saving...
-                  </>
-                ) : (
-                  "Save Profile"
-                )}
-              </Button>
-            </div>
+            <Button
+              type="submit"
+              disabled={form.formState.isSubmitting}
+              className="min-w-[120px]"
+            >
+              {form.formState.isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                "Save Profile"
+              )}
+            </Button>
           </motion.div>
         </form>
       </Form>
