@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
-import { Star, ArrowRight } from "lucide-react";
+import { Star, ArrowRight, Briefcase } from "lucide-react";
 import { motion } from "framer-motion";
 import { HoverCard, HoverCardTrigger, HoverCardContent } from "@/components/ui/hover-card";
 import { cn } from "@/lib/utils";
@@ -62,14 +62,14 @@ export default function HomePage() {
     }
   ];
 
-  // Company logos
+  // Company logos with simplified data
   const companyLogos = [
-    { name: "Google", logo: "/logos/google.svg" },
-    { name: "Microsoft", logo: "/logos/microsoft.svg" },
-    { name: "Amazon", logo: "/logos/amazon.svg" },
-    { name: "Apple", logo: "/logos/apple.svg" },
-    { name: "Meta", logo: "/logos/meta.svg" },
-    { name: "Netflix", logo: "/logos/netflix.svg" }
+    { name: "Google", primaryColor: "#4285F4" },
+    { name: "Microsoft", primaryColor: "#00A4EF" },
+    { name: "Amazon", primaryColor: "#FF9900" },
+    { name: "Apple", primaryColor: "#000000" },
+    { name: "Meta", primaryColor: "#0668E1" },
+    { name: "Netflix", primaryColor: "#E50914" }
   ];
 
   return (
@@ -208,30 +208,33 @@ export default function HomePage() {
         </section>
         
         {/* Company logos section */}
-        <section className="py-16">
+        <section className="py-16 bg-gradient-to-r from-background via-muted/20 to-background">
           <div className="container mx-auto px-4">
-            <div className="text-center mb-8">
-              <h2 className="text-xl font-medium text-muted-foreground">
-                Trusted by leading companies worldwide
+            <div className="text-center mb-10">
+              <h2 className="text-3xl font-bold mb-3">
+                Featured Companies
               </h2>
+              <p className="text-muted-foreground max-w-2xl mx-auto">
+                Top organizations working with our platform to find exceptional talent
+              </p>
             </div>
             
-            <motion.div 
-              className="flex flex-wrap justify-center items-center gap-8 md:gap-12 max-w-4xl mx-auto"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.5 }}
-            >
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 max-w-5xl mx-auto">
               {companyLogos.map((company, index) => (
-                <div key={index} className="h-8 opacity-70 hover:opacity-100 transition-opacity">
-                  <img 
-                    src={company.logo} 
-                    alt={`${company.name} logo`} 
-                    className="h-full w-auto object-contain grayscale hover:grayscale-0 transition-all"
-                  />
+                <div 
+                  key={index}
+                  className="bg-card rounded-lg shadow-md border p-4 flex flex-col items-center justify-center h-32 hover:border-primary/50 transition-colors"
+                >
+                  <div 
+                    className="w-16 h-16 rounded-full flex items-center justify-center mb-2"
+                    style={{ backgroundColor: company.primaryColor }}
+                  >
+                    <Briefcase className="h-8 w-8 text-white" />
+                  </div>
+                  <p className="font-medium text-center">{company.name}</p>
                 </div>
               ))}
-            </motion.div>
+            </div>
           </div>
         </section>
         
