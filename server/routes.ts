@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertJobSchema, insertApplicationSchema, insertProfileSchema, insertMessageSchema, insertUserSchema, insertFeedbackSchema } from "@shared/schema";
+import { insertJobSchema, insertApplicationSchema, insertProfileSchema, insertMessageSchema, insertUserSchema, insertFeedbackSchema, insertSavedJobSchema } from "@shared/schema";
 import { ScraperManager } from './services/scraper/manager';
 import { db } from './db';
 import { users } from '@shared/schema';
@@ -1437,6 +1437,101 @@ export function registerRoutes(app: Express): Server {
     } catch (error) {
       console.error('Error fetching user credits:', error);
       res.status(500).json({ error: "Failed to fetch credit information" });
+    }
+  });
+
+  // Saved Jobs API routes
+  
+  // Get saved jobs for current user
+  app.get("/api/saved-jobs", async (req: any, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ error: "Authentication required" });
+      }
+
+      const userId = req.user.id;
+      const savedJobs = await storage.getSavedJobsWithDetails(userId);
+      res.json(savedJobs);
+    } catch (error) {
+      console.error('Error fetching saved jobs:', error);
+      res.status(500).json({ error: "Failed to fetch saved jobs" });
+    }
+  });
+
+  // Save a job for current user
+  app.post("/api/saved-jobs", async (req: any, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ error: "Authentication required" });
+      }
+
+      const userId = req.user.id;
+      const { jobId, notes } = req.body;
+      
+      if (!jobId || typeof jobId !== 'number') {
+        return res.status(400).json({ error: "Valid job ID is required" });
+      }
+
+      // Verify the job exists
+      const job = await storage.getJob(jobId);
+      if (!job) {
+        return res.status(404).json({ error: "Job not found" });
+      }
+
+      const savedJob = await storage.saveJob({
+        userId,
+        jobId,
+        notes: notes || null
+      });
+
+      res.status(201).json(savedJob);
+    } catch (error) {
+      console.error('Error saving job:', error);
+      res.status(500).json({ error: "Failed to save job" });
+    }
+  });
+
+  // Check if a job is saved by current user
+  app.get("/api/saved-jobs/:jobId", async (req: any, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ error: "Authentication required" });
+      }
+
+      const userId = req.user.id;
+      const jobId = parseInt(req.params.jobId);
+      
+      if (isNaN(jobId)) {
+        return res.status(400).json({ error: "Invalid job ID" });
+      }
+
+      const isSaved = await storage.isJobSaved(userId, jobId);
+      res.json({ isSaved });
+    } catch (error) {
+      console.error('Error checking saved job status:', error);
+      res.status(500).json({ error: "Failed to check saved job status" });
+    }
+  });
+
+  // Unsave (remove) a saved job
+  app.delete("/api/saved-jobs/:jobId", async (req: any, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ error: "Authentication required" });
+      }
+
+      const userId = req.user.id;
+      const jobId = parseInt(req.params.jobId);
+      
+      if (isNaN(jobId)) {
+        return res.status(400).json({ error: "Invalid job ID" });
+      }
+
+      await storage.unsaveJob(userId, jobId);
+      res.json({ success: true, message: "Job removed from saved jobs" });
+    } catch (error) {
+      console.error('Error removing saved job:', error);
+      res.status(500).json({ error: "Failed to remove saved job" });
     }
   });
 
