@@ -286,6 +286,67 @@ export default function JobsPage() {
     }
   });
 
+  const reportJobMutation = useMutation({
+    mutationFn: async ({ jobId, reportType, comment }: { jobId: number; reportType: string; comment: string }) => {
+      // Map report types to feedback categories
+      const categoryMap: Record<string, string> = {
+        "ghost_listing": "job_report_ghost",
+        "duplicate": "job_report_duplicate",
+        "misleading": "job_report_misleading",
+        "inappropriate": "job_report_inappropriate",
+        "other": "job_report_other"
+      };
+      
+      const category = categoryMap[reportType] || "job_report_other";
+      
+      // Create feedback with job reference in metadata
+      const feedback = {
+        rating: 1, // Low rating for reports
+        subject: `Job Report: ${reportType}`,
+        category,
+        comment,
+        status: "received",
+        metadata: {
+          jobId,
+          reportType
+        }
+      };
+      
+      const res = await apiRequest("POST", "/api/feedback", feedback);
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || "Failed to report job");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Job Reported",
+        description: "Thank you for your feedback. Our team will review this report.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to report job",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleReportJob = (jobId: number, reportType: string, comment: string) => {
+    if (!user) {
+      toast({
+        title: "Authentication Required",
+        description: "Please sign in to report jobs.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    reportJobMutation.mutate({ jobId, reportType, comment });
+  };
+
   // Type assertion to ensure jobs is treated as an array
   const filteredJobs = (Array.isArray(jobs) ? jobs : []).filter((job: Job) => {
     // First check if job is active
@@ -745,6 +806,7 @@ export default function JobsPage() {
               onApply={() => applyMutation.mutate(job.id)}
               onViewDetails={() => setSelectedJob(job)}
               onSaveJob={() => handleSaveJob(job.id)}
+              onReportJob={(reportType, comment) => handleReportJob(job.id, reportType, comment)}
               isApplying={applyMutation.isPending && selectedJob?.id === job.id}
               isApplied={user ? applications.some((app) => app.jobId === job.id) : false}
               previouslyApplied={user ? applications.some((app) => app.jobId === job.id && app.status === "Withdrawn") : false}
@@ -767,6 +829,7 @@ export default function JobsPage() {
               onApply={() => applyMutation.mutate(savedJob.jobId)}
               onViewDetails={() => setSelectedJob(savedJob.job)}
               onSaveJob={() => handleSaveJob(savedJob.jobId)}
+              onReportJob={(reportType, comment) => handleReportJob(savedJob.jobId, reportType, comment)}
               isApplying={applyMutation.isPending && selectedJob?.id === savedJob.jobId}
               isApplied={applications.some((app) => app.jobId === savedJob.jobId)}
               previouslyApplied={applications.some((app) => app.jobId === savedJob.jobId && app.status === "Withdrawn")}

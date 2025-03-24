@@ -1,5 +1,5 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
-import type { Feedback } from "@shared/schema";
+import type { Feedback as FeedbackType } from "@shared/schema";
 import { 
   Card,
   CardContent,
@@ -7,7 +7,7 @@ import {
   CardTitle 
 } from "@/components/ui/card";
 import { format } from "date-fns";
-import { Star, Archive, ArchiveX, MessageSquarePlus, Trash2 } from "lucide-react";
+import { Star, Archive, ArchiveX, MessageSquarePlus, Trash2, Flag, Briefcase } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
@@ -35,6 +35,15 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger 
 } from "@/components/ui/alert-dialog";
+
+// Extended feedback type with proper metadata typing
+interface Feedback extends FeedbackType {
+  metadata: {
+    jobId?: number;
+    reportType?: string;
+    [key: string]: any;
+  };
+}
 
 export function FeedbackManagement() {
   const { toast } = useToast();
@@ -123,6 +132,30 @@ export function FeedbackManagement() {
     }
   };
 
+  const getCategoryIcon = (category: string) => {
+    if (category.startsWith('job_report_')) {
+      return <Flag className="h-4 w-4 text-red-500" />;
+    }
+    // Default icon for regular feedback
+    return null;
+  };
+
+  const formatCategoryLabel = (category: string): string => {
+    if (category === 'job_report_ghost') return 'Ghost Listing';
+    if (category === 'job_report_duplicate') return 'Duplicate Listing';
+    if (category === 'job_report_misleading') return 'Misleading Info';
+    if (category === 'job_report_inappropriate') return 'Inappropriate';
+    if (category === 'job_report_other') return 'Job Issue - Other';
+    return category.charAt(0).toUpperCase() + category.slice(1); // Capitalize regular categories
+  };
+
+  const getCategoryStyle = (category: string): string => {
+    if (category.startsWith('job_report_')) {
+      return 'bg-red-100 text-red-700 border-red-200';
+    }
+    return 'bg-gray-100 text-gray-700 border-gray-200';
+  };
+
   const handleAddNote = (feedback: Feedback) => {
     setSelectedFeedback(feedback);
     setInternalNote(feedback.internalNotes || "");
@@ -157,12 +190,105 @@ export function FeedbackManagement() {
   const activeFeedback = feedbackList.filter(f => !f.archived);
   const archivedFeedback = feedbackList.filter(f => f.archived);
   
-  // Split active feedback into new and commented
-  const newFeedback = activeFeedback.filter(f => !f.internalNotes || f.internalNotes.trim() === '');
-  const commentedFeedback = activeFeedback.filter(f => f.internalNotes && f.internalNotes.trim() !== '');
+  // Split active feedback into job reports and regular feedback
+  const jobReports = activeFeedback.filter(f => f.category.startsWith('job_report_'));
+  const regularActiveFeedback = activeFeedback.filter(f => !f.category.startsWith('job_report_'));
+  
+  // Split regular active feedback into new and commented
+  const newFeedback = regularActiveFeedback.filter(f => !f.internalNotes || f.internalNotes.trim() === '');
+  const commentedFeedback = regularActiveFeedback.filter(f => f.internalNotes && f.internalNotes.trim() !== '');
 
   return (
     <div className="space-y-6">
+      {/* Job Reports Card */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center">
+            <Flag className="mr-2 h-5 w-5 text-red-500" />
+            Job Reports
+            <span className="ml-2 text-sm font-normal text-muted-foreground">
+              ({jobReports.length})
+            </span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ScrollArea className="h-[400px] pr-4">
+            <div className="space-y-4">
+              {jobReports.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  No job reports.
+                </div>
+              ) : (
+                jobReports.map((feedback) => (
+                  <Card key={feedback.id} className="p-4 border border-red-100">
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Flag className="h-4 w-4 text-red-500" />
+                          <Badge variant="outline" className={getCategoryStyle(feedback.category)}>
+                            {formatCategoryLabel(feedback.category)}
+                          </Badge>
+                          <Badge variant="outline" className={getStatusColor(feedback.status)}>
+                            {feedback.status}
+                          </Badge>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => handleAddNote(feedback)}
+                          >
+                            <MessageSquarePlus className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => handleToggleArchive(feedback)}
+                          >
+                            <Archive className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-red-500 hover:text-red-600"
+                            onClick={() => handleDelete(feedback)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                      <div>
+                        <h3 className="text-base font-semibold mb-1">
+                          {feedback.subject}
+                          {feedback.metadata && feedback.metadata.jobId && (
+                            <span className="text-xs font-mono ml-2 text-muted-foreground">
+                              Job ID: {feedback.metadata.jobId}
+                            </span>
+                          )}
+                        </h3>
+                        <p className="text-sm text-muted-foreground mb-2">{feedback.comment}</p>
+                        {feedback.internalNotes && (
+                          <div className="mt-2 p-2 bg-muted rounded-md">
+                            <p className="text-xs font-medium mb-1">Internal Notes:</p>
+                            <p className="text-xs">{feedback.internalNotes}</p>
+                          </div>
+                        )}
+                        <div className="text-xs text-muted-foreground mt-2">
+                          {format(new Date(feedback.createdAt), "MMM d, yyyy")}
+                        </div>
+                      </div>
+                    </div>
+                  </Card>
+                ))
+              )}
+            </div>
+          </ScrollArea>
+        </CardContent>
+      </Card>
+
+      {/* New Feedback Card */}
       <Card>
         <CardHeader>
           <CardTitle>
@@ -229,8 +355,9 @@ export function FeedbackManagement() {
                         </div>
                       </div>
                       <div>
-                        <Badge variant="outline" className="mb-2">
-                          {feedback.category}
+                        <Badge variant="outline" className={`mb-2 ${getCategoryStyle(feedback.category)}`}>
+                          {getCategoryIcon(feedback.category)}
+                          {formatCategoryLabel(feedback.category)}
                         </Badge>
                         <h3 className="text-base font-semibold mb-1">{feedback.subject || "No Subject"}</h3>
                         <p className="text-sm text-muted-foreground mb-2">{feedback.comment}</p>
