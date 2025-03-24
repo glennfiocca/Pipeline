@@ -8,11 +8,36 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { NavCreditsCard } from "@/components/NavCreditsCard";
 import { NavReferralButton } from "@/components/NavReferralButton";
 import { cn } from "@/lib/utils";
+import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 
 export function NavBar() {
   const { user, logoutMutation } = useAuth();
   const [location, setLocation] = useLocation();
   const isMobile = useIsMobile();
+  const [isNavigating, setIsNavigating] = useState(false);
+  const [navigatingTo, setNavigatingTo] = useState("");
+
+  // Specify longer durations for auth page transitions
+  const authPaths = ["/auth/login", "/auth/register"];
+  const isAuthPath = (path: string) => authPaths.includes(path);
+  
+  const handleNavigation = (path: string) => {
+    setIsNavigating(true);
+    setNavigatingTo(path);
+    
+    // Use a longer delay for auth pages to allow for smoother transitions
+    const delay = isAuthPath(path) ? 600 : 300;
+    
+    setTimeout(() => {
+      setLocation(path);
+      
+      // Keep the overlay visible a bit longer to match with the page transition
+      setTimeout(() => {
+        setIsNavigating(false);
+      }, isAuthPath(path) ? 100 : 0);
+    }, delay);
+  };
 
   const NavLinks = () => (
     <div className="flex flex-col md:flex-row md:items-center space-y-2 md:space-y-0 md:space-x-2">
@@ -131,66 +156,94 @@ export function NavBar() {
   );
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container flex h-14 items-center px-4 sm:px-6 lg:px-8 max-w-[2000px]">
-        <div className="mr-4 flex">
-          <Link href="/" className="mr-6 flex items-center space-x-2">
-            <img 
-              src="/Black logo - no background.png" 
-              alt="Pipeline Logo" 
-              className="h-8 md:h-10"
-            />
-          </Link>
-        </div>
-
-        {isMobile ? (
-          <Sheet>
-            <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="md:hidden">
-                <Menu className="h-5 w-5" />
-                <span className="sr-only">Toggle menu</span>
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="left" className="w-[240px] sm:w-[300px]">
-              <div className="px-2 py-6">
-                <NavLinks />
-              </div>
-            </SheetContent>
-          </Sheet>
-        ) : (
-          <NavLinks />
+    <>
+      <AnimatePresence>
+        {isNavigating && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ 
+              opacity: isAuthPath(navigatingTo) ? 0.7 : 0.5 
+            }}
+            exit={{ 
+              opacity: 0,
+              transition: { 
+                duration: isAuthPath(navigatingTo) ? 0.5 : 0.3,
+                ease: "easeInOut"
+              } 
+            }}
+            transition={{ 
+              duration: isAuthPath(navigatingTo) ? 0.4 : 0.3,
+              ease: "easeOut" 
+            }}
+            className="fixed inset-0 bg-background z-50"
+          />
         )}
+      </AnimatePresence>
 
-        <div className="flex-1 flex justify-end items-center space-x-2">
-          {user && (
-            <>
-              <NavCreditsCard />
-              <NotificationsDialog />
-            </>
-          )}
-          {user ? (
-            <Button 
-              variant="ghost" 
-              size="sm"
-              onClick={() => logoutMutation.mutate()}
-              className={cn(
-                "ml-2 relative group"
-              )}
-            >
-              <LogOutIcon className="h-4 w-4 mr-2" />
-              Logout
-              <span className="absolute bottom-0 left-0 h-0.5 bg-primary w-0 group-hover:w-full transition-all duration-300 ease-out"></span>
-            </Button>
+      <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="container flex h-14 items-center px-4 sm:px-6 lg:px-8 max-w-[2000px]">
+          <div className="mr-4 flex">
+            <Link href="/" className="mr-6 flex items-center space-x-2">
+              <img 
+                src="/Black logo - no background.png" 
+                alt="Pipeline Logo" 
+                className="h-8 md:h-10"
+              />
+            </Link>
+          </div>
+
+          {isMobile ? (
+            <Sheet>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="icon" className="md:hidden">
+                  <Menu className="h-5 w-5" />
+                  <span className="sr-only">Toggle menu</span>
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="left" className="w-[240px] sm:w-[300px]">
+                <div className="px-2 py-6">
+                  <NavLinks />
+                </div>
+              </SheetContent>
+            </Sheet>
           ) : (
-            <div className="flex items-center space-x-2">
-              <Link href="/auth/login">
+            <NavLinks />
+          )}
+
+          <div className="flex-1 flex justify-end items-center space-x-2">
+            {user && (
+              <>
+                <NavCreditsCard />
+                <NotificationsDialog />
+              </>
+            )}
+            {user ? (
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={() => logoutMutation.mutate()}
+                className={cn(
+                  "ml-2 relative group"
+                )}
+              >
+                <LogOutIcon className="h-4 w-4 mr-2" />
+                Logout
+                <span className="absolute bottom-0 left-0 h-0.5 bg-primary w-0 group-hover:w-full transition-all duration-300 ease-out"></span>
+              </Button>
+            ) : (
+              <div className="flex items-center space-x-2">
                 <Button 
                   variant="ghost" 
                   size="sm"
                   className={cn(
                     "relative group",
-                    location === "/auth/login" && "font-medium"
+                    location === "/auth/login" && "font-medium",
+                    navigatingTo === "/auth/login" && isNavigating ? "opacity-70" : ""
                   )}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    handleNavigation("/auth/login");
+                  }}
                 >
                   Login
                   <span className={cn(
@@ -198,14 +251,17 @@ export function NavBar() {
                     location === "/auth/login" ? "w-full" : "w-0 group-hover:w-full"
                   )}></span>
                 </Button>
-              </Link>
-              <Link href="/auth/register">
                 <Button 
                   size="sm"
                   className={cn(
                     "relative group",
-                    location === "/auth/register" && "font-medium"
+                    location === "/auth/register" && "font-medium",
+                    navigatingTo === "/auth/register" && isNavigating ? "opacity-70" : ""
                   )}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    handleNavigation("/auth/register");
+                  }}
                 >
                   Sign Up
                   <span className={cn(
@@ -213,11 +269,11 @@ export function NavBar() {
                     location === "/auth/register" ? "w-full" : "w-0 group-hover:w-full"
                   )}></span>
                 </Button>
-              </Link>
-            </div>
-          )}
+              </div>
+            )}
+          </div>
         </div>
-      </div>
-    </header>
+      </header>
+    </>
   );
 }
