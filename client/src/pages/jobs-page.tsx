@@ -7,13 +7,14 @@ import { Slider } from "@/components/ui/slider";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
-import { Job, Application } from "@shared/schema";
+import { Job, Application, SavedJob } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useState, useEffect } from "react";
 import { JobModal } from "@/components/JobModal";
-import { Loader2, Search, Filter, Briefcase } from "lucide-react";
+import { Loader2, Search, Filter, Briefcase, Bookmark } from "lucide-react";
 import { useLocation } from "wouter";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -47,6 +48,7 @@ export default function JobsPage() {
   const [datePosted, setDatePosted] = useState("All");
   const [education, setEducation] = useState("All");
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
+  const [activeTab, setActiveTab] = useState<string>("all");
   const { toast } = useToast();
   const { user } = useAuth();
   const [, navigate] = useLocation();
@@ -112,6 +114,111 @@ export default function JobsPage() {
     enabled: !!user, // Only run query if user is logged in
     staleTime: 1000 * 60 * 5, // Consider data fresh for 5 minutes
   });
+  
+  // Fetch saved jobs if user is logged in
+  const { 
+    data: savedJobs = [], 
+    isLoading: isLoadingSavedJobs 
+  } = useQuery<(SavedJob & { job: Job })[]>({
+    queryKey: ["/api/saved-jobs"],
+    enabled: !!user, // Only run query if user is logged in
+    staleTime: 1000 * 60, // Consider data fresh for 1 minute
+  });
+  
+  // Check if a job is saved
+  const isJobSaved = (jobId: number): boolean => {
+    if (!user || !savedJobs.length) return false;
+    return savedJobs.some(savedJob => savedJob.jobId === jobId);
+  };
+  
+  // Mutation to save a job
+  const saveJobMutation = useMutation({
+    mutationFn: async (jobId: number) => {
+      if (!user) {
+        throw new Error("You must be logged in to save jobs");
+      }
+
+      const res = await apiRequest(
+        "POST",
+        "/api/saved-jobs",
+        { jobId }
+      );
+
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || "Failed to save job");
+      }
+
+      return await res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/saved-jobs"] });
+      toast({
+        title: "Job saved",
+        description: "This job has been added to your saved jobs."
+      });
+    },
+    onError: (error: Error) => {
+      if (error.message.includes("must be logged in")) {
+        navigate("/auth/login");
+        toast({
+          title: "Authentication required",
+          description: "Please log in to save jobs",
+          variant: "default",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: error.message,
+          variant: "destructive"
+        });
+      }
+    }
+  });
+
+  // Mutation to unsave a job
+  const unsaveJobMutation = useMutation({
+    mutationFn: async (jobId: number) => {
+      if (!user) {
+        throw new Error("You must be logged in to manage saved jobs");
+      }
+
+      const res = await apiRequest(
+        "DELETE",
+        `/api/saved-jobs/${jobId}`
+      );
+
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || "Failed to remove saved job");
+      }
+
+      return await res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/saved-jobs"] });
+      toast({
+        title: "Job removed",
+        description: "This job has been removed from your saved jobs."
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  });
+  
+  // Handle saving/unsaving a job
+  const handleSaveJob = (jobId: number) => {
+    if (isJobSaved(jobId)) {
+      unsaveJobMutation.mutate(jobId);
+    } else {
+      saveJobMutation.mutate(jobId);
+    }
+  };
 
   const applyMutation = useMutation({
     mutationFn: async (jobId: number) => {
