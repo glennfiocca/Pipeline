@@ -7,6 +7,7 @@ import { Slider } from "@/components/ui/slider";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
@@ -688,14 +689,41 @@ export default function JobsPage() {
         </Card>
       </motion.div>
 
-      {/* Jobs count */}
+      {/* Jobs count and tabs */}
       <motion.div 
-        className="flex justify-between items-center"
+        className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4"
         variants={fadeInVariants}
       >
         <p className="text-sm text-muted-foreground">
-          Found <span className="font-semibold text-foreground">{filteredJobs.length}</span> active jobs
+          Found <span className="font-semibold text-foreground">
+            {activeTab === "saved" && user ? savedJobs.length : filteredJobs.length}
+          </span> {activeTab === "saved" ? "saved" : "active"} jobs
         </p>
+        
+        {user && (
+          <Tabs 
+            defaultValue="all" 
+            value={activeTab} 
+            onValueChange={setActiveTab}
+            className="w-[400px]"
+          >
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="all" className="flex items-center gap-2">
+                <Briefcase className="h-4 w-4" />
+                <span>All Jobs</span>
+              </TabsTrigger>
+              <TabsTrigger value="saved" className="flex items-center gap-2">
+                <Bookmark className="h-4 w-4" />
+                <span>Saved Jobs</span>
+                {savedJobs.length > 0 && (
+                  <Badge variant="secondary" className="ml-1 h-5 min-w-5 flex items-center justify-center rounded-full px-1.5 text-xs">
+                    {savedJobs.length}
+                  </Badge>
+                )}
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+        )}
       </motion.div>
 
       {/* Jobs List Section - Now in 3 columns */}
@@ -703,7 +731,7 @@ export default function JobsPage() {
         className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3"
         variants={containerVariants}
       >
-        {filteredJobs.map((job: Job, index: number) => (
+        {activeTab === "all" && filteredJobs.map((job: Job, index: number) => (
           <motion.div
             key={job.id}
             variants={itemVariants}
@@ -716,14 +744,38 @@ export default function JobsPage() {
               job={job}
               onApply={() => applyMutation.mutate(job.id)}
               onViewDetails={() => setSelectedJob(job)}
+              onSaveJob={() => handleSaveJob(job.id)}
               isApplying={applyMutation.isPending && selectedJob?.id === job.id}
               isApplied={user ? applications.some((app) => app.jobId === job.id) : false}
               previouslyApplied={user ? applications.some((app) => app.jobId === job.id && app.status === "Withdrawn") : false}
+              isSaved={isJobSaved(job.id)}
+            />
+          </motion.div>
+        ))}
+        
+        {activeTab === "saved" && user && savedJobs.map((savedJob, index) => (
+          <motion.div
+            key={savedJob.jobId}
+            variants={itemVariants}
+            custom={index}
+            whileHover={{ y: -3, boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)" }}
+            transition={{ type: "spring", stiffness: 400 }}
+            className={cn("h-full")}
+          >
+            <JobCard
+              job={savedJob.job}
+              onApply={() => applyMutation.mutate(savedJob.jobId)}
+              onViewDetails={() => setSelectedJob(savedJob.job)}
+              onSaveJob={() => handleSaveJob(savedJob.jobId)}
+              isApplying={applyMutation.isPending && selectedJob?.id === savedJob.jobId}
+              isApplied={applications.some((app) => app.jobId === savedJob.jobId)}
+              previouslyApplied={applications.some((app) => app.jobId === savedJob.jobId && app.status === "Withdrawn")}
+              isSaved={true}
             />
           </motion.div>
         ))}
 
-        {filteredJobs.length === 0 && (
+        {activeTab === "all" && filteredJobs.length === 0 && (
           <motion.div 
             className="text-center py-8 md:col-span-2 lg:col-span-3"
             variants={fadeInVariants}
@@ -731,6 +783,28 @@ export default function JobsPage() {
             <p className="text-muted-foreground">
               No active jobs found matching your criteria. Try adjusting your filters.
             </p>
+          </motion.div>
+        )}
+        
+        {activeTab === "saved" && (savedJobs.length === 0 || !user) && (
+          <motion.div 
+            className="text-center py-8 md:col-span-2 lg:col-span-3"
+            variants={fadeInVariants}
+          >
+            <p className="text-muted-foreground">
+              {!user ? "Please log in to save jobs." : "You haven't saved any jobs yet."}
+            </p>
+            {user && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="mt-4"
+                onClick={() => setActiveTab("all")}
+              >
+                <Briefcase className="mr-2 h-4 w-4" />
+                Browse Jobs
+              </Button>
+            )}
           </motion.div>
         )}
       </motion.div>
