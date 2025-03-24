@@ -94,7 +94,11 @@ export function JobCard({
               </Button>
             ) : (
               <Link href="/auth/login" className="flex-1">
-                <Button variant="default" className="w-full h-8 text-sm" size="sm">
+                <Button 
+                  variant="outline" 
+                  className="w-full h-8 text-sm bg-gray-100 text-gray-600 hover:bg-gray-200 border-gray-300" 
+                  size="sm"
+                >
                   Sign in to Apply
                 </Button>
               </Link>
