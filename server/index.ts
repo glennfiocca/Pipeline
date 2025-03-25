@@ -46,7 +46,7 @@ if (app.get("env") === "development") {
   serveStatic(app);
 }
 
-const PORT = 5000;
+const PORT = 5001; // Fixed port to avoid TypeScript errors
 server.listen(PORT, "0.0.0.0", () => {
   log(`serving on port ${PORT}`);
 });

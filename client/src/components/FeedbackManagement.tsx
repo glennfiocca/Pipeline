@@ -467,10 +467,10 @@ export function FeedbackManagement() {
                               </div>
                               
                               {/* User comment - displayed prominently */}
-                              {feedback.comment && (
+                              {(feedback.comment || feedback.metadata?.comment) && (
                                 <div className="p-3 bg-amber-50 border border-amber-200 rounded-md">
                                   <p className="text-sm font-medium text-amber-800 mb-1">Additional Details:</p>
-                                  <p className="text-sm whitespace-pre-wrap">{feedback.comment}</p>
+                                  <p className="text-sm whitespace-pre-wrap">{feedback.comment || feedback.metadata?.comment}</p>
                                 </div>
                               )}
                               
@@ -603,7 +603,7 @@ export function FeedbackManagement() {
                           {formatCategoryLabel(feedback.category)}
                         </Badge>
                         <h3 className="text-base font-semibold mb-1">{feedback.subject || "No Subject"}</h3>
-                        <p className="text-sm text-muted-foreground mb-2">{feedback.comment}</p>
+                        <p className="text-sm text-muted-foreground mb-2">{feedback.comment || feedback.metadata?.comment}</p>
                         <div className="text-xs text-muted-foreground mt-2">
                           {format(new Date(feedback.createdAt), "MMM d, yyyy")}
                         </div>
@@ -687,7 +687,7 @@ export function FeedbackManagement() {
                           {feedback.category}
                         </Badge>
                         <h3 className="text-base font-semibold mb-1">{feedback.subject || "No Subject"}</h3>
-                        <p className="text-sm text-muted-foreground mb-2">{feedback.comment}</p>
+                        <p className="text-sm text-muted-foreground mb-2">{feedback.comment || feedback.metadata?.comment}</p>
                         {feedback.internalNotes && (
                           <div className="mt-2 p-2 bg-muted rounded-md">
                             <p className="text-xs font-medium">Internal Notes:</p>
@@ -770,10 +770,10 @@ export function FeedbackManagement() {
                         </h3>
                         
                         {/* User comment - displayed prominently */}
-                        {feedback.comment && (
+                        {(feedback.comment || feedback.metadata?.comment) && (
                           <div className="mb-3 p-3 bg-amber-50 border border-amber-200 rounded-md">
                             <p className="text-sm font-medium text-amber-800 mb-1">User Feedback:</p>
-                            <p className="text-sm">{feedback.comment}</p>
+                            <p className="text-sm">{feedback.comment || feedback.metadata?.comment}</p>
                           </div>
                         )}
                         
@@ -793,10 +793,10 @@ export function FeedbackManagement() {
                           </div>
                           
                           {/* User additional details section - highlighted */}
-                          {feedback.comment && (
+                          {(feedback.comment || feedback.metadata?.comment) && (
                             <div className="p-3 bg-amber-50 border border-amber-200 rounded-md">
                               <p className="text-sm font-medium text-amber-800 mb-1">Additional Details:</p>
-                              <p className="text-sm whitespace-pre-wrap">{feedback.comment}</p>
+                              <p className="text-sm whitespace-pre-wrap">{feedback.comment || feedback.metadata?.comment}</p>
                             </div>
                           )}
                           
@@ -905,7 +905,7 @@ export function FeedbackManagement() {
                 {feedbackToDelete.category}
               </Badge>
               <h4 className="text-sm font-medium mb-1">{feedbackToDelete.subject}</h4>
-              <p className="text-sm text-muted-foreground">{feedbackToDelete.comment}</p>
+              <p className="text-sm text-muted-foreground">{feedbackToDelete.comment || feedbackToDelete.metadata?.comment}</p>
             </div>
           )}
           
