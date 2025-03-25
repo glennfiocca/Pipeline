@@ -46,7 +46,7 @@ if (app.get("env") === "development") {
   serveStatic(app);
 }
 
-const PORT = 5001; // Using port 5001 as 5000 is in use
+const PORT = 5000;
 server.listen(PORT, "0.0.0.0", () => {
   log(`serving on port ${PORT}`);
 });
