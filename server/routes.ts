@@ -296,6 +296,32 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Add a dedicated endpoint for deactivating jobs
+  app.patch("/api/admin/jobs/:id/deactivate", isAdmin, async (req, res) => {
+    try {
+      const jobId = parseInt(req.params.id);
+      if (isNaN(jobId)) {
+        return res.status(400).json({ error: "Invalid job ID" });
+      }
+
+      const job = await storage.getJob(jobId);
+      if (!job) {
+        return res.status(404).json({ error: "Job not found" });
+      }
+
+      if (!job.isActive) {
+        return res.json(job); // Job is already inactive, no need to update
+      }
+
+      // Deactivate the job
+      const updatedJob = await storage.deactivateJob(jobId);
+      res.json(updatedJob);
+    } catch (error) {
+      console.error('Error deactivating job:', error);
+      res.status(500).json({ error: "Failed to deactivate job" });
+    }
+  });
+
   // Add delete route for users
   app.delete("/api/admin/users/:id", isAdmin, async (req, res) => {
     try {

@@ -299,16 +299,38 @@ export default function JobsPage() {
       
       const category = categoryMap[reportType] || "job_report_other";
       
-      // Create feedback with job reference in metadata
+      // Get a user-friendly report type label for the subject
+      const reportTypeLabels: Record<string, string> = {
+        "ghost_listing": "Ghost Listing",
+        "duplicate": "Duplicate Listing",
+        "misleading": "Misleading Information",
+        "inappropriate": "Inappropriate Content",
+        "other": "Other Issue"
+      };
+      
+      // Get the job info from the jobs array
+      const reportedJob = jobs.find(j => j.id === jobId);
+      const jobIdentifier = reportedJob?.jobIdentifier || `Job #${jobId}`;
+      const jobTitle = reportedJob?.title || 'Unknown Job';
+      const companyName = reportedJob?.company || 'Unknown Company';
+      
+      // Create a detailed subject line
+      const subject = `Report: ${reportTypeLabels[reportType] || reportType} - ${jobTitle}`;
+      
+      // Create feedback with comprehensive job reference in metadata
       const feedback = {
         rating: 1, // Low rating for reports
-        subject: `Job Report: ${reportType}`,
+        subject,
         category,
         comment,
         status: "received",
         metadata: {
-          jobId,
-          reportType
+          jobId: String(jobId),
+          reportType,
+          jobIdentifier,
+          jobTitle,
+          companyName,
+          reportTimestamp: new Date().toISOString()
         }
       };
       
@@ -344,7 +366,11 @@ export default function JobsPage() {
       return;
     }
     
-    reportJobMutation.mutate({ jobId, reportType, comment });
+    reportJobMutation.mutate({ 
+      jobId,  // This is numeric and expected by the mutation function 
+      reportType, 
+      comment 
+    });
   };
 
   // Type assertion to ensure jobs is treated as an array

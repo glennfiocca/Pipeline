@@ -1,5 +1,5 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
-import type { Feedback as FeedbackType } from "@shared/schema";
+import type { Feedback as FeedbackType, Job, EnhancedFeedback } from "@shared/schema";
 import { 
   Card,
   CardContent,
@@ -7,7 +7,7 @@ import {
   CardTitle 
 } from "@/components/ui/card";
 import { format } from "date-fns";
-import { Star, Archive, ArchiveX, MessageSquarePlus, Trash2, Flag, Briefcase } from "lucide-react";
+import { Star, Archive, ArchiveX, MessageSquarePlus, Trash2, Flag, Briefcase, Eye, XCircleIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
@@ -35,15 +35,12 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger 
 } from "@/components/ui/alert-dialog";
+import { JobModal } from "@/components/JobModal";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Loader2 } from "lucide-react";
 
-// Extended feedback type with proper metadata typing
-interface Feedback extends FeedbackType {
-  metadata: {
-    jobId?: number;
-    reportType?: string;
-    [key: string]: any;
-  };
-}
+// Use the EnhancedFeedback type from our declarations
+type Feedback = EnhancedFeedback;
 
 export function FeedbackManagement() {
   const { toast } = useToast();
@@ -51,9 +48,17 @@ export function FeedbackManagement() {
   const [internalNote, setInternalNote] = useState("");
   const [showNoteDialog, setShowNoteDialog] = useState(false);
   const [feedbackToDelete, setFeedbackToDelete] = useState<Feedback | null>(null);
+  const [selectedJob, setSelectedJob] = useState<Job | null>(null);
+  const [showJobDetailsModal, setShowJobDetailsModal] = useState(false);
+  const [jobDetailLoading, setJobDetailLoading] = useState<number | null>(null);
 
   const { data: feedbackList = [] } = useQuery<Feedback[]>({
     queryKey: ["/api/feedback"],
+  });
+
+  const { data: jobs = [] } = useQuery<Job[]>({
+    queryKey: ["/api/jobs"],
+    enabled: true
   });
 
   const updateFeedbackMutation = useMutation({
@@ -112,6 +117,30 @@ export function FeedbackManagement() {
       toast({
         title: "Error",
         description: error.message || "Failed to delete feedback",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deactivateJobMutation = useMutation({
+    mutationFn: async (jobId: number) => {
+      const response = await apiRequest("PATCH", `/api/admin/jobs/${jobId}/deactivate`, {});
+      if (!response.ok) {
+        throw new Error(`Failed to deactivate job: ${response.status}`);
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
+      toast({
+        title: "Success",
+        description: "Job has been deactivated",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to deactivate job",
         variant: "destructive",
       });
     },
@@ -187,6 +216,55 @@ export function FeedbackManagement() {
     }
   };
 
+  const getJobById = (jobId?: number) => {
+    if (!jobId) return null;
+    return jobs.find(job => job.id === jobId) || null;
+  };
+
+  const handleViewJob = (jobId?: number) => {
+    if (!jobId) return;
+
+    setJobDetailLoading(jobId);
+    const job = getJobById(jobId);
+    
+    if (job) {
+      setSelectedJob(job);
+      setShowJobDetailsModal(true);
+      setJobDetailLoading(null);
+    } else {
+      toast({
+        title: "Job Not Found",
+        description: "The job details could not be found",
+        variant: "destructive"
+      });
+      setJobDetailLoading(null);
+    }
+  };
+
+  const handleDeactivateJob = (jobId?: number) => {
+    if (!jobId) return;
+    
+    const job = getJobById(jobId);
+    if (!job) {
+      toast({
+        title: "Job Not Found",
+        description: "The job details could not be found",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    if (!job.isActive) {
+      toast({
+        title: "Job Already Inactive",
+        description: "This job is already marked as inactive",
+      });
+      return;
+    }
+    
+    deactivateJobMutation.mutate(jobId);
+  };
+
   const activeFeedback = feedbackList.filter(f => !f.archived);
   const archivedFeedback = feedbackList.filter(f => f.archived);
   
@@ -197,6 +275,40 @@ export function FeedbackManagement() {
   // Split regular active feedback into new and commented
   const newFeedback = regularActiveFeedback.filter(f => !f.internalNotes || f.internalNotes.trim() === '');
   const commentedFeedback = regularActiveFeedback.filter(f => f.internalNotes && f.internalNotes.trim() !== '');
+
+  // Group job reports by job ID for better organization
+  const reportsByJob = jobReports.reduce((grouped, report) => {
+    const jobId = report.metadata?.jobId;
+    if (jobId) {
+      if (!grouped[jobId]) {
+        grouped[jobId] = [];
+      }
+      grouped[jobId].push(report);
+    } else {
+      // Reports without jobId
+      if (!grouped["unknown"]) {
+        grouped["unknown"] = [];
+      }
+      grouped["unknown"].push(report);
+    }
+    return grouped;
+  }, {} as Record<string, Feedback[]>);
+
+  const formatReportTypeForDisplay = (reportType: string) => {
+    // First check for category-based report types
+    if (reportType === 'job_report_ghost' || reportType === 'ghost_listing') return 'Ghost Listing';
+    if (reportType === 'job_report_duplicate' || reportType === 'duplicate') return 'Duplicate Listing';
+    if (reportType === 'job_report_misleading' || reportType === 'misleading') return 'Misleading Information';
+    if (reportType === 'job_report_inappropriate' || reportType === 'inappropriate') return 'Inappropriate Content';
+    if (reportType === 'job_report_other' || reportType === 'other') return 'Other Issue';
+    
+    // For numeric or unknown types, provide a fallback
+    if (!reportType || reportType === '') return 'Unknown Issue';
+    if (!isNaN(Number(reportType))) return `Report #${reportType}`;
+    
+    // Default formatting for any other values
+    return reportType.charAt(0).toUpperCase() + reportType.slice(1).replace(/_/g, ' ');
+  };
 
   return (
     <div className="space-y-6">
@@ -212,76 +324,207 @@ export function FeedbackManagement() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <ScrollArea className="h-[400px] pr-4">
-            <div className="space-y-4">
+          <ScrollArea className="h-[500px] pr-4">
+            <div className="space-y-6">
               {jobReports.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
                   No job reports.
                 </div>
               ) : (
-                jobReports.map((feedback) => (
-                  <Card key={feedback.id} className="p-4 border border-red-100">
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <Flag className="h-4 w-4 text-red-500" />
-                          <Badge variant="outline" className={getCategoryStyle(feedback.category)}>
-                            {formatCategoryLabel(feedback.category)}
-                          </Badge>
-                          <Badge variant="outline" className={getStatusColor(feedback.status)}>
-                            {feedback.status}
-                          </Badge>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => handleAddNote(feedback)}
-                          >
-                            <MessageSquarePlus className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => handleToggleArchive(feedback)}
-                          >
-                            <Archive className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-red-500 hover:text-red-600"
-                            onClick={() => handleDelete(feedback)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                      <div>
-                        <h3 className="text-base font-semibold mb-1">
-                          {feedback.subject}
-                          {feedback.metadata && feedback.metadata.jobId && (
-                            <span className="text-xs font-mono ml-2 text-muted-foreground">
-                              Job ID: {feedback.metadata.jobId}
-                            </span>
-                          )}
-                        </h3>
-                        <p className="text-sm text-muted-foreground mb-2">{feedback.comment}</p>
-                        {feedback.internalNotes && (
-                          <div className="mt-2 p-2 bg-muted rounded-md">
-                            <p className="text-xs font-medium mb-1">Internal Notes:</p>
-                            <p className="text-xs">{feedback.internalNotes}</p>
+                Object.entries(reportsByJob).map(([jobIdStr, reports]) => {
+                  const jobId = jobIdStr !== "unknown" ? parseInt(jobIdStr) : undefined;
+                  const job = jobId ? getJobById(jobId) : null;
+                  
+                  return (
+                    <div key={jobIdStr} className="space-y-2">
+                      {job && (
+                        <div className="p-3 bg-muted rounded-md mb-3">
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <h3 className="text-base font-semibold">
+                                {job.title}
+                                <span className="ml-2 text-xs font-mono text-muted-foreground">
+                                  {job.jobIdentifier}
+                                </span>
+                              </h3>
+                              <p className="text-sm text-muted-foreground mb-1">
+                                {job.company} • {job.location}
+                              </p>
+                              <div className="flex gap-2 items-center mt-1">
+                                <Badge variant={job.isActive ? "default" : "secondary"}>
+                                  {job.isActive ? "Active" : "Inactive"}
+                                </Badge>
+                                <Badge variant="outline">
+                                  {job.type}
+                                </Badge>
+                                <Badge variant="outline" className="bg-amber-100 text-amber-800 border-amber-200">
+                                  {reports.length} {reports.length === 1 ? "Report" : "Reports"}
+                                </Badge>
+                              </div>
+                            </div>
+                            <div className="flex gap-2">
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => handleViewJob(jobId)}
+                                      disabled={jobDetailLoading === jobId}
+                                    >
+                                      {jobDetailLoading === jobId ? (
+                                        <span className="flex items-center">
+                                          <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                                          Loading...
+                                        </span>
+                                      ) : (
+                                        <span className="flex items-center">
+                                          <Eye className="h-3 w-3 mr-1" />
+                                          View Job
+                                        </span>
+                                      )}
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    View full job details
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+
+                              {job.isActive && (
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button
+                                        size="sm"
+                                        variant="destructive"
+                                        onClick={() => handleDeactivateJob(jobId)}
+                                        disabled={deactivateJobMutation.isPending}
+                                      >
+                                        <span className="flex items-center">
+                                          <XCircleIcon className="h-3 w-3 mr-1" />
+                                          Deactivate
+                                        </span>
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      Mark this job as inactive
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              )}
+                            </div>
                           </div>
-                        )}
-                        <div className="text-xs text-muted-foreground mt-2">
-                          {format(new Date(feedback.createdAt), "MMM d, yyyy")}
                         </div>
+                      )}
+                      
+                      <div className="space-y-3 pl-3 border-l-2 border-red-200">
+                        {reports.map((feedback) => (
+                          <Card key={feedback.id} className="p-4 border border-red-100">
+                            <div className="space-y-3">
+                              {/* Header with actions */}
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                  <Badge 
+                                    variant="outline" 
+                                    className="bg-red-50 text-red-800 border-red-200 px-2 py-1"
+                                  >
+                                    {formatReportTypeForDisplay(feedback.metadata?.reportType || '')}
+                                  </Badge>
+                                  <span className="text-xs text-muted-foreground">
+                                    Report #{feedback.id} • {format(new Date(feedback.metadata?.reportTimestamp || feedback.createdAt), "MMM d, yyyy")}
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8"
+                                    onClick={() => handleAddNote(feedback)}
+                                    title="Add internal note"
+                                  >
+                                    <MessageSquarePlus className="h-4 w-4" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8"
+                                    onClick={() => handleToggleArchive(feedback)}
+                                    title="Archive report"
+                                  >
+                                    <Archive className="h-4 w-4" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 text-red-500 hover:text-red-600"
+                                    onClick={() => handleDelete(feedback)}
+                                    title="Delete report"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              </div>
+                              
+                              {/* User comment - displayed prominently */}
+                              {feedback.comment && (
+                                <div className="p-3 bg-amber-50 border border-amber-200 rounded-md">
+                                  <p className="text-sm font-medium text-amber-800 mb-1">Additional Details:</p>
+                                  <p className="text-sm whitespace-pre-wrap">{feedback.comment}</p>
+                                </div>
+                              )}
+                              
+                              {/* Job details section */}
+                              <div className="p-3 bg-slate-50 border border-slate-100 rounded-md">
+                                <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
+                                  <div className="col-span-2">
+                                    <span className="font-medium">Job Title:</span>{" "}
+                                    {feedback.metadata?.jobTitle || "Unknown Job"}
+                                  </div>
+                                  
+                                  <div className="col-span-2">
+                                    <span className="font-medium">Company:</span>{" "}
+                                    {feedback.metadata?.companyName || "Unknown Company"}
+                                  </div>
+                                  
+                                  <div>
+                                    <span className="font-medium">Job ID:</span>{" "}
+                                    {feedback.metadata?.jobIdentifier || `Job #${feedback.metadata?.jobId || "Unknown"}`}
+                                  </div>
+                                  
+                                  <div>
+                                    <span className="font-medium">Reported By:</span>{" "}
+                                    User #{feedback.userId}
+                                  </div>
+                                  
+                                  <div>
+                                    <span className="font-medium">Date Reported:</span>{" "}
+                                    {format(new Date(feedback.metadata?.reportTimestamp || feedback.createdAt), "MMM d, yyyy")}
+                                  </div>
+                                  
+                                  <div>
+                                    <span className="font-medium">Status:</span>{" "}
+                                    <Badge variant="outline" className={getStatusColor(feedback.status)}>
+                                      {feedback.status}
+                                    </Badge>
+                                  </div>
+                                </div>
+                              </div>
+                              
+                              {/* Internal notes section if any */}
+                              {feedback.internalNotes && (
+                                <div className="p-3 bg-muted rounded-md">
+                                  <p className="text-xs font-medium mb-1">Internal Notes:</p>
+                                  <p className="text-sm">{feedback.internalNotes}</p>
+                                </div>
+                              )}
+                            </div>
+                          </Card>
+                        ))}
                       </div>
                     </div>
-                  </Card>
-                ))
+                  );
+                })
               )}
             </div>
           </ScrollArea>
@@ -522,19 +765,73 @@ export function FeedbackManagement() {
                         </div>
                       </div>
                       <div>
-                        <Badge variant="outline" className="mb-2">
-                          {feedback.category}
-                        </Badge>
-                        <h3 className="text-base font-semibold mb-1">{feedback.subject}</h3>
-                        <p className="text-sm text-muted-foreground mb-2">{feedback.comment}</p>
-                        {feedback.internalNotes && (
-                          <div className="mt-2 p-2 bg-background rounded-md">
-                            <p className="text-xs font-medium">Internal Notes:</p>
-                            <p className="text-sm text-muted-foreground">{feedback.internalNotes}</p>
+                        <h3 className="text-base font-semibold mb-1">
+                          Job Report: {formatReportTypeForDisplay(feedback.metadata?.reportType || '')}
+                        </h3>
+                        
+                        {/* User comment - displayed prominently */}
+                        {feedback.comment && (
+                          <div className="mb-3 p-3 bg-amber-50 border border-amber-200 rounded-md">
+                            <p className="text-sm font-medium text-amber-800 mb-1">User Feedback:</p>
+                            <p className="text-sm">{feedback.comment}</p>
                           </div>
                         )}
-                        <div className="text-xs text-muted-foreground mt-2">
-                          {format(new Date(feedback.createdAt), "MMM d, yyyy")}
+                        
+                        {/* Report metadata with enhanced details */}
+                        <div className="space-y-3">
+                          {/* Report header with type prominently displayed */}
+                          <div className="flex items-center gap-2">
+                            <Badge 
+                              variant="outline" 
+                              className="bg-red-50 text-red-800 border-red-200 px-2 py-1 text-xs"
+                            >
+                              {formatReportTypeForDisplay(feedback.metadata?.reportType || '')}
+                            </Badge>
+                            <span className="text-xs text-muted-foreground">
+                              Report #{feedback.id} • {format(new Date(feedback.metadata?.reportTimestamp || feedback.createdAt), "MMM d, yyyy")}
+                            </span>
+                          </div>
+                          
+                          {/* User additional details section - highlighted */}
+                          {feedback.comment && (
+                            <div className="p-3 bg-amber-50 border border-amber-200 rounded-md">
+                              <p className="text-sm font-medium text-amber-800 mb-1">Additional Details:</p>
+                              <p className="text-sm whitespace-pre-wrap">{feedback.comment}</p>
+                            </div>
+                          )}
+                          
+                          {/* Job details section */}
+                          <div className="p-3 bg-slate-50 border border-slate-100 rounded-md space-y-2">
+                            <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
+                              <div className="col-span-2">
+                                <span className="font-medium">Job Title:</span>{" "}
+                                {feedback.metadata?.jobTitle || "Unknown Job"}
+                              </div>
+                              
+                              <div className="col-span-2">
+                                <span className="font-medium">Company:</span>{" "}
+                                {feedback.metadata?.companyName || "Unknown Company"}
+                              </div>
+                              
+                              <div>
+                                <span className="font-medium">Job ID:</span>{" "}
+                                {feedback.metadata?.jobIdentifier || `Job #${feedback.metadata?.jobId || "Unknown"}`}
+                              </div>
+                              
+                              <div>
+                                <span className="font-medium">Reported By:</span>{" "}
+                                User #{feedback.userId}
+                              </div>
+                            </div>
+                          </div>
+                          
+                          {/* Internal notes section if any */}
+                          {feedback.internalNotes && (
+                            <div className="p-3 bg-muted rounded-md">
+                              <p className="text-xs font-medium mb-1">Internal Notes:</p>
+                              <p className="text-sm">{feedback.internalNotes}</p>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -623,6 +920,15 @@ export function FeedbackManagement() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Job Modal for viewing job details */}
+      {selectedJob && (
+        <JobModal
+          isOpen={showJobDetailsModal}
+          onClose={() => setShowJobDetailsModal(false)}
+          job={selectedJob}
+        />
+      )}
     </div>
   );
 }
