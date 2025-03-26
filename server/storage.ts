@@ -4,14 +4,15 @@ import { eq, desc, and, ilike } from "drizzle-orm";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
 import { 
-  messages, applications, jobs, profiles, users, feedback, notifications, referralCodes, savedJobs,
+  messages, applications, jobs, profiles, users, feedback, notifications, referralCodes, savedJobs, reportedJobs,
   type Message, type InsertMessage,
   type Job, type Profile, type Application, type User,
   type InsertJob, type InsertProfile, type InsertApplication, type InsertUser,
   type Feedback, type InsertFeedback,
   type Notification, type InsertNotification,
   type ReferralCode, type InsertReferralCode,
-  type SavedJob, type InsertSavedJob
+  type SavedJob, type InsertSavedJob,
+  type ReportedJob, type InsertReportedJob
 } from "@shared/schema";
 import { db } from "./db";
 import { nanoid } from 'nanoid';
@@ -121,6 +122,16 @@ export interface IStorage {
   saveJob(savedJob: InsertSavedJob): Promise<SavedJob>;
   unsaveJob(userId: number, jobId: number): Promise<void>;
   isJobSaved(userId: number, jobId: number): Promise<boolean>;
+  
+  // Reported jobs methods
+  getReportedJobs(): Promise<ReportedJob[]>;
+  getReportedJobById(id: number): Promise<ReportedJob | undefined>;
+  getReportedJobsByUser(userId: number): Promise<ReportedJob[]>;
+  getReportedJobsByStatus(status: string): Promise<ReportedJob[]>;
+  getReportedJobsWithDetails(): Promise<(ReportedJob & { job: Job; user: User })[]>;
+  reportJob(report: InsertReportedJob): Promise<ReportedJob>;
+  updateReportStatus(id: number, status: string, adminNotes?: string, reviewedBy?: number): Promise<ReportedJob>;
+  deleteJobReport(id: number): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1155,6 +1166,153 @@ export class DatabaseStorage implements IStorage {
     } catch (error) {
       console.error('Error checking if job is saved:', error);
       return false;
+    }
+  }
+
+  // Reported jobs implementation
+  async getReportedJobs(): Promise<ReportedJob[]> {
+    try {
+      return await db.select().from(reportedJobs).orderBy(desc(reportedJobs.createdAt));
+    } catch (error) {
+      console.error('Error fetching reported jobs:', error);
+      throw error;
+    }
+  }
+
+  async getReportedJobById(id: number): Promise<ReportedJob | undefined> {
+    try {
+      const [report] = await db
+        .select()
+        .from(reportedJobs)
+        .where(eq(reportedJobs.id, id));
+      
+      return report;
+    } catch (error) {
+      console.error(`Error fetching reported job with ID ${id}:`, error);
+      throw error;
+    }
+  }
+
+  async getReportedJobsByUser(userId: number): Promise<ReportedJob[]> {
+    try {
+      return await db
+        .select()
+        .from(reportedJobs)
+        .where(eq(reportedJobs.userId, userId))
+        .orderBy(desc(reportedJobs.createdAt));
+    } catch (error) {
+      console.error(`Error fetching reported jobs for user ${userId}:`, error);
+      throw error;
+    }
+  }
+
+  async getReportedJobsByStatus(status: string): Promise<ReportedJob[]> {
+    try {
+      return await db
+        .select()
+        .from(reportedJobs)
+        .where(eq(reportedJobs.status, status))
+        .orderBy(desc(reportedJobs.createdAt));
+    } catch (error) {
+      console.error(`Error fetching reported jobs with status ${status}:`, error);
+      throw error;
+    }
+  }
+
+  async getReportedJobsWithDetails(): Promise<(ReportedJob & { job: Job; user: User })[]> {
+    try {
+      const reports = await db.select().from(reportedJobs).orderBy(desc(reportedJobs.createdAt));
+      
+      // Get all unique job IDs and user IDs from reports
+      const jobIds = [...new Set(reports.map(report => report.jobId))];
+      const userIds = [...new Set(reports.map(report => report.userId))];
+      
+      // Fetch all jobs and users in bulk
+      const jobsData = await db.select().from(jobs).where(
+        jobIds.length > 0 ? (jobs.id as any).in(jobIds) : undefined
+      );
+      
+      const usersData = await db.select().from(users).where(
+        userIds.length > 0 ? (users.id as any).in(userIds) : undefined
+      );
+      
+      // Create maps for easy lookup
+      const jobMap = Object.fromEntries(jobsData.map(job => [job.id, job]));
+      const userMap = Object.fromEntries(usersData.map(user => [user.id, user]));
+      
+      // Combine the data
+      return reports.map(report => ({
+        ...report,
+        job: jobMap[report.jobId],
+        user: userMap[report.userId]
+      }));
+    } catch (error) {
+      console.error('Error fetching reported jobs with details:', error);
+      throw error;
+    }
+  }
+
+  async reportJob(report: InsertReportedJob): Promise<ReportedJob> {
+    try {
+      const [newReport] = await db
+        .insert(reportedJobs)
+        .values({
+          ...report,
+          createdAt: new Date().toISOString(),
+          status: 'pending'
+        })
+        .returning();
+      
+      return newReport;
+    } catch (error) {
+      console.error('Error reporting job:', error);
+      throw error;
+    }
+  }
+
+  async updateReportStatus(
+    id: number, 
+    status: string, 
+    adminNotes?: string, 
+    reviewedBy?: number
+  ): Promise<ReportedJob> {
+    try {
+      const updates: any = {
+        status,
+        reviewedAt: new Date().toISOString()
+      };
+
+      if (adminNotes) {
+        updates.adminNotes = adminNotes;
+      }
+
+      if (reviewedBy) {
+        updates.reviewedBy = reviewedBy;
+      }
+
+      const [updatedReport] = await db
+        .update(reportedJobs)
+        .set(updates)
+        .where(eq(reportedJobs.id, id))
+        .returning();
+      
+      if (!updatedReport) {
+        throw new Error(`Report with ID ${id} not found`);
+      }
+      
+      return updatedReport;
+    } catch (error) {
+      console.error(`Error updating report status for ID ${id}:`, error);
+      throw error;
+    }
+  }
+
+  async deleteJobReport(id: number): Promise<void> {
+    try {
+      await db.delete(reportedJobs).where(eq(reportedJobs.id, id));
+    } catch (error) {
+      console.error(`Error deleting job report with ID ${id}:`, error);
+      throw error;
     }
   }
 }

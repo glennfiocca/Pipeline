@@ -451,6 +451,58 @@ export const insertSavedJobSchema = createInsertSchema(savedJobs).omit({
 export type SavedJob = typeof savedJobs.$inferSelect;
 export type InsertSavedJob = z.infer<typeof insertSavedJobSchema>;
 
+// Reported jobs table to track user reports for job listings
+export const reportedJobs = pgTable("reported_jobs", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  jobId: integer("job_id").notNull().references(() => jobs.id, { onDelete: "cascade" }),
+  reason: text("reason").notNull(), // ghost listing, duplicate, fraudulent, inappropriate, etc.
+  comments: text("comments"),
+  status: text("status").notNull().default("pending"), // pending, reviewed, resolved, dismissed
+  createdAt: text("created_at").notNull().default(new Date().toISOString()),
+  reviewedAt: text("reviewed_at"),
+  reviewedBy: integer("reviewed_by").references(() => users.id),
+  adminNotes: text("admin_notes")
+});
+
+// Add relations for reported jobs
+export const reportedJobsRelations = relations(reportedJobs, ({ one }) => ({
+  user: one(users, {
+    fields: [reportedJobs.userId],
+    references: [users.id],
+  }),
+  job: one(jobs, {
+    fields: [reportedJobs.jobId],
+    references: [jobs.id],
+  }),
+  reviewer: one(users, {
+    fields: [reportedJobs.reviewedBy],
+    references: [users.id],
+  })
+}));
+
+// Create the insert reported job schema
+export const insertReportedJobSchema = createInsertSchema(reportedJobs).omit({
+  id: true,
+  createdAt: true,
+  reviewedAt: true,
+  reviewedBy: true,
+  adminNotes: true
+}).extend({
+  reason: z.enum([
+    "ghost_listing", 
+    "duplicate", 
+    "fraudulent", 
+    "inappropriate", 
+    "misleading", 
+    "other"
+  ])
+});
+
+// Define types for reported jobs
+export type ReportedJob = typeof reportedJobs.$inferSelect;
+export type InsertReportedJob = z.infer<typeof insertReportedJobSchema>;
+
 // Define ReferralCode type
 export type ReferralCode = typeof referralCodes.$inferSelect;
 export type InsertReferralCode = typeof referralCodes.$inferInsert;
