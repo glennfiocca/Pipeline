@@ -50,7 +50,10 @@ export function ReportJobDialog({ isOpen, onClose, jobId, jobTitle }: ReportJobD
     mutationFn: async (formData: z.infer<typeof reportJobSchema>) => {
       return await apiRequest<any>("/api/job-reports", {
         method: "POST",
-        data: formData
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(formData)
       });
     },
     onSuccess: () => {
