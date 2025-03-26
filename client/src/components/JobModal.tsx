@@ -8,12 +8,13 @@ import {
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Building2, MapPin, DollarSign, CheckCircle2, ExternalLink, Loader2, AtSign } from "lucide-react";
+import { Building2, MapPin, DollarSign, CheckCircle2, ExternalLink, Loader2, AtSign, Flag } from "lucide-react";
 import { Link } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import type { Job } from "@shared/schema";
 import { useState, ReactNode } from "react";
 import { ApplicationCreditsDialog } from "./ApplicationCreditsDialog";
+import { ReportJobDialog } from "./ReportJobDialog";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface JobModalProps {
@@ -41,6 +42,7 @@ export function JobModal({
 }: JobModalProps) {
   const { user } = useAuth();
   const [showCreditsDialog, setShowCreditsDialog] = useState(false);
+  const [showReportDialog, setShowReportDialog] = useState(false);
 
   if (!job) return null;
 
@@ -57,6 +59,11 @@ export function JobModal({
   const handleApplyClick = () => {
     if (!user) return;
     setShowCreditsDialog(true);
+  };
+
+  const handleReportClick = () => {
+    if (!user) return;
+    setShowReportDialog(true);
   };
 
   // Animation variants
@@ -119,23 +126,37 @@ export function JobModal({
           </DialogHeader>
 
           <motion.div className="space-y-6 mt-4" variants={itemVariants}>
-            <motion.div className="flex flex-wrap gap-2" variants={itemVariants}>
-              <Badge variant="secondary" className="flex items-center">
-                <AtSign className="mr-2 h-3 w-3" />
-                {job.company}
-              </Badge>
-              <Badge variant="secondary" className="flex items-center">
-                <MapPin className="mr-2 h-3 w-3" />
-                {job.location}
-              </Badge>
-              <Badge variant="secondary" className="flex items-center">
-                <DollarSign className="mr-2 h-3 w-3" />
-                {job.salary}
-              </Badge>
-              <Badge variant="default">
-                {job.type}
-              </Badge>
-            </motion.div>
+            <div className="flex justify-between items-center">
+              <motion.div className="flex flex-wrap gap-2" variants={itemVariants}>
+                <Badge variant="secondary" className="flex items-center">
+                  <AtSign className="mr-2 h-3 w-3" />
+                  {job.company}
+                </Badge>
+                <Badge variant="secondary" className="flex items-center">
+                  <MapPin className="mr-2 h-3 w-3" />
+                  {job.location}
+                </Badge>
+                <Badge variant="secondary" className="flex items-center">
+                  <DollarSign className="mr-2 h-3 w-3" />
+                  {job.salary}
+                </Badge>
+                <Badge variant="default">
+                  {job.type}
+                </Badge>
+              </motion.div>
+              
+              {user && (
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={handleReportClick}
+                  className="flex items-center gap-1 text-amber-500 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20"
+                >
+                  <Flag className="h-4 w-4" />
+                  <span className="text-xs">Report</span>
+                </Button>
+              )}
+            </div>
 
             <div className="space-y-6">
               <motion.div variants={itemVariants}>
@@ -220,6 +241,13 @@ export function JobModal({
           onApply && onApply(job.id);
           setShowCreditsDialog(false);
         }}
+        jobTitle={job.title}
+      />
+      
+      <ReportJobDialog
+        isOpen={showReportDialog}
+        onClose={() => setShowReportDialog(false)}
+        jobId={job.id}
         jobTitle={job.title}
       />
     </Dialog>
