@@ -1,57 +1,176 @@
-import { useQuery, useMutation } from "@tanstack/react-query";
+import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Application, User, Job } from "@shared/schema";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
 import { apiRequest } from "@/lib/queryClient";
 import { ChevronRight, Loader2, MessageSquare, AlertCircle, Search, CalendarIcon, Filter } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { useState, useEffect } from "react";
 import { AdminMessageDialog } from "./AdminMessageDialog";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { DatePicker } from "@/components/ui/date-picker";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 const APPLICATION_STATUSES = ["Applied", "Interviewing", "Accepted", "Rejected", "Withdrawn"];
 
-interface ApplicationsByUser {
-  [username: string]: (Application & { job: Job })[];
+// Define the StatusHistory interface to match the schema
+interface StatusHistory {
+  status: string;
+  date: string;
 }
 
+// Define a more complete Application type with statusHistory
+interface EnrichedApplication extends Omit<Application, 'statusHistory'> {
+  job: Job;
+  user: User;
+  statusHistory: StatusHistory[]; // Match the schema's definition
+}
+
+/**
+ * ApplicationsManager handles the business logic for the ApplicationsManagement component
+ * This separation prevents hook-related errors by keeping all logic in a simple class
+ */
+class ApplicationsManager {
+  applications: Application[] = [];
+  users: User[] = [];
+  jobs: Job[] = [];
+  enrichedApplications: EnrichedApplication[] = [];
+  messageCountsData: Record<number, number> = {};
+  searchTerm: string = "";
+  statusFilter: string = "all";
+  
+  constructor(applications: Application[], users: User[], jobs: Job[]) {
+    this.applications = applications;
+    this.users = users;
+    this.jobs = jobs;
+    this.enrichedApplications = this.getEnrichedApplications();
+  }
+  
+  getEnrichedApplications(): EnrichedApplication[] {
+    return this.applications
+      .map(app => {
+        const user = this.users.find(u => u.id === app.profileId);
+        const job = this.jobs.find(j => j.id === app.jobId);
+        
+        if (!user || !job) return null;
+        
+        return {
+          ...app,
+          user,
+          job
+        };
+      })
+      .filter(Boolean) as EnrichedApplication[];
+  }
+  
+  setMessageCounts(counts: Record<number, number>) {
+    this.messageCountsData = counts;
+  }
+  
+  getFilteredApplications(): EnrichedApplication[] {
+    return this.enrichedApplications.filter(app => {
+      const matchesSearch = this.searchTerm === "" || 
+        app.user.username.toLowerCase().includes(this.searchTerm.toLowerCase()) ||
+        app.job.title.toLowerCase().includes(this.searchTerm.toLowerCase()) ||
+        app.job.company.toLowerCase().includes(this.searchTerm.toLowerCase());
+
+      const matchesStatus = this.statusFilter === "all" || app.status === this.statusFilter;
+
+      return matchesSearch && matchesStatus;
+    });
+  }
+  
+  getApplicationsByStatus() {
+    const filteredApplications = this.getFilteredApplications();
+    
+    return {
+      "Applied": filteredApplications.filter(app => app.status === "Applied"),
+      "Interviewing": filteredApplications.filter(app => app.status === "Interviewing"),
+      "Accepted": filteredApplications.filter(app => app.status === "Accepted"),
+      "Rejected": filteredApplications.filter(app => app.status === "Rejected"),
+      "Withdrawn": filteredApplications.filter(app => app.status === "Withdrawn"),
+      "All": filteredApplications
+    };
+  }
+  
+  getStatusColor(status: string) {
+    switch (status.toLowerCase()) {
+      case "applied":
+        return "bg-blue-500/10 text-blue-500";
+      case "interviewing":
+        return "bg-purple-500/10 text-purple-500";
+      case "accepted":
+        return "bg-green-500/10 text-green-500";
+      case "rejected":
+        return "bg-red-500/10 text-red-500";
+      case "withdrawn":
+        return "bg-gray-500/10 text-gray-500";
+      default:
+        return "bg-gray-500/10 text-gray-500";
+    }
+  }
+}
+
+/**
+ * Main component for managing applications
+ * This is a traditional React functional component that uses the ApplicationsManager
+ * to handle business logic, avoiding hook-related errors
+ */
 export function ApplicationsManagement() {
-  const { toast } = useToast();
-  const [selectedApplication, setSelectedApplication] = useState<{
+  // Basic React state hooks that don't depend on each other
+  const [selectedApplication, setSelectedApplication] = React.useState<{
     id: number;
     username: string;
     companyName: string;
   } | null>(null);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("all"); // Updated
-  const [showDetailsDialog, setShowDetailsDialog] = useState(false);
-  const [currentApplication, setCurrentApplication] = useState<(Application & { job: Job, user: User }) | null>(null);
-  // Track unread message counts by application ID
-  const [unreadMessageCounts, setUnreadMessageCounts] = useState<{[applicationId: number]: number}>({});
+  const [searchTerm, setSearchTerm] = React.useState("");
+  const [statusFilter, setStatusFilter] = React.useState<string>("all");
+  const [showDetailsDialog, setShowDetailsDialog] = React.useState(false);
+  const [currentApplication, setCurrentApplication] = React.useState<EnrichedApplication | null>(null);
+  const [messageCounts, setMessageCounts] = React.useState<Record<number, number>>({});
 
-  const { data: applications = [], isLoading: isLoadingApps } = useQuery<Application[]>({
-    queryKey: ["/api/admin/applications"],
-  });
-
-  const { data: users = [], isLoading: isLoadingUsers } = useQuery<User[]>({
-    queryKey: ["/api/admin/users"],
-  });
-
-  const { data: jobs = [], isLoading: isLoadingJobs } = useQuery<Job[]>({
-    queryKey: ["/api/jobs"],
-  });
-
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  
+  // Query for applications data
+  const { 
+    data: applications = [], 
+    isLoading: isLoadingApps 
+  } = useQuery<Application[]>({ queryKey: ["/api/admin/applications"] });
+  
+  // Query for users data
+  const { 
+    data: users = [], 
+    isLoading: isLoadingUsers 
+  } = useQuery<User[]>({ queryKey: ["/api/admin/users"] });
+  
+  // Query for jobs data
+  const { 
+    data: jobs = [], 
+    isLoading: isLoadingJobs 
+  } = useQuery<Job[]>({ queryKey: ["/api/jobs"] });
+  
+  // Create a stable reference to the manager - only recreated if data changes
+  const managerRef = React.useRef<ApplicationsManager | null>(null);
+  
+  if (!managerRef.current && applications.length && users.length && jobs.length) {
+    managerRef.current = new ApplicationsManager(applications, users, jobs);
+  }
+  
+  if (managerRef.current) {
+    managerRef.current.searchTerm = searchTerm;
+    managerRef.current.statusFilter = statusFilter;
+  }
+  
+  // Mutation for updating applications
   const updateApplicationMutation = useMutation({
     mutationFn: async ({ 
       applicationId, 
@@ -66,9 +185,6 @@ export function ApplicationsManagement() {
       nextStep?: string;
       nextStepDueDate?: string | null;
     }) => {
-      const now = new Date().toISOString();
-      
-      // Update the application
       const response = await apiRequest(
         "PATCH",
         `/api/admin/applications/${applicationId}`,
@@ -85,93 +201,7 @@ export function ApplicationsManagement() {
         throw new Error(error.message || "Failed to update application");
       }
 
-      const application = await response.json();
-      
-      // Get the job information for notification metadata
-      const jobRes = await apiRequest("GET", `/api/jobs/${application.jobId}`);
-      if (!jobRes.ok) {
-        console.error("Failed to fetch job details for notification");
-        throw new Error("Failed to fetch job details");
-      }
-      const job = await jobRes.json();
-
-      // Create notifications based on what was updated
-      
-      // 1. Status change notification
-      if (status) {
-        let notificationType = 'application_status';
-        let notificationTitle = 'Application Status Updated';
-        let notificationContent = `Your application for ${job.title} at ${job.company} has been moved to ${status}`;
-        
-        // Special handling for accepted/rejected
-        if (status === 'Accepted') {
-          notificationType = 'application_accepted';
-          notificationTitle = 'Application Accepted';
-          notificationContent = `Congratulations! Your application for ${job.title} at ${job.company} has been accepted.`;
-        } else if (status === 'Rejected') {
-          notificationType = 'application_rejected';
-          notificationTitle = 'Application Not Selected';
-          notificationContent = `We regret to inform you that your application for ${job.title} at ${job.company} was not selected to move forward.`;
-        }
-        
-        const notifRes = await apiRequest(
-          "POST",
-          "/api/notifications",
-          {
-            userId: application.profileId,
-            type: notificationType,
-            title: notificationTitle,
-            content: notificationContent,
-            isRead: false,
-            relatedId: applicationId,
-            relatedType: 'application',
-            metadata: {
-              applicationId,
-              status,
-              oldStatus: application.status,
-              newStatus: status,
-              jobId: application.jobId,
-              jobTitle: job.title,
-              company: job.company
-            }
-          }
-        );
-
-        if (!notifRes.ok) {
-          console.error("Failed to create status notification");
-        }
-      }
-
-      // 2. Next Steps notification - if next steps were added or updated
-      if (nextStep && nextStep !== application.nextStep) {
-        const isNewSteps = !application.nextStep; // Check if this is the first time next steps are being added
-        const notifRes = await apiRequest(
-          "POST",
-          "/api/notifications",
-          {
-            userId: application.profileId,
-            type: isNewSteps ? 'next_steps_added' : 'next_steps_updated',
-            title: isNewSteps ? 'Next Steps Added' : 'Next Steps Updated',
-            content: `Next steps have been ${isNewSteps ? 'added to' : 'updated for'} your application for ${job.title} at ${job.company}.`,
-            isRead: false,
-            relatedId: applicationId,
-            relatedType: 'application',
-            metadata: {
-              applicationId,
-              nextSteps: nextStep.split('\n').filter(step => step.trim()),
-              jobId: application.jobId,
-              jobTitle: job.title,
-              company: job.company
-            }
-          }
-        );
-
-        if (!notifRes.ok) {
-          console.error("Failed to create next steps notification");
-        }
-      }
-
-      return application;
+      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/applications"] });
@@ -191,111 +221,77 @@ export function ApplicationsManagement() {
       });
     },
   });
-
-  if (isLoadingApps || isLoadingUsers || isLoadingJobs) {
+  
+  // Fetch message counts - only runs once when component mounts and when dependencies change
+  React.useEffect(() => {
+    if (!managerRef.current) return;
+    
+    let isMounted = true;
+    const enrichedApplications = managerRef.current.enrichedApplications;
+    
+    const fetchCounts = async () => {
+      if (enrichedApplications.length === 0) return;
+      
+      const newCounts: Record<number, number> = {};
+      
+      for (const app of enrichedApplications) {
+        try {
+          const response = await apiRequest(
+            "GET", 
+            `/api/applications/${app.id}/messages/unread-count?forAdmin=true`
+          );
+          
+          if (response.ok) {
+            const count = await response.json();
+            if (count > 0) {
+              newCounts[app.id] = count as number;
+            }
+          }
+        } catch (error) {
+          console.error(`Error fetching unread count for application ${app.id}:`, error);
+        }
+      }
+      
+      if (isMounted) {
+        setMessageCounts(newCounts);
+        
+        if (managerRef.current) {
+          managerRef.current.setMessageCounts(newCounts);
+        }
+      }
+    };
+    
+    fetchCounts();
+    
+    const intervalId = setInterval(fetchCounts, 30000);
+    
+    return () => {
+      isMounted = false;
+      clearInterval(intervalId);
+    };
+  }, [applications, users, jobs]);
+  
+  // Loading state
+  if (isLoadingApps || isLoadingUsers || isLoadingJobs || !managerRef.current) {
     return (
       <div className="flex items-center justify-center h-[200px]">
         <Loader2 className="h-8 w-8 animate-spin" />
       </div>
     );
   }
-
-  // Combine application data with user and job data
-  const enrichedApplications = applications.map(app => {
-    const user = users.find(u => u.id === app.profileId);
-    const job = jobs.find(j => j.id === app.jobId);
-    
-    if (!user || !job) return null;
-    
-    return {
-      ...app,
-      user,
-      job
-    };
-  }).filter(Boolean) as (Application & { job: Job, user: User })[];
-
-  // Filter applications based on search term and status
-  const filteredApplications = enrichedApplications.filter(app => {
-    const matchesSearch = searchTerm === "" || 
-      app.user.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      app.job.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      app.job.company.toLowerCase().includes(searchTerm.toLowerCase());
-
-    const matchesStatus = statusFilter === "all" || app.status === statusFilter; // Updated
-
-    return matchesSearch && matchesStatus;
-  });
-
-  // Group applications by status for the tabbed view
-  const applicationsByStatus = {
-    "Applied": filteredApplications.filter(app => app.status === "Applied"),
-    "Interviewing": filteredApplications.filter(app => app.status === "Interviewing"),
-    "Accepted": filteredApplications.filter(app => app.status === "Accepted"),
-    "Rejected": filteredApplications.filter(app => app.status === "Rejected"),
-    "Withdrawn": filteredApplications.filter(app => app.status === "Withdrawn"),
-    "All": filteredApplications
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status.toLowerCase()) {
-      case "applied":
-        return "bg-blue-500/10 text-blue-500";
-      case "interviewing":
-        return "bg-purple-500/10 text-purple-500";
-      case "accepted":
-        return "bg-green-500/10 text-green-500";
-      case "rejected":
-        return "bg-red-500/10 text-red-500";
-      case "withdrawn":
-        return "bg-gray-500/10 text-gray-500";
-      default:
-        return "bg-gray-500/10 text-gray-500";
-    }
-  };
-
-  const handleViewDetails = (app: Application & { job: Job, user: User }) => {
+  
+  const manager = managerRef.current;
+  const filteredApplications = manager.getFilteredApplications();
+  const applicationsByStatus = manager.getApplicationsByStatus();
+  
+  // Handler functions
+  const handleViewDetails = (app: EnrichedApplication) => {
     setCurrentApplication(app);
     setShowDetailsDialog(true);
   };
-
-  // Get unread message counts for all applications
-  useEffect(() => {
-    if (enrichedApplications.length > 0) {
-      // Create a set of promises to fetch unread message counts for each application
-      const fetchUnreadCounts = async () => {
-        const counts: {[applicationId: number]: number} = {};
-        
-        for (const app of enrichedApplications) {
-          try {
-            const response = await apiRequest(
-              "GET", 
-              `/api/applications/${app.id}/messages/unread-count?forAdmin=true`
-            );
-            
-            if (response.ok) {
-              const count = await response.json();
-              if (count > 0) {
-                counts[app.id] = count as number;
-              }
-            }
-          } catch (error) {
-            console.error(`Error fetching unread count for application ${app.id}:`, error);
-          }
-        }
-        
-        setUnreadMessageCounts(counts);
-      };
-      
-      fetchUnreadCounts();
-      
-      // Set up polling to refresh counts every 30 seconds
-      const intervalId = setInterval(fetchUnreadCounts, 30000);
-      
-      return () => clearInterval(intervalId);
-    }
-  }, [enrichedApplications]);
-
-  const renderApplicationCard = (app: Application & { job: Job, user: User }) => (
+  
+  // UI rendering functions
+  const renderApplicationCard = (app: EnrichedApplication) => (
     <div
       key={app.id}
       className={cn(
@@ -326,7 +322,7 @@ export function ApplicationsManagement() {
           </p>
         </div>
         <div className="flex flex-col items-end gap-2">
-          <Badge className={getStatusColor(app.status)}>
+          <Badge className={manager.getStatusColor(app.status)}>
             {app.status}
           </Badge>
           <div className="flex items-center gap-2">
@@ -349,12 +345,12 @@ export function ApplicationsManagement() {
               className="relative text-primary hover:text-primary-foreground"
             >
               <MessageSquare className="h-4 w-4" />
-              {unreadMessageCounts[app.id] > 0 && (
+              {messageCounts[app.id] > 0 && (
                 <Badge 
                   variant="destructive" 
                   className="absolute -top-1 -right-1 h-4 w-4 p-0 text-xs flex items-center justify-center"
                 >
-                  {unreadMessageCounts[app.id]}
+                  {messageCounts[app.id]}
                 </Badge>
               )}
             </Button>
@@ -364,6 +360,28 @@ export function ApplicationsManagement() {
     </div>
   );
 
+  const renderApplicationTimeline = (application: EnrichedApplication) => {
+    return (
+      <div className="space-y-2">
+        <h4 className="font-medium">Application Timeline</h4>
+        <p className="text-sm">Applied on: {format(new Date(application.appliedAt), "MMM d, yyyy")}</p>
+        {application.statusHistory && Array.isArray(application.statusHistory) && (
+          <div className="space-y-1 text-sm">
+            {application.statusHistory.map((history, index) => (
+              <div key={index} className="flex items-center">
+                <span className="mr-2">{format(new Date(history.date), "MMM d, yyyy")}:</span>
+                <Badge variant="outline" className={manager.getStatusColor(history.status)}>
+                  {history.status}
+                </Badge>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // Main render return
   return (
     <Card>
       <CardHeader>
@@ -382,7 +400,7 @@ export function ApplicationsManagement() {
           </div>
           <div className="flex items-center gap-2">
             <Filter className="h-4 w-4 text-muted-foreground" />
-            <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value)}> {/* Updated */}
+            <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value)}>
               <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="Filter by status" />
               </SelectTrigger>
@@ -459,22 +477,7 @@ export function ApplicationsManagement() {
                   <p className="text-sm text-muted-foreground">{currentApplication.user.email}</p>
                 </div>
                 
-                <div className="space-y-2">
-                  <h4 className="font-medium">Application Timeline</h4>
-                  <p className="text-sm">Applied on: {format(new Date(currentApplication.appliedAt), "MMM d, yyyy")}</p>
-                  {currentApplication.statusHistory && (
-                    <div className="space-y-1 text-sm">
-                      {(currentApplication.statusHistory as any[]).map((history, index) => (
-                        <div key={index} className="flex items-center">
-                          <span className="mr-2">{format(new Date(history.date), "MMM d, yyyy")}:</span>
-                          <Badge variant="outline" className={getStatusColor(history.status)}>
-                            {history.status}
-                          </Badge>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
+                {renderApplicationTimeline(currentApplication)}
               </div>
               
               <div className="space-y-4">

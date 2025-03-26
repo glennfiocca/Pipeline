@@ -11,7 +11,8 @@ import {
   type Feedback, type InsertFeedback,
   type Notification, type InsertNotification,
   type ReferralCode, type InsertReferralCode,
-  type SavedJob, type InsertSavedJob
+  type SavedJob, type InsertSavedJob,
+  type ReportedJob, type InsertReportedJob
 } from "@shared/schema";
 import { db } from "./db";
 import { nanoid } from 'nanoid';
@@ -121,6 +122,12 @@ export interface IStorage {
   saveJob(savedJob: InsertSavedJob): Promise<SavedJob>;
   unsaveJob(userId: number, jobId: number): Promise<void>;
   isJobSaved(userId: number, jobId: number): Promise<boolean>;
+
+  // Reported Jobs methods
+  getReportedJobs(): Promise<ReportedJob[]>;
+  getReportedJob(id: number): Promise<ReportedJob | undefined>; 
+  updateReportedJob(id: number, updates: Partial<ReportedJob>): Promise<ReportedJob>;
+  deleteReportedJob(id: number): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1045,4 +1052,27 @@ export class DatabaseStorage implements IStorage {
       return this.generateReferralCode(userId);
     }
   }
+
+  async getReportedJobs(): Promise<ReportedJob[]> {
+    return await db.select().from(reportedJobs);
+  }
+
+  async getReportedJob(id: number): Promise<ReportedJob | undefined> {
+    const [reportedJob] = await db.select().from(reportedJobs).where(eq(reportedJobs.id, id));
+    return reportedJob;
+  }
+
+  async updateReportedJob(id: number, updates: Partial<ReportedJob>): Promise<ReportedJob> {
+    const [updatedReportedJob] = await db
+      .update(reportedJobs)
+      .set(updates)
+      .where(eq(reportedJobs.id, id))
+      .returning();
+    return updatedReportedJob;
+  }
+
+  async deleteReportedJob(id: number): Promise<void> {
+    await db.delete(reportedJobs).where(eq(reportedJobs.id, id));
+  }
+}
 

@@ -11,7 +11,7 @@ import { queryClient } from "@/lib/queryClient";
 import { apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
 import { useLocation } from "wouter";
-import { Users, Mail, User as UserIcon, Edit, Trash2, Plus, CreditCard, FileDown, Eye, FileText, ChevronRight, Search } from "lucide-react";
+import { Users, Mail, User as UserIcon, Edit, Trash2, Plus, CreditCard, FileDown, Eye, FileText, ChevronRight, Search, Flag, CheckCircle, XCircle } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -26,6 +26,9 @@ import { jsPDF } from "jspdf";
 import "jspdf-autotable";
 import { Input } from "@/components/ui/input";
 import { motion, AnimatePresence } from "framer-motion";
+import Link from "next/link";
+import { Link as WouterLink } from "wouter";
+import { type ReportedJob } from "@shared/schema";
 type NewJobForm = z.infer<typeof insertJobSchema>;
 type NewUserForm = z.infer<typeof insertUserSchema>;
 type SelectedUserCredits = {
@@ -54,6 +57,7 @@ export default function AdminDashboardPage() {
   const [archivedJobsSearch, setArchivedJobsSearch] = useState("");
   const [usersSearch, setUsersSearch] = useState("");
   const [managementSearch, setManagementSearch] = useState("");
+  const [reportedJobsSearch, setReportedJobsSearch] = useState("");
 
   const { data: jobs = [], isLoading: isLoadingJobs } = useQuery<Job[]>({
     queryKey: ["/api/jobs"],
@@ -760,6 +764,86 @@ export default function AdminDashboardPage() {
     });
   };
 
+  const { data: reportedJobs = [], isLoading: isLoadingReportedJobs } = useQuery<ReportedJob[]>({
+    queryKey: ["/api/admin/reported-jobs"],
+    queryFn: async () => {
+      const res = await apiRequest("GET", "/api/admin/reported-jobs");
+      if (!res.ok) {
+        throw new Error("Failed to fetch reported jobs");
+      }
+      return res.json();
+    },
+  });
+
+  // Filter reported jobs based on search term
+  const filteredReportedJobs = reportedJobs.filter(report => 
+    reportedJobsSearch === "" || 
+    report.job?.title?.toLowerCase().includes(reportedJobsSearch.toLowerCase()) ||
+    report.job?.company?.toLowerCase().includes(reportedJobsSearch.toLowerCase()) ||
+    report.job?.jobIdentifier?.toLowerCase().includes(reportedJobsSearch.toLowerCase()) ||
+    report.reason?.toLowerCase().includes(reportedJobsSearch.toLowerCase()) ||
+    report.status?.toLowerCase().includes(reportedJobsSearch.toLowerCase()) ||
+    report.user?.username?.toLowerCase().includes(reportedJobsSearch.toLowerCase())
+  );
+
+  // Mutation for updating report status
+  const updateReportStatusMutation = useMutation({
+    mutationFn: async ({ id, status, adminNotes }: { id: number; status: string; adminNotes?: string }) => {
+      const res = await apiRequest("PATCH", `/api/job-reports/${id}`, { status, adminNotes });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || "Failed to update report status");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/job-reports"] });
+      toast({
+        title: "Success",
+        description: "Report status updated successfully",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Mutation for deleting a report
+  const deleteReportMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const res = await apiRequest("DELETE", `/api/job-reports/${id}`, {});
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || "Failed to delete report");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/job-reports"] });
+      toast({
+        title: "Success",
+        description: "Report deleted successfully",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Function to format reason display
+  const formatReason = (reason: string) => {
+    if (!reason) return "";
+    return reason.replace(/_/g, " ").replace(/\b\w/g, char => char.toUpperCase());
+  };
+
   if (isLoadingJobs || isLoadingUsers) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -828,6 +912,7 @@ export default function AdminDashboardPage() {
           <TabsList className="mb-4">
             <TabsTrigger value="active-jobs">Active Jobs</TabsTrigger>
             <TabsTrigger value="archived-jobs">Archived Jobs</TabsTrigger>
+            <TabsTrigger value="reported-jobs">Reported Jobs</TabsTrigger>
             <TabsTrigger value="users">Users</TabsTrigger>
             <TabsTrigger value="applications">All Applications</TabsTrigger>
             <TabsTrigger value="user-view">Management</TabsTrigger>
@@ -1057,6 +1142,191 @@ export default function AdminDashboardPage() {
                       transition={{ duration: 0.5 }}
                     >
                       {archivedJobsSearch ? "No matching archived jobs found" : "No archived jobs found"}
+                    </motion.div>
+                  )}
+                </motion.div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        </TabsContent>
+        <TabsContent value="reported-jobs">
+          <motion.div
+            initial="hidden"
+            animate="visible"
+            variants={containerVariants}
+          >
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0">
+                <CardTitle>
+                  Reported Jobs Management
+                  <span className="ml-2 text-sm font-normal text-muted-foreground">
+                    ({filteredReportedJobs.length} reports)
+                  </span>
+                </CardTitle>
+                <div className="flex items-center gap-4">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search reports by job, reason, status..."
+                      className="w-[300px] pl-9"
+                      value={reportedJobsSearch}
+                      onChange={(e) => setReportedJobsSearch(e.target.value)}
+                    />
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <motion.div className="space-y-4" variants={containerVariants}>
+                  {isLoadingReportedJobs ? (
+                    <div className="flex justify-center py-8">
+                      <div className="animate-spin h-8 w-8 border-4 border-primary border-opacity-50 rounded-full border-t-transparent"></div>
+                    </div>
+                  ) : filteredReportedJobs.length > 0 ? (
+                    <div className="overflow-x-auto">
+                      <table className="w-full border-collapse">
+                        <thead>
+                          <tr className="border-b">
+                            <th className="px-4 py-2 text-left">Job</th>
+                            <th className="px-4 py-2 text-left">Reported By</th>
+                            <th className="px-4 py-2 text-left">Reason</th>
+                            <th className="px-4 py-2 text-left">Status</th>
+                            <th className="px-4 py-2 text-left">Reported On</th>
+                            <th className="px-4 py-2 text-left">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {filteredReportedJobs.map((report) => (
+                            <motion.tr
+                              key={report.id}
+                              variants={itemVariants}
+                              whileHover={{ backgroundColor: "rgba(0,0,0,0.02)" }}
+                              className="border-b"
+                            >
+                              <td className="px-4 py-3">
+                                <div className="font-medium">{report.job?.title || "Unknown Job"}</div>
+                                <div className="text-sm text-muted-foreground">
+                                  {report.job?.company} - ID: {report.job?.jobIdentifier}
+                                </div>
+                              </td>
+                              <td className="px-4 py-3">{report.user?.username || "Unknown User"}</td>
+                              <td className="px-4 py-3">
+                                <div className="flex items-center gap-1">
+                                  <Flag className="h-4 w-4 text-yellow-500" />
+                                  <span>{formatReason(report.reason)}</span>
+                                </div>
+                                {report.comments && (
+                                  <div className="text-sm text-muted-foreground mt-1">
+                                    "{report.comments}"
+                                  </div>
+                                )}
+                              </td>
+                              <td className="px-4 py-3">
+                                <Badge
+                                  variant={
+                                    report.status === "pending" 
+                                      ? "outline" 
+                                      : report.status === "resolved" 
+                                        ? "default" 
+                                        : "secondary"
+                                  }
+                                >
+                                  {report.status}
+                                </Badge>
+                              </td>
+                              <td className="px-4 py-3">
+                                {format(new Date(report.createdAt), "MMM d, yyyy")}
+                              </td>
+                              <td className="px-4 py-3">
+                                <div className="flex items-center gap-2">
+                                  {report.status === "pending" && (
+                                    <>
+                                      <Button
+                                        variant="default"
+                                        size="sm"
+                                        className="gap-1"
+                                        onClick={() => updateReportStatusMutation.mutate({ 
+                                          id: report.id, 
+                                          status: "resolved",
+                                          adminNotes: "Issue verified and resolved" 
+                                        })}
+                                      >
+                                        <CheckCircle className="h-4 w-4" />
+                                        Resolve
+                                      </Button>
+                                      <Button
+                                        variant="secondary"
+                                        size="sm"
+                                        className="gap-1"
+                                        onClick={() => updateReportStatusMutation.mutate({ 
+                                          id: report.id, 
+                                          status: "dismissed",
+                                          adminNotes: "Report reviewed and dismissed" 
+                                        })}
+                                      >
+                                        <XCircle className="h-4 w-4" />
+                                        Dismiss
+                                      </Button>
+                                    </>
+                                  )}
+                                  {report.status !== "pending" && (
+                                    <AlertDialog>
+                                      <AlertDialogTrigger asChild>
+                                        <Button variant="destructive" size="sm" className="gap-1">
+                                          <Trash2 className="h-4 w-4" />
+                                          Delete
+                                        </Button>
+                                      </AlertDialogTrigger>
+                                      <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                          <AlertDialogTitle>Delete Report</AlertDialogTitle>
+                                          <AlertDialogDescription>
+                                            Are you sure you want to delete this report? This action cannot be undone.
+                                          </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                          <AlertDialogAction
+                                            onClick={() => deleteReportMutation.mutate(report.id)}
+                                          >
+                                            Delete
+                                          </AlertDialogAction>
+                                        </AlertDialogFooter>
+                                      </AlertDialogContent>
+                                    </AlertDialog>
+                                  )}
+                                  {report.adminNotes && (
+                                    <Dialog>
+                                      <DialogTrigger asChild>
+                                        <Button variant="outline" size="sm">
+                                          <FileText className="h-4 w-4" />
+                                          Notes
+                                        </Button>
+                                      </DialogTrigger>
+                                      <DialogContent>
+                                        <DialogHeader>
+                                          <DialogTitle>Admin Notes</DialogTitle>
+                                        </DialogHeader>
+                                        <div className="mt-4">
+                                          <p>{report.adminNotes}</p>
+                                        </div>
+                                      </DialogContent>
+                                    </Dialog>
+                                  )}
+                                </div>
+                              </td>
+                            </motion.tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <motion.div 
+                      className="text-center py-8 text-muted-foreground"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ duration: 0.5 }}
+                    >
+                      {reportedJobsSearch ? "No matching reported jobs found" : "No reported jobs found"}
                     </motion.div>
                   )}
                 </motion.div>

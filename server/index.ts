@@ -3,6 +3,7 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { setupAuth } from "./auth";
 import path from "path";
+import reportedJobsRoutes from './routes/admin/reportedJobs';
 
 const app = express();
 
@@ -18,6 +19,8 @@ setupAuth(app);
 
 // Then setup routes
 const server = registerRoutes(app);
+
+app.use('/api/admin/reported-jobs', reportedJobsRoutes);
 
 // Error handler for JSON parsing
 app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
