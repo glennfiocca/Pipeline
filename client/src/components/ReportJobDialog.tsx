@@ -10,22 +10,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-
-// Schema for job report
-export const reportJobSchema = z.object({
-  jobId: z.number(),
-  reason: z.enum([
-    "ghost_listing",
-    "duplicate",
-    "fraudulent",
-    "inappropriate",
-    "misleading",
-    "other"
-  ], {
-    required_error: "Please select a reason for reporting this job"
-  }),
-  comments: z.string().min(5, "Please provide at least 5 characters of detail").max(500, "Comments must be less than 500 characters")
-});
+import { reportJobSchema, ReportJobSchema } from "@/components/schemas/job-report-schema";
 
 interface ReportJobDialogProps {
   isOpen: boolean;
