@@ -1,6 +1,6 @@
 import { Pool, neonConfig } from '@neondatabase/serverless';
 import { drizzle } from 'drizzle-orm/neon-serverless';
-import { eq, desc, and, ilike } from "drizzle-orm";
+import { eq, desc, and, ilike, inArray } from "drizzle-orm";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
 import { 
@@ -1224,17 +1224,27 @@ export class DatabaseStorage implements IStorage {
       const reports = await db.select().from(reportedJobs).orderBy(desc(reportedJobs.createdAt));
       
       // Get all unique job IDs and user IDs from reports
-      const jobIds = [...new Set(reports.map(report => report.jobId))];
-      const userIds = [...new Set(reports.map(report => report.userId))];
+      const jobIds = Array.from(new Set(reports.map(report => report.jobId)));
+      const userIds = Array.from(new Set(reports.map(report => report.userId)));
       
       // Fetch all jobs and users in bulk
-      const jobsData = await db.select().from(jobs).where(
-        jobIds.length > 0 ? (jobs.id as any).in(jobIds) : undefined
-      );
+      let jobsData: Job[] = [];
+      if (jobIds.length > 0) {
+        jobsData = await db.select().from(jobs).where(
+          jobIds.length === 1 
+            ? eq(jobs.id, jobIds[0])
+            : inArray(jobs.id, jobIds)
+        );
+      }
       
-      const usersData = await db.select().from(users).where(
-        userIds.length > 0 ? (users.id as any).in(userIds) : undefined
-      );
+      let usersData: User[] = [];
+      if (userIds.length > 0) {
+        usersData = await db.select().from(users).where(
+          userIds.length === 1
+            ? eq(users.id, userIds[0])
+            : inArray(users.id, userIds)
+        );
+      }
       
       // Create maps for easy lookup
       const jobMap = Object.fromEntries(jobsData.map(job => [job.id, job]));

@@ -765,9 +765,9 @@ export default function AdminDashboardPage() {
   };
 
   const { data: reportedJobs = [], isLoading: isLoadingReportedJobs } = useQuery<ReportedJob[]>({
-    queryKey: ["/api/admin/reported-jobs"],
+    queryKey: ["/api/job-reports"],
     queryFn: async () => {
-      const res = await apiRequest("GET", "/api/admin/reported-jobs");
+      const res = await apiRequest("GET", "/api/job-reports");
       if (!res.ok) {
         throw new Error("Failed to fetch reported jobs");
       }
