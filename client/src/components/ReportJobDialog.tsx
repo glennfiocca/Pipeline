@@ -8,7 +8,7 @@ import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/api";
+import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
 // Schema for job report
@@ -48,13 +48,7 @@ export function ReportJobDialog({ isOpen, onClose, jobId, jobTitle }: ReportJobD
 
   const reportJobMutation = useMutation({
     mutationFn: async (formData: z.infer<typeof reportJobSchema>) => {
-      return await apiRequest<any>("/api/job-reports", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify(formData)
-      });
+      return await apiRequest("POST", "/api/job-reports", formData);
     },
     onSuccess: () => {
       toast({
