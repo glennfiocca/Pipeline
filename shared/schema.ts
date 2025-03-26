@@ -361,7 +361,7 @@ export const insertFeedbackSchema = createInsertSchema(feedback).omit({
 }).extend({
   rating: z.number().min(1).max(5),
   subject: z.string().min(3, "Please provide a subject").max(100, "Subject is too long"),
-  category: z.enum(["bug", "feature", "general", "ui", "other", "job_report_ghost", "job_report_duplicate", "job_report_misleading", "job_report_inappropriate", "job_report_other"]),
+  category: z.enum(["bug", "feature", "general", "ui", "other"]),
   status: z.enum(["pending", "in_progress", "resolved", "rejected", "received"])
 });
 

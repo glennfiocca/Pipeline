@@ -1,14 +1,13 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { MapPin, DollarSign, Loader2, CheckCircle2, AtSign, Bookmark, BookmarkCheck, Flag } from "lucide-react";
+import { MapPin, DollarSign, Loader2, CheckCircle2, AtSign, Bookmark, BookmarkCheck } from "lucide-react";
 import { Link } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import type { Job } from "@shared/schema";
 import { useState } from "react";
 import { ApplicationCreditsDialog } from "./ApplicationCreditsDialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { JobReportDialog } from "./JobReportDialog";
 
 interface JobCardProps {
   job: Job;
@@ -19,7 +18,6 @@ interface JobCardProps {
   isApplying?: boolean;
   previouslyApplied?: boolean;
   isSaved?: boolean;
-  onReportJob?: (jobId: number, reportType: string, comment: string) => void;
 }
 
 export function JobCard({ 
@@ -30,12 +28,10 @@ export function JobCard({
   isApplied, 
   isApplying,
   previouslyApplied,
-  isSaved = false,
-  onReportJob
+  isSaved = false
 }: JobCardProps) {
   const { user } = useAuth();
   const [showCreditsDialog, setShowCreditsDialog] = useState(false);
-  const [showReportDialog, setShowReportDialog] = useState(false);
   const [localSaved, setLocalSaved] = useState(isSaved);
 
   const buttonText = isApplying 
@@ -61,67 +57,34 @@ export function JobCard({
     }
   };
 
-  const handleReportClick = () => {
-    if (!user) return;
-    setShowReportDialog(true);
-  };
-
-  const handleReportSubmit = (reportType: string, comment: string) => {
-    if (onReportJob) {
-      onReportJob(job.id, reportType, comment);
-    }
-    setShowReportDialog(false);
-  };
-
   return (
     <>
       <Card className="w-full transition-shadow hover:shadow-md relative border-2 border-border/50 h-full flex flex-col">
         <div className="absolute top-2 right-2 flex items-center gap-2">
           {user ? (
-            <>
-              <TooltipProvider delayDuration={0} skipDelayDuration={0}>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7"
-                      onClick={handleReportClick}
-                    >
-                      <Flag className="h-4 w-4 text-muted-foreground" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom" className="bg-card border shadow-sm">
-                    <p className="text-xs font-medium">
-                      Report job listing
-                    </p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-              <TooltipProvider delayDuration={0} skipDelayDuration={0}>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7"
-                      onClick={handleSaveClick}
-                    >
-                      {localSaved ? (
-                        <BookmarkCheck className="h-4 w-4 text-primary" />
-                      ) : (
-                        <Bookmark className="h-4 w-4" />
-                      )}
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom" className="bg-card border shadow-sm">
-                    <p className="text-xs font-medium">
-                      {localSaved ? "Unsave job" : "Save job"}
-                    </p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </>
+            <TooltipProvider delayDuration={0} skipDelayDuration={0}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7"
+                    onClick={handleSaveClick}
+                  >
+                    {localSaved ? (
+                      <BookmarkCheck className="h-4 w-4 text-primary" />
+                    ) : (
+                      <Bookmark className="h-4 w-4" />
+                    )}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="bg-card border shadow-sm">
+                  <p className="text-xs font-medium">
+                    {localSaved ? "Unsave job" : "Save job"}
+                  </p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           ) : (
             <TooltipProvider delayDuration={0} skipDelayDuration={0}>
               <Tooltip>
@@ -220,14 +183,6 @@ export function JobCard({
           setShowCreditsDialog(false);
         }}
         jobTitle={job.title}
-      />
-
-      <JobReportDialog
-        isOpen={showReportDialog}
-        onClose={() => setShowReportDialog(false)}
-        onSubmit={handleReportSubmit}
-        jobTitle={job.title}
-        jobId={job.id}
       />
     </>
   );

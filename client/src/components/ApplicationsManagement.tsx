@@ -1,6 +1,6 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Application as BaseApplication, User, Job } from "@shared/schema";
+import { Application, User, Job } from "@shared/schema";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -12,24 +12,13 @@ import { apiRequest } from "@/lib/queryClient";
 import { ChevronRight, Loader2, MessageSquare, AlertCircle, Search, CalendarIcon, Filter } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { AdminMessageDialog } from "./AdminMessageDialog";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { DatePicker } from "@/components/ui/date-picker";
-
-// Define interface for status history items
-interface StatusHistoryItem {
-  status: string;
-  date: string;
-}
-
-// Extend the Application type with properly typed statusHistory
-interface Application extends BaseApplication {
-  statusHistory: StatusHistoryItem[];
-}
 
 const APPLICATION_STATUSES = ["Applied", "Interviewing", "Accepted", "Rejected", "Withdrawn"];
 
@@ -45,24 +34,11 @@ export function ApplicationsManagement() {
     companyName: string;
   } | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string>("all"); // Updated
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
   const [currentApplication, setCurrentApplication] = useState<(Application & { job: Job, user: User }) | null>(null);
+  // Track unread message counts by application ID
   const [unreadMessageCounts, setUnreadMessageCounts] = useState<{[applicationId: number]: number}>({});
-  
-  // Store processed data in state instead of calculating during render
-  const [enrichedApplications, setEnrichedApplications] = useState<(Application & { job: Job, user: User })[]>([]);
-  const [filteredApplications, setFilteredApplications] = useState<(Application & { job: Job, user: User })[]>([]);
-  const [applicationsByStatus, setApplicationsByStatus] = useState<{[key: string]: (Application & { job: Job, user: User })[]}>(
-    {
-      "Applied": [],
-      "Interviewing": [],
-      "Accepted": [],
-      "Rejected": [],
-      "Withdrawn": [],
-      "All": []
-    }
-  );
 
   const { data: applications = [], isLoading: isLoadingApps } = useQuery<Application[]>({
     queryKey: ["/api/admin/applications"],
@@ -76,116 +52,6 @@ export function ApplicationsManagement() {
     queryKey: ["/api/jobs"],
   });
 
-  // Process data whenever applications, users, or jobs change
-  useEffect(() => {
-    if (!applications.length || !users.length || !jobs.length) {
-      return;
-    }
-
-    // Combine application data with user and job data
-    const combinedApps = applications
-      .map(app => {
-        const user = users.find(u => u.id === app.profileId);
-        const job = jobs.find(j => j.id === app.jobId);
-        
-        if (!user || !job) return null;
-        
-        return {
-          ...app,
-          user,
-          job
-        };
-      })
-      .filter(Boolean) as (Application & { job: Job, user: User })[];
-    
-    setEnrichedApplications(combinedApps);
-  }, [applications, users, jobs]);
-
-  // Filter applications whenever search term, status filter, or enriched applications change
-  useEffect(() => {
-    const filtered = enrichedApplications.filter(app => {
-      const matchesSearch = searchTerm === "" || 
-        app.user.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        app.job.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        app.job.company.toLowerCase().includes(searchTerm.toLowerCase());
-
-      const matchesStatus = statusFilter === "all" || app.status === statusFilter;
-
-      return matchesSearch && matchesStatus;
-    });
-
-    setFilteredApplications(filtered);
-
-    // Group applications by status for the tabbed view
-    setApplicationsByStatus({
-      "Applied": filtered.filter(app => app.status === "Applied"),
-      "Interviewing": filtered.filter(app => app.status === "Interviewing"),
-      "Accepted": filtered.filter(app => app.status === "Accepted"),
-      "Rejected": filtered.filter(app => app.status === "Rejected"),
-      "Withdrawn": filtered.filter(app => app.status === "Withdrawn"),
-      "All": filtered
-    });
-  }, [enrichedApplications, searchTerm, statusFilter]);
-
-  // Get unread message counts for all applications
-  useEffect(() => {
-    // Define the fetch function
-    const fetchUnreadCounts = async () => {
-      if (!enrichedApplications || enrichedApplications.length === 0) {
-        // If no applications, set empty counts and return
-        setUnreadMessageCounts({});
-        return;
-      }
-      
-      try {
-        const counts: {[applicationId: number]: number} = {};
-        
-        // Process applications in batches to avoid too many simultaneous requests
-        const batchSize = 5;
-        for (let i = 0; i < enrichedApplications.length; i += batchSize) {
-          const batch = enrichedApplications.slice(i, i + batchSize);
-          
-          // Use Promise.all to fetch counts for a batch in parallel
-          await Promise.all(
-            batch.map(async (app) => {
-              try {
-                const response = await apiRequest(
-                  "GET", 
-                  `/api/applications/${app.id}/messages/unread-count?forAdmin=true`
-                );
-                
-                if (response.ok) {
-                  const count = await response.json();
-                  if (count > 0) {
-                    counts[app.id] = count as number;
-                  }
-                }
-              } catch (err) {
-                console.error(`Error fetching unread count for application ${app.id}:`, err);
-              }
-            })
-          );
-        }
-        
-        // Update state with all counts at once
-        setUnreadMessageCounts(counts);
-      } catch (error) {
-        console.error("Error fetching unread message counts:", error);
-        setUnreadMessageCounts({});
-      }
-    };
-    
-    // Call the fetch function immediately
-    fetchUnreadCounts();
-    
-    // Set up the interval for polling
-    const intervalId = setInterval(fetchUnreadCounts, 30000);
-    
-    // Clean up the interval when component unmounts
-    return () => clearInterval(intervalId);
-  }, [enrichedApplications]);
-
-  // Define mutation after all state is defined
   const updateApplicationMutation = useMutation({
     mutationFn: async ({ 
       applicationId, 
@@ -326,14 +192,51 @@ export function ApplicationsManagement() {
     },
   });
 
-  // Event handler for viewing application details
-  const handleViewDetails = useCallback((app: Application & { job: Job, user: User }) => {
-    setCurrentApplication(app);
-    setShowDetailsDialog(true);
-  }, []);
+  if (isLoadingApps || isLoadingUsers || isLoadingJobs) {
+    return (
+      <div className="flex items-center justify-center h-[200px]">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
 
-  // Function to get status color
-  const getStatusColor = useCallback((status: string) => {
+  // Combine application data with user and job data
+  const enrichedApplications = applications.map(app => {
+    const user = users.find(u => u.id === app.profileId);
+    const job = jobs.find(j => j.id === app.jobId);
+    
+    if (!user || !job) return null;
+    
+    return {
+      ...app,
+      user,
+      job
+    };
+  }).filter(Boolean) as (Application & { job: Job, user: User })[];
+
+  // Filter applications based on search term and status
+  const filteredApplications = enrichedApplications.filter(app => {
+    const matchesSearch = searchTerm === "" || 
+      app.user.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      app.job.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      app.job.company.toLowerCase().includes(searchTerm.toLowerCase());
+
+    const matchesStatus = statusFilter === "all" || app.status === statusFilter; // Updated
+
+    return matchesSearch && matchesStatus;
+  });
+
+  // Group applications by status for the tabbed view
+  const applicationsByStatus = {
+    "Applied": filteredApplications.filter(app => app.status === "Applied"),
+    "Interviewing": filteredApplications.filter(app => app.status === "Interviewing"),
+    "Accepted": filteredApplications.filter(app => app.status === "Accepted"),
+    "Rejected": filteredApplications.filter(app => app.status === "Rejected"),
+    "Withdrawn": filteredApplications.filter(app => app.status === "Withdrawn"),
+    "All": filteredApplications
+  };
+
+  const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
       case "applied":
         return "bg-blue-500/10 text-blue-500";
@@ -348,10 +251,51 @@ export function ApplicationsManagement() {
       default:
         return "bg-gray-500/10 text-gray-500";
     }
-  }, []);
+  };
 
-  // Application card renderer
-  const renderApplicationCard = useCallback((app: Application & { job: Job, user: User }) => (
+  const handleViewDetails = (app: Application & { job: Job, user: User }) => {
+    setCurrentApplication(app);
+    setShowDetailsDialog(true);
+  };
+
+  // Get unread message counts for all applications
+  useEffect(() => {
+    if (enrichedApplications.length > 0) {
+      // Create a set of promises to fetch unread message counts for each application
+      const fetchUnreadCounts = async () => {
+        const counts: {[applicationId: number]: number} = {};
+        
+        for (const app of enrichedApplications) {
+          try {
+            const response = await apiRequest(
+              "GET", 
+              `/api/applications/${app.id}/messages/unread-count?forAdmin=true`
+            );
+            
+            if (response.ok) {
+              const count = await response.json();
+              if (count > 0) {
+                counts[app.id] = count as number;
+              }
+            }
+          } catch (error) {
+            console.error(`Error fetching unread count for application ${app.id}:`, error);
+          }
+        }
+        
+        setUnreadMessageCounts(counts);
+      };
+      
+      fetchUnreadCounts();
+      
+      // Set up polling to refresh counts every 30 seconds
+      const intervalId = setInterval(fetchUnreadCounts, 30000);
+      
+      return () => clearInterval(intervalId);
+    }
+  }, [enrichedApplications]);
+
+  const renderApplicationCard = (app: Application & { job: Job, user: User }) => (
     <div
       key={app.id}
       className={cn(
@@ -418,15 +362,7 @@ export function ApplicationsManagement() {
         </div>
       </div>
     </div>
-  ), [handleViewDetails, getStatusColor, unreadMessageCounts, setSelectedApplication]);
-
-  if (isLoadingApps || isLoadingUsers || isLoadingJobs) {
-    return (
-      <div className="flex items-center justify-center h-[200px]">
-        <Loader2 className="h-8 w-8 animate-spin" />
-      </div>
-    );
-  }
+  );
 
   return (
     <Card>
@@ -446,7 +382,7 @@ export function ApplicationsManagement() {
           </div>
           <div className="flex items-center gap-2">
             <Filter className="h-4 w-4 text-muted-foreground" />
-            <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value)}>
+            <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value)}> {/* Updated */}
               <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="Filter by status" />
               </SelectTrigger>
@@ -528,7 +464,7 @@ export function ApplicationsManagement() {
                   <p className="text-sm">Applied on: {format(new Date(currentApplication.appliedAt), "MMM d, yyyy")}</p>
                   {currentApplication.statusHistory && (
                     <div className="space-y-1 text-sm">
-                      {currentApplication.statusHistory.map((history, index) => (
+                      {(currentApplication.statusHistory as any[]).map((history, index) => (
                         <div key={index} className="flex items-center">
                           <span className="mr-2">{format(new Date(history.date), "MMM d, yyyy")}:</span>
                           <Badge variant="outline" className={getStatusColor(history.status)}>

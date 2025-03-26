@@ -286,93 +286,6 @@ export default function JobsPage() {
     }
   });
 
-  const reportJobMutation = useMutation({
-    mutationFn: async ({ jobId, reportType, comment }: { jobId: number; reportType: string; comment: string }) => {
-      // Map report types to feedback categories
-      const categoryMap: Record<string, string> = {
-        "ghost_listing": "job_report_ghost",
-        "duplicate": "job_report_duplicate",
-        "misleading": "job_report_misleading",
-        "inappropriate": "job_report_inappropriate",
-        "other": "job_report_other"
-      };
-      
-      const category = categoryMap[reportType] || "job_report_other";
-      
-      // Get a user-friendly report type label for the subject
-      const reportTypeLabels: Record<string, string> = {
-        "ghost_listing": "Ghost Listing",
-        "duplicate": "Duplicate Listing",
-        "misleading": "Misleading Information",
-        "inappropriate": "Inappropriate Content",
-        "other": "Other Issue"
-      };
-      
-      // Get the job info from the jobs array
-      const reportedJob = jobs.find(j => j.id === jobId);
-      const jobIdentifier = reportedJob?.jobIdentifier || `Job #${jobId}`;
-      const jobTitle = reportedJob?.title || 'Unknown Job';
-      const companyName = reportedJob?.company || 'Unknown Company';
-      
-      // Create a detailed subject line
-      const subject = `Report: ${reportTypeLabels[reportType] || reportType} - ${jobTitle}`;
-      
-      // Create feedback with comprehensive job reference in metadata
-      const feedback = {
-        rating: 1, // Low rating for reports
-        subject,
-        category,
-        comment,
-        status: "received",
-        metadata: {
-          jobId: String(jobId),
-          reportType,
-          jobIdentifier,
-          jobTitle,
-          companyName,
-          reportTimestamp: new Date().toISOString()
-        }
-      };
-      
-      const res = await apiRequest("POST", "/api/feedback", feedback);
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.message || "Failed to report job");
-      }
-      return res.json();
-    },
-    onSuccess: () => {
-      toast({
-        title: "Job Reported",
-        description: "Thank you for your feedback. Our team will review this report.",
-      });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to report job",
-        variant: "destructive",
-      });
-    },
-  });
-
-  const handleReportJob = (jobId: number, reportType: string, comment: string) => {
-    if (!user) {
-      toast({
-        title: "Authentication Required",
-        description: "Please sign in to report jobs.",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    reportJobMutation.mutate({ 
-      jobId,  // This is numeric and expected by the mutation function 
-      reportType, 
-      comment 
-    });
-  };
-
   // Type assertion to ensure jobs is treated as an array
   const filteredJobs = (Array.isArray(jobs) ? jobs : []).filter((job: Job) => {
     // First check if job is active
@@ -832,7 +745,6 @@ export default function JobsPage() {
               onApply={() => applyMutation.mutate(job.id)}
               onViewDetails={() => setSelectedJob(job)}
               onSaveJob={() => handleSaveJob(job.id)}
-              onReportJob={(reportType, comment) => handleReportJob(job.id, reportType, comment)}
               isApplying={applyMutation.isPending && selectedJob?.id === job.id}
               isApplied={user ? applications.some((app) => app.jobId === job.id) : false}
               previouslyApplied={user ? applications.some((app) => app.jobId === job.id && app.status === "Withdrawn") : false}
@@ -855,7 +767,6 @@ export default function JobsPage() {
               onApply={() => applyMutation.mutate(savedJob.jobId)}
               onViewDetails={() => setSelectedJob(savedJob.job)}
               onSaveJob={() => handleSaveJob(savedJob.jobId)}
-              onReportJob={(reportType, comment) => handleReportJob(savedJob.jobId, reportType, comment)}
               isApplying={applyMutation.isPending && selectedJob?.id === savedJob.jobId}
               isApplied={applications.some((app) => app.jobId === savedJob.jobId)}
               previouslyApplied={applications.some((app) => app.jobId === savedJob.jobId && app.status === "Withdrawn")}
