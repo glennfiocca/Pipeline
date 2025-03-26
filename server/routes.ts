@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertJobSchema, insertApplicationSchema, insertProfileSchema, insertMessageSchema, insertUserSchema, insertFeedbackSchema, insertSavedJobSchema } from "@shared/schema";
+import { insertJobSchema, insertApplicationSchema, insertProfileSchema, insertMessageSchema, insertUserSchema, insertFeedbackSchema, insertSavedJobSchema, insertReportedJobSchema } from "@shared/schema";
 import { ScraperManager } from './services/scraper/manager';
 import { db } from './db';
 import { users } from '@shared/schema';
@@ -1532,6 +1532,134 @@ export function registerRoutes(app: Express): Server {
     } catch (error) {
       console.error('Error removing saved job:', error);
       res.status(500).json({ error: "Failed to remove saved job" });
+    }
+  });
+
+  // Job Reports
+  // Report a job
+  app.post("/api/job-reports", async (req: any, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ error: "Authentication required" });
+      }
+
+      const userId = req.user.id;
+      
+      const parsed = insertReportedJobSchema.safeParse({
+        ...req.body,
+        userId,
+        status: "pending"
+      });
+      
+      if (!parsed.success) {
+        return res.status(400).json({ 
+          error: "Invalid report data", 
+          details: parsed.error.format() 
+        });
+      }
+
+      // Check if job exists
+      const job = await storage.getJob(parsed.data.jobId);
+      if (!job) {
+        return res.status(404).json({ error: "Job not found" });
+      }
+
+      const report = await storage.reportJob(parsed.data);
+      res.status(201).json(report);
+    } catch (error) {
+      console.error('Error reporting job:', error);
+      res.status(500).json({ 
+        error: "Failed to report job",
+        message: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  // Get reported jobs (admin only)
+  app.get("/api/job-reports", async (req: any, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ error: "Authentication required" });
+      }
+
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ error: "Unauthorized, admin access required" });
+      }
+
+      const reportedJobs = await storage.getReportedJobsWithDetails();
+      res.json(reportedJobs);
+    } catch (error) {
+      console.error('Error fetching reported jobs:', error);
+      res.status(500).json({ error: "Failed to fetch reported jobs" });
+    }
+  });
+
+  // Update a job report status (admin only)
+  app.patch("/api/job-reports/:id", async (req: any, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ error: "Authentication required" });
+      }
+
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ error: "Unauthorized, admin access required" });
+      }
+
+      const reportId = parseInt(req.params.id);
+      if (isNaN(reportId)) {
+        return res.status(400).json({ error: "Invalid report ID" });
+      }
+
+      const { status, adminNotes } = req.body;
+      if (!status) {
+        return res.status(400).json({ error: "Status is required" });
+      }
+
+      const report = await storage.getReportedJobById(reportId);
+      if (!report) {
+        return res.status(404).json({ error: "Report not found" });
+      }
+
+      const updatedReport = await storage.updateReportStatus(
+        reportId,
+        status,
+        adminNotes,
+        req.user.id
+      );
+
+      res.json(updatedReport);
+    } catch (error) {
+      console.error('Error updating report status:', error);
+      res.status(500).json({ error: "Failed to update report status" });
+    }
+  });
+
+  // Delete a job report (admin only)
+  app.delete("/api/job-reports/:id", async (req: any, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ error: "Authentication required" });
+      }
+
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ error: "Unauthorized, admin access required" });
+      }
+
+      const reportId = parseInt(req.params.id);
+      if (isNaN(reportId)) {
+        return res.status(400).json({ error: "Invalid report ID" });
+      }
+
+      const report = await storage.getReportedJobById(reportId);
+      if (!report) {
+        return res.status(404).json({ error: "Report not found" });
+      }
+
+      await storage.deleteJobReport(reportId);
+      res.json({ message: "Report deleted successfully" });
+    } catch (error) {
+      console.error('Error deleting report:', error);
+      res.status(500).json({ error: "Failed to delete report" });
     }
   });
 

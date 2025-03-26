@@ -37,8 +37,7 @@ export async function POST(req: Request, res: Response) {
       jobId,
       reason,
       comments,
-      status: "pending",
-      createdAt: new Date().toISOString()
+      status: "pending"
     });
 
     return res.status(201).json(report);
@@ -55,7 +54,7 @@ export async function GET(req: Request, res: Response) {
       return res.status(401).json({ message: "Unauthorized" });
     }
 
-    if (req.user.role !== "admin") {
+    if (!(req.user as any).isAdmin) {
       return res.status(403).json({ message: "Forbidden. Admin access required." });
     }
 
@@ -75,7 +74,7 @@ export async function PATCH(req: Request, res: Response) {
       return res.status(401).json({ message: "Unauthorized" });
     }
 
-    if (req.user.role !== "admin") {
+    if (!(req.user as any).isAdmin) {
       return res.status(403).json({ message: "Forbidden. Admin access required." });
     }
 
@@ -107,7 +106,7 @@ export async function DELETE(req: Request, res: Response) {
       return res.status(401).json({ message: "Unauthorized" });
     }
 
-    if (req.user.role !== "admin") {
+    if (!(req.user as any).isAdmin) {
       return res.status(403).json({ message: "Forbidden. Admin access required." });
     }
 
