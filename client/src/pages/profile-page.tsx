@@ -19,6 +19,7 @@ import { Calendar, Award, Globe, Code } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { motion } from "framer-motion";
 import { User } from "lucide-react";
+import React from 'react';
 
 // Add file state management
 interface FileState {
@@ -97,6 +98,693 @@ const fetchOrCreateProfile = async (userId: number) => {
     };
   }
 };
+
+// Add this function near the top of the file, before the ProfilePage component
+const StatesSelect = React.forwardRef<
+  HTMLSelectElement, 
+  { 
+    value: string, 
+    onChange: (value: string) => void,
+    placeholder?: string
+  }
+>(({ value, onChange, placeholder = "Select a state" }, ref) => {
+  const [searchTerm, setSearchTerm] = useState("");
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // List of states with their codes
+  const states = [
+    { code: "none", name: "-- Select a state --" },
+    { code: "AL", name: "Alabama" },
+    { code: "AK", name: "Alaska" },
+    { code: "AZ", name: "Arizona" },
+    { code: "AR", name: "Arkansas" },
+    { code: "CA", name: "California" },
+    { code: "CO", name: "Colorado" },
+    { code: "CT", name: "Connecticut" },
+    { code: "DE", name: "Delaware" },
+    { code: "FL", name: "Florida" },
+    { code: "GA", name: "Georgia" },
+    { code: "HI", name: "Hawaii" },
+    { code: "ID", name: "Idaho" },
+    { code: "IL", name: "Illinois" },
+    { code: "IN", name: "Indiana" },
+    { code: "IA", name: "Iowa" },
+    { code: "KS", name: "Kansas" },
+    { code: "KY", name: "Kentucky" },
+    { code: "LA", name: "Louisiana" },
+    { code: "ME", name: "Maine" },
+    { code: "MD", name: "Maryland" },
+    { code: "MA", name: "Massachusetts" },
+    { code: "MI", name: "Michigan" },
+    { code: "MN", name: "Minnesota" },
+    { code: "MS", name: "Mississippi" },
+    { code: "MO", name: "Missouri" },
+    { code: "MT", name: "Montana" },
+    { code: "NE", name: "Nebraska" },
+    { code: "NV", name: "Nevada" },
+    { code: "NH", name: "New Hampshire" },
+    { code: "NJ", name: "New Jersey" },
+    { code: "NM", name: "New Mexico" },
+    { code: "NY", name: "New York" },
+    { code: "NC", name: "North Carolina" },
+    { code: "ND", name: "North Dakota" },
+    { code: "OH", name: "Ohio" },
+    { code: "OK", name: "Oklahoma" },
+    { code: "OR", name: "Oregon" },
+    { code: "PA", name: "Pennsylvania" },
+    { code: "RI", name: "Rhode Island" },
+    { code: "SC", name: "South Carolina" },
+    { code: "SD", name: "South Dakota" },
+    { code: "TN", name: "Tennessee" },
+    { code: "TX", name: "Texas" },
+    { code: "UT", name: "Utah" },
+    { code: "VT", name: "Vermont" },
+    { code: "VA", name: "Virginia" },
+    { code: "WA", name: "Washington" },
+    { code: "WV", name: "West Virginia" },
+    { code: "WI", name: "Wisconsin" },
+    { code: "WY", name: "Wyoming" },
+    { code: "DC", name: "District of Columbia" }
+  ];
+
+  // Current selected state name
+  const selectedState = states.find(state => state.code === value)?.name || placeholder;
+
+  // Filter states based on search term (ignoring spaces)
+  const filteredStates = states.filter(state => 
+    state.name.toLowerCase().replace(/\s+/g, '').includes(searchTerm.toLowerCase().replace(/\s+/g, ''))
+  );
+
+  // Handle keyboard navigation
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      if (isOpen && filteredStates.length > 0) {
+        onChange(filteredStates[0].code);
+        setIsOpen(false);
+        setSearchTerm("");
+      } else {
+        setIsOpen(true);
+      }
+    } else if (e.key === 'Escape') {
+      setIsOpen(false);
+      setSearchTerm("");
+    } else if (isOpen && e.key === 'ArrowDown') {
+      // Focus the first item in the dropdown
+      const dropdownItem = containerRef.current?.querySelector('[role="option"]') as HTMLElement;
+      if (dropdownItem) dropdownItem.focus();
+    } else if (/^[a-zA-Z0-9\s]$/.test(e.key)) {
+      if (!isOpen) {
+        setIsOpen(true);
+      }
+      setSearchTerm(prev => prev + e.key);
+    } else if (e.key === 'Backspace') {
+      setSearchTerm(prev => prev.slice(0, -1));
+    }
+  };
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+        setSearchTerm("");
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  return (
+    <div className="relative w-full" ref={containerRef}>
+      <div 
+        className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+        tabIndex={0}
+        role="combobox"
+        aria-expanded={isOpen}
+        onClick={() => {
+          setIsOpen(!isOpen);
+          if (!isOpen) setSearchTerm("");
+        }}
+        onKeyDown={handleKeyDown}
+      >
+        <span className={`${value === "none" ? "text-muted-foreground" : ""}`}>
+          {searchTerm ? searchTerm : selectedState}
+        </span>
+        <svg 
+          xmlns="http://www.w3.org/2000/svg" 
+          width="24" 
+          height="24" 
+          viewBox="0 0 24 24" 
+          fill="none" 
+          stroke="currentColor" 
+          strokeWidth="2" 
+          strokeLinecap="round" 
+          strokeLinejoin="round" 
+          className="h-4 w-4 opacity-50"
+        >
+          <path d="m6 9 6 6 6-6"/>
+        </svg>
+      </div>
+      
+      {isOpen && (
+        <div className="absolute z-50 mt-1 max-h-60 w-full overflow-auto rounded-md border bg-popover text-popover-foreground shadow-md">
+          <div className="p-1">
+            {filteredStates.length > 0 ? (
+              filteredStates.map(state => (
+                <div
+                  key={state.code}
+                  className={`relative flex cursor-default select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-sm outline-none hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground ${state.code === value ? 'bg-accent text-accent-foreground' : ''}`}
+                  onClick={() => {
+                    onChange(state.code);
+                    setIsOpen(false);
+                    setSearchTerm("");
+                  }}
+                  role="option"
+                  aria-selected={state.code === value}
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      onChange(state.code);
+                      setIsOpen(false);
+                      setSearchTerm("");
+                    }
+                  }}
+                >
+                  {state.code === value && (
+                    <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
+                        <polyline points="20 6 9 17 4 12"/>
+                      </svg>
+                    </span>
+                  )}
+                  {state.name}
+                </div>
+              ))
+            ) : (
+              <div className="text-center py-2 text-sm text-muted-foreground">No results found</div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+});
+
+StatesSelect.displayName = 'StatesSelect';
+
+// Add this CountriesSelect component after the StatesSelect component
+const CountriesSelect = React.forwardRef<
+  HTMLSelectElement, 
+  { 
+    value: string, 
+    onChange: (value: string) => void,
+    placeholder?: string
+  }
+>(({ value, onChange, placeholder = "Select a country" }, ref) => {
+  const [searchTerm, setSearchTerm] = useState("");
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Comprehensive list of countries with their ISO codes
+  const countries = [
+    { code: "none", name: "-- Select a country --" },
+    { code: "US", name: "United States" },
+    { code: "AF", name: "Afghanistan" },
+    { code: "AL", name: "Albania" },
+    { code: "DZ", name: "Algeria" },
+    { code: "AD", name: "Andorra" },
+    { code: "AO", name: "Angola" },
+    { code: "AG", name: "Antigua and Barbuda" },
+    { code: "AR", name: "Argentina" },
+    { code: "AM", name: "Armenia" },
+    { code: "AU", name: "Australia" },
+    { code: "AT", name: "Austria" },
+    { code: "AZ", name: "Azerbaijan" },
+    { code: "BS", name: "Bahamas" },
+    { code: "BH", name: "Bahrain" },
+    { code: "BD", name: "Bangladesh" },
+    { code: "BB", name: "Barbados" },
+    { code: "BY", name: "Belarus" },
+    { code: "BE", name: "Belgium" },
+    { code: "BZ", name: "Belize" },
+    { code: "BJ", name: "Benin" },
+    { code: "BT", name: "Bhutan" },
+    { code: "BO", name: "Bolivia" },
+    { code: "BA", name: "Bosnia and Herzegovina" },
+    { code: "BW", name: "Botswana" },
+    { code: "BR", name: "Brazil" },
+    { code: "BN", name: "Brunei" },
+    { code: "BG", name: "Bulgaria" },
+    { code: "BF", name: "Burkina Faso" },
+    { code: "BI", name: "Burundi" },
+    { code: "CV", name: "Cabo Verde" },
+    { code: "KH", name: "Cambodia" },
+    { code: "CM", name: "Cameroon" },
+    { code: "CA", name: "Canada" },
+    { code: "CF", name: "Central African Republic" },
+    { code: "TD", name: "Chad" },
+    { code: "CL", name: "Chile" },
+    { code: "CN", name: "China" },
+    { code: "CO", name: "Colombia" },
+    { code: "KM", name: "Comoros" },
+    { code: "CG", name: "Congo" },
+    { code: "CD", name: "Congo, Democratic Republic of the" },
+    { code: "CR", name: "Costa Rica" },
+    { code: "CI", name: "Côte d'Ivoire" },
+    { code: "HR", name: "Croatia" },
+    { code: "CU", name: "Cuba" },
+    { code: "CY", name: "Cyprus" },
+    { code: "CZ", name: "Czech Republic" },
+    { code: "DK", name: "Denmark" },
+    { code: "DJ", name: "Djibouti" },
+    { code: "DM", name: "Dominica" },
+    { code: "DO", name: "Dominican Republic" },
+    { code: "EC", name: "Ecuador" },
+    { code: "EG", name: "Egypt" },
+    { code: "SV", name: "El Salvador" },
+    { code: "GQ", name: "Equatorial Guinea" },
+    { code: "ER", name: "Eritrea" },
+    { code: "EE", name: "Estonia" },
+    { code: "SZ", name: "Eswatini" },
+    { code: "ET", name: "Ethiopia" },
+    { code: "FJ", name: "Fiji" },
+    { code: "FI", name: "Finland" },
+    { code: "FR", name: "France" },
+    { code: "GA", name: "Gabon" },
+    { code: "GM", name: "Gambia" },
+    { code: "GE", name: "Georgia" },
+    { code: "DE", name: "Germany" },
+    { code: "GH", name: "Ghana" },
+    { code: "GR", name: "Greece" },
+    { code: "GD", name: "Grenada" },
+    { code: "GT", name: "Guatemala" },
+    { code: "GN", name: "Guinea" },
+    { code: "GW", name: "Guinea-Bissau" },
+    { code: "GY", name: "Guyana" },
+    { code: "HT", name: "Haiti" },
+    { code: "HN", name: "Honduras" },
+    { code: "HU", name: "Hungary" },
+    { code: "IS", name: "Iceland" },
+    { code: "IN", name: "India" },
+    { code: "ID", name: "Indonesia" },
+    { code: "IR", name: "Iran" },
+    { code: "IQ", name: "Iraq" },
+    { code: "IE", name: "Ireland" },
+    { code: "IL", name: "Israel" },
+    { code: "IT", name: "Italy" },
+    { code: "JM", name: "Jamaica" },
+    { code: "JP", name: "Japan" },
+    { code: "JO", name: "Jordan" },
+    { code: "KZ", name: "Kazakhstan" },
+    { code: "KE", name: "Kenya" },
+    { code: "KI", name: "Kiribati" },
+    { code: "KP", name: "Korea, North" },
+    { code: "KR", name: "Korea, South" },
+    { code: "KW", name: "Kuwait" },
+    { code: "KG", name: "Kyrgyzstan" },
+    { code: "LA", name: "Laos" },
+    { code: "LV", name: "Latvia" },
+    { code: "LB", name: "Lebanon" },
+    { code: "LS", name: "Lesotho" },
+    { code: "LR", name: "Liberia" },
+    { code: "LY", name: "Libya" },
+    { code: "LI", name: "Liechtenstein" },
+    { code: "LT", name: "Lithuania" },
+    { code: "LU", name: "Luxembourg" },
+    { code: "MG", name: "Madagascar" },
+    { code: "MW", name: "Malawi" },
+    { code: "MY", name: "Malaysia" },
+    { code: "MV", name: "Maldives" },
+    { code: "ML", name: "Mali" },
+    { code: "MT", name: "Malta" },
+    { code: "MH", name: "Marshall Islands" },
+    { code: "MR", name: "Mauritania" },
+    { code: "MU", name: "Mauritius" },
+    { code: "MX", name: "Mexico" },
+    { code: "FM", name: "Micronesia" },
+    { code: "MD", name: "Moldova" },
+    { code: "MC", name: "Monaco" },
+    { code: "MN", name: "Mongolia" },
+    { code: "ME", name: "Montenegro" },
+    { code: "MA", name: "Morocco" },
+    { code: "MZ", name: "Mozambique" },
+    { code: "MM", name: "Myanmar" },
+    { code: "NA", name: "Namibia" },
+    { code: "NR", name: "Nauru" },
+    { code: "NP", name: "Nepal" },
+    { code: "NL", name: "Netherlands" },
+    { code: "NZ", name: "New Zealand" },
+    { code: "NI", name: "Nicaragua" },
+    { code: "NE", name: "Niger" },
+    { code: "NG", name: "Nigeria" },
+    { code: "MK", name: "North Macedonia" },
+    { code: "NO", name: "Norway" },
+    { code: "OM", name: "Oman" },
+    { code: "PK", name: "Pakistan" },
+    { code: "PW", name: "Palau" },
+    { code: "PA", name: "Panama" },
+    { code: "PG", name: "Papua New Guinea" },
+    { code: "PY", name: "Paraguay" },
+    { code: "PE", name: "Peru" },
+    { code: "PH", name: "Philippines" },
+    { code: "PL", name: "Poland" },
+    { code: "PT", name: "Portugal" },
+    { code: "QA", name: "Qatar" },
+    { code: "RO", name: "Romania" },
+    { code: "RU", name: "Russia" },
+    { code: "RW", name: "Rwanda" },
+    { code: "KN", name: "Saint Kitts and Nevis" },
+    { code: "LC", name: "Saint Lucia" },
+    { code: "VC", name: "Saint Vincent and the Grenadines" },
+    { code: "WS", name: "Samoa" },
+    { code: "SM", name: "San Marino" },
+    { code: "ST", name: "Sao Tome and Principe" },
+    { code: "SA", name: "Saudi Arabia" },
+    { code: "SN", name: "Senegal" },
+    { code: "RS", name: "Serbia" },
+    { code: "SC", name: "Seychelles" },
+    { code: "SL", name: "Sierra Leone" },
+    { code: "SG", name: "Singapore" },
+    { code: "SK", name: "Slovakia" },
+    { code: "SI", name: "Slovenia" },
+    { code: "SB", name: "Solomon Islands" },
+    { code: "SO", name: "Somalia" },
+    { code: "ZA", name: "South Africa" },
+    { code: "SS", name: "South Sudan" },
+    { code: "ES", name: "Spain" },
+    { code: "LK", name: "Sri Lanka" },
+    { code: "SD", name: "Sudan" },
+    { code: "SR", name: "Suriname" },
+    { code: "SE", name: "Sweden" },
+    { code: "CH", name: "Switzerland" },
+    { code: "SY", name: "Syria" },
+    { code: "TW", name: "Taiwan" },
+    { code: "TJ", name: "Tajikistan" },
+    { code: "TZ", name: "Tanzania" },
+    { code: "TH", name: "Thailand" },
+    { code: "TL", name: "Timor-Leste" },
+    { code: "TG", name: "Togo" },
+    { code: "TO", name: "Tonga" },
+    { code: "TT", name: "Trinidad and Tobago" },
+    { code: "TN", name: "Tunisia" },
+    { code: "TR", name: "Turkey" },
+    { code: "TM", name: "Turkmenistan" },
+    { code: "TV", name: "Tuvalu" },
+    { code: "UG", name: "Uganda" },
+    { code: "UA", name: "Ukraine" },
+    { code: "AE", name: "United Arab Emirates" },
+    { code: "GB", name: "United Kingdom" },
+    { code: "UY", name: "Uruguay" },
+    { code: "UZ", name: "Uzbekistan" },
+    { code: "VU", name: "Vanuatu" },
+    { code: "VA", name: "Vatican City" },
+    { code: "VE", name: "Venezuela" },
+    { code: "VN", name: "Vietnam" },
+    { code: "YE", name: "Yemen" },
+    { code: "ZM", name: "Zambia" },
+    { code: "ZW", name: "Zimbabwe" }
+  ];
+
+  // Current selected country name
+  const selectedCountry = countries.find(country => country.code === value)?.name || placeholder;
+
+  // Filter countries based on search term (ignoring spaces)
+  const filteredCountries = countries.filter(country => 
+    country.name.toLowerCase().replace(/\s+/g, '').includes(searchTerm.toLowerCase().replace(/\s+/g, ''))
+  );
+
+  // Handle keyboard navigation
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      if (isOpen && filteredCountries.length > 0) {
+        onChange(filteredCountries[0].code);
+        setIsOpen(false);
+        setSearchTerm("");
+      } else {
+        setIsOpen(true);
+      }
+    } else if (e.key === 'Escape') {
+      setIsOpen(false);
+      setSearchTerm("");
+    } else if (isOpen && e.key === 'ArrowDown') {
+      // Focus the first item in the dropdown
+      const dropdownItem = containerRef.current?.querySelector('[role="option"]') as HTMLElement;
+      if (dropdownItem) dropdownItem.focus();
+    } else if (/^[a-zA-Z0-9\s]$/.test(e.key)) {
+      if (!isOpen) {
+        setIsOpen(true);
+      }
+      setSearchTerm(prev => prev + e.key);
+    } else if (e.key === 'Backspace') {
+      setSearchTerm(prev => prev.slice(0, -1));
+    }
+  };
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+        setSearchTerm("");
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  return (
+    <div className="relative w-full" ref={containerRef}>
+      <div 
+        className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+        tabIndex={0}
+        role="combobox"
+        aria-expanded={isOpen}
+        onClick={() => {
+          setIsOpen(!isOpen);
+          if (!isOpen) setSearchTerm("");
+        }}
+        onKeyDown={handleKeyDown}
+      >
+        <span className={`${value === "none" ? "text-muted-foreground" : ""}`}>
+          {searchTerm ? searchTerm : selectedCountry}
+        </span>
+        <svg 
+          xmlns="http://www.w3.org/2000/svg" 
+          width="24" 
+          height="24" 
+          viewBox="0 0 24 24" 
+          fill="none" 
+          stroke="currentColor" 
+          strokeWidth="2" 
+          strokeLinecap="round" 
+          strokeLinejoin="round" 
+          className="h-4 w-4 opacity-50"
+        >
+          <path d="m6 9 6 6 6-6"/>
+        </svg>
+      </div>
+      
+      {isOpen && (
+        <div className="absolute z-50 mt-1 max-h-60 w-full overflow-auto rounded-md border bg-popover text-popover-foreground shadow-md">
+          <div className="p-1">
+            {filteredCountries.length > 0 ? (
+              filteredCountries.map(country => (
+                <div
+                  key={country.code}
+                  className={`relative flex cursor-default select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-sm outline-none hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground ${country.code === value ? 'bg-accent text-accent-foreground' : ''}`}
+                  onClick={() => {
+                    onChange(country.code);
+                    setIsOpen(false);
+                    setSearchTerm("");
+                  }}
+                  role="option"
+                  aria-selected={country.code === value}
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      onChange(country.code);
+                      setIsOpen(false);
+                      setSearchTerm("");
+                    }
+                  }}
+                >
+                  {country.code === value && (
+                    <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
+                        <polyline points="20 6 9 17 4 12"/>
+                      </svg>
+                    </span>
+                  )}
+                  {country.name}
+                </div>
+              ))
+            ) : (
+              <div className="text-center py-2 text-sm text-muted-foreground">No results found</div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+});
+
+CountriesSelect.displayName = 'CountriesSelect';
+
+// Add this WorkLocationSelect component after the CountriesSelect component
+const WorkLocationSelect = React.forwardRef<
+  HTMLSelectElement, 
+  { 
+    value: string, 
+    onChange: (value: string) => void,
+    placeholder?: string
+  }
+>(({ value, onChange, placeholder = "Select preferred work location" }, ref) => {
+  const [searchTerm, setSearchTerm] = useState("");
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Work location options
+  const locations = [
+    { code: "none", name: "-- Select work location --" },
+    { code: "office", name: "Office" },
+    { code: "hybrid", name: "Hybrid" },
+    { code: "remote", name: "Remote" }
+  ];
+
+  // Current selected location
+  const selectedLocation = locations.find(location => location.code === value)?.name || placeholder;
+
+  // Filter locations based on search term (ignoring spaces)
+  const filteredLocations = locations.filter(location => 
+    location.name.toLowerCase().replace(/\s+/g, '').includes(searchTerm.toLowerCase().replace(/\s+/g, ''))
+  );
+
+  // Handle keyboard navigation
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      if (isOpen && filteredLocations.length > 0) {
+        onChange(filteredLocations[0].code);
+        setIsOpen(false);
+        setSearchTerm("");
+      } else {
+        setIsOpen(true);
+      }
+    } else if (e.key === 'Escape') {
+      setIsOpen(false);
+      setSearchTerm("");
+    } else if (isOpen && e.key === 'ArrowDown') {
+      // Focus the first item in the dropdown
+      const dropdownItem = containerRef.current?.querySelector('[role="option"]') as HTMLElement;
+      if (dropdownItem) dropdownItem.focus();
+    } else if (/^[a-zA-Z0-9\s]$/.test(e.key)) {
+      if (!isOpen) {
+        setIsOpen(true);
+      }
+      setSearchTerm(prev => prev + e.key);
+    } else if (e.key === 'Backspace') {
+      setSearchTerm(prev => prev.slice(0, -1));
+    }
+  };
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+        setSearchTerm("");
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  return (
+    <div className="relative w-full" ref={containerRef}>
+      <div 
+        className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+        tabIndex={0}
+        role="combobox"
+        aria-expanded={isOpen}
+        onClick={() => {
+          setIsOpen(!isOpen);
+          if (!isOpen) setSearchTerm("");
+        }}
+        onKeyDown={handleKeyDown}
+      >
+        <span className={`${value === "none" ? "text-muted-foreground" : ""}`}>
+          {searchTerm ? searchTerm : selectedLocation}
+        </span>
+        <svg 
+          xmlns="http://www.w3.org/2000/svg" 
+          width="24" 
+          height="24" 
+          viewBox="0 0 24 24" 
+          fill="none" 
+          stroke="currentColor" 
+          strokeWidth="2" 
+          strokeLinecap="round" 
+          strokeLinejoin="round" 
+          className="h-4 w-4 opacity-50"
+        >
+          <path d="m6 9 6 6 6-6"/>
+        </svg>
+      </div>
+      
+      {isOpen && (
+        <div className="absolute z-50 mt-1 max-h-60 w-full overflow-auto rounded-md border bg-popover text-popover-foreground shadow-md">
+          <div className="p-1">
+            {filteredLocations.length > 0 ? (
+              filteredLocations.map(location => (
+                <div
+                  key={location.code}
+                  className={`relative flex cursor-default select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-sm outline-none hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground ${location.code === value ? 'bg-accent text-accent-foreground' : ''}`}
+                  onClick={() => {
+                    onChange(location.code);
+                    setIsOpen(false);
+                    setSearchTerm("");
+                  }}
+                  role="option"
+                  aria-selected={location.code === value}
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      onChange(location.code);
+                      setIsOpen(false);
+                      setSearchTerm("");
+                    }
+                  }}
+                >
+                  {location.code === value && (
+                    <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
+                        <polyline points="20 6 9 17 4 12"/>
+                      </svg>
+                    </span>
+                  )}
+                  {location.name}
+                </div>
+              ))
+            ) : (
+              <div className="text-center py-2 text-sm text-muted-foreground">No results found</div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+});
+
+WorkLocationSelect.displayName = 'WorkLocationSelect';
 
 export default function ProfilePage() {
   const { toast } = useToast();
@@ -608,7 +1296,13 @@ export default function ProfilePage() {
                             <FormItem>
                               <FormLabel>State</FormLabel>
                               <FormControl>
-                                <Input {...field} />
+                                <StatesSelect
+                                  value={field.value || "none"}
+                                  onChange={(value) => {
+                                    field.onChange(value === "none" ? "" : value);
+                                  }}
+                                  placeholder="Select a state"
+                                />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -636,7 +1330,13 @@ export default function ProfilePage() {
                             <FormItem>
                               <FormLabel>Country</FormLabel>
                               <FormControl>
-                                <Input {...field} />
+                                <CountriesSelect
+                                  value={field.value || "none"}
+                                  onChange={(value) => {
+                                    field.onChange(value === "none" ? "" : value);
+                                  }}
+                                  placeholder="Select a country"
+                                />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -650,9 +1350,14 @@ export default function ProfilePage() {
                             <FormItem>
                               <FormLabel>Preferred Location</FormLabel>
                               <FormControl>
-                                <Input {...field} placeholder="e.g., Remote, New York, San Francisco" />
+                                <WorkLocationSelect
+                                  value={field.value || "none"}
+                                  onChange={(value) => {
+                                    field.onChange(value === "none" ? "" : value);
+                                  }}
+                                  placeholder="Select preferred work location"
+                                />
                               </FormControl>
-                              <FormDescription>Where you prefer to work</FormDescription>
                               <FormMessage />
                             </FormItem>
                           )}
