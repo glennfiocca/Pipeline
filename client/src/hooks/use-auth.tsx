@@ -55,42 +55,68 @@ function useLogoutMutation() {
   const { toast } = useToast();
   return useMutation({
     mutationFn: async () => {
-      // First clear the user data to prevent unnecessary authenticated requests
-      queryClient.setQueryData(["/api/user"], null);
-
-      // Then perform the logout
-      const res = await apiRequest("POST", "/api/logout");
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.error || "Logout failed");
+      try {
+        // Create an AbortController to cancel any pending requests
+        const controller = new AbortController();
+        
+        // First cancel any in-flight requests by invalidating queries
+        queryClient.cancelQueries();
+        
+        // Perform the logout request with the controller signal
+        const res = await apiRequest("POST", "/api/logout", undefined, controller.signal);
+        
+        if (!res.ok) {
+          const error = await res.json();
+          throw new Error(error.error || "Logout failed");
+        }
+        
+        return res.json();
+      } catch (error) {
+        // Check if it's an AbortError, which we can safely ignore
+        if (error instanceof DOMException && error.name === "AbortError") {
+          console.log("Logout request was aborted - this is expected behavior");
+          return { aborted: true };
+        }
+        
+        console.error("Logout error:", error);
+        throw error;
+      } finally {
+        // Always clear cache regardless of outcome with a small delay
+        // to ensure UI components have time to detach from data
+        setTimeout(() => {
+          queryClient.setQueryData(["/api/user"], null);
+          queryClient.clear();
+        }, 10);
       }
-
-      // Clear all queries from the cache
-      await queryClient.invalidateQueries();
-      queryClient.clear();
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
+      // Skip toast if it was an aborted request
+      if (result && 'aborted' in result) return;
+      
       toast({
         title: "Logged out",
         description: "You have been successfully logged out.",
       });
-
-      // Redirect to login page
-      window.location.href = "/auth/login";
+      
+      // Use a reasonable delay before redirect to allow for state cleanup
+      // This helps prevent React component unmounting errors
+      setTimeout(() => {
+        window.location.href = "/auth/login";
+      }, 150);
     },
     onError: (error: Error) => {
-      // If there's an error, we still want to clear the auth state
-      queryClient.setQueryData(["/api/user"], null);
-      queryClient.clear();
-
+      console.error("Logout error:", error);
+      
       toast({
         title: "Logout issue",
         description: "You have been logged out but there was an issue with the server.",
         variant: "destructive",
       });
-
-      // Still redirect to login page
-      window.location.href = "/auth/login";
+      
+      // Still redirect to login page, but with a slight delay
+      setTimeout(() => {
+        window.location.href = "/auth/login";
+      }, 150);
     },
   });
 }

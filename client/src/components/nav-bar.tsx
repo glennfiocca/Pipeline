@@ -10,6 +10,7 @@ import { NavReferralButton } from "@/components/NavReferralButton";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { queryClient } from "@/lib/queryClient";
 
 export function NavBar() {
   const { user, logoutMutation } = useAuth();
@@ -221,13 +222,23 @@ export function NavBar() {
               <Button 
                 variant="ghost" 
                 size="sm"
-                onClick={() => logoutMutation.mutate()}
+                disabled={logoutMutation.isPending}
+                onClick={(e) => {
+                  e.preventDefault();
+                  
+                  // Cancel any requests before logout
+                  queryClient.cancelQueries();
+                  
+                  // Perform the logout
+                  logoutMutation.mutate();
+                }}
                 className={cn(
-                  "ml-2 relative group"
+                  "ml-2 relative group",
+                  logoutMutation.isPending && "opacity-70 pointer-events-none"
                 )}
               >
                 <LogOutIcon className="h-4 w-4 mr-2" />
-                Logout
+                {logoutMutation.isPending ? "Logging out..." : "Logout"}
                 <span className="absolute bottom-0 left-0 h-0.5 bg-primary w-0 group-hover:w-full transition-all duration-300 ease-out"></span>
               </Button>
             ) : (

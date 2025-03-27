@@ -15,10 +15,18 @@ async function throwIfResNotOk(res: Response) {
       errorMessage = res.statusText;
     }
 
-    // Don't throw on 401 during logout
-    if (res.status === 401 && window.location.pathname === "/auth/login") {
+    // Don't throw on 401 during logout or when already at login page
+    const currentPath = window.location.pathname;
+    const isLogoutRequest = res.url.includes("/api/logout");
+    
+    if (res.status === 401 && (
+      currentPath === "/auth/login" || 
+      isLogoutRequest
+    )) {
+      console.log("Ignoring 401 error during logout or at login page");
       return;
     }
+    
     throw new Error(`${res.status}: ${errorMessage}`);
   }
 }
@@ -27,6 +35,7 @@ export async function apiRequest(
   method: string,
   url: string,
   data?: unknown | undefined,
+  signal?: AbortSignal,
 ): Promise<Response> {
   const headers: Record<string, string> = {
     'Accept': 'application/json',
@@ -41,6 +50,7 @@ export async function apiRequest(
     headers,
     body: data ? JSON.stringify(data) : undefined,
     credentials: "include",
+    signal,
   });
 
   await throwIfResNotOk(res);
