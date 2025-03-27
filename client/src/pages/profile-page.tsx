@@ -1516,6 +1516,42 @@ export default function ProfilePage() {
     }
   }, [profile]);
 
+  // Add a new useEffect to properly sync field arrays with form data
+  useEffect(() => {
+    if (profile) {
+      // This effect ensures the field arrays get properly reinitialized
+      // when tabs are switched or the component re-renders
+      
+      // Force the useFieldArray hooks to update with the current form values
+      const formValues = form.getValues();
+      
+      // Reset the field arrays with current values to ensure they display correctly
+      if (Array.isArray(formValues.education)) {
+        form.setValue("education", [...formValues.education], { shouldDirty: false });
+      }
+      
+      if (Array.isArray(formValues.experience)) {
+        form.setValue("experience", [...formValues.experience], { shouldDirty: false });
+      }
+      
+      if (Array.isArray(formValues.certifications)) {
+        form.setValue("certifications", [...formValues.certifications], { shouldDirty: false });
+      }
+      
+      if (Array.isArray(formValues.projects)) {
+        form.setValue("projects", [...formValues.projects], { shouldDirty: false });
+      }
+      
+      if (Array.isArray(formValues.languages)) {
+        form.setValue("languages", [...formValues.languages], { shouldDirty: false });
+      }
+      
+      if (Array.isArray(formValues.publications)) {
+        form.setValue("publications", [...formValues.publications], { shouldDirty: false });
+      }
+    }
+  }, [profile, form]);
+
   const { fields: educationFields, append: appendEducation, remove: removeEducation } =
     useFieldArray({
       control: form.control,
@@ -1623,6 +1659,31 @@ export default function ProfilePage() {
       // Reset form state to mark as pristine
       form.reset(savedProfile);
       
+      // Explicitly update field arrays to ensure they display correctly
+      if (Array.isArray(savedProfile.education)) {
+        form.setValue("education", [...savedProfile.education], { shouldDirty: false });
+      }
+      
+      if (Array.isArray(savedProfile.experience)) {
+        form.setValue("experience", [...savedProfile.experience], { shouldDirty: false });
+      }
+      
+      if (Array.isArray(savedProfile.certifications)) {
+        form.setValue("certifications", [...savedProfile.certifications], { shouldDirty: false });
+      }
+      
+      if (Array.isArray(savedProfile.projects)) {
+        form.setValue("projects", [...savedProfile.projects], { shouldDirty: false });
+      }
+      
+      if (Array.isArray(savedProfile.languages)) {
+        form.setValue("languages", [...savedProfile.languages], { shouldDirty: false });
+      }
+      
+      if (Array.isArray(savedProfile.publications)) {
+        form.setValue("publications", [...savedProfile.publications], { shouldDirty: false });
+      }
+      
       // Mark form as pristine
       if (formRef.current) {
         formRef.current.dataset.isDirty = 'false';
@@ -1657,11 +1718,38 @@ export default function ProfilePage() {
     }
 
     // Bypass the form validation and submit directly
-    onSubmit(formData).then(() => {
+    onSubmit(formData).then((savedProfile) => {
       // Fix the null check on user
       if (user?.id) {
         // Force a refetch of the profile data to ensure UI is in sync
         queryClient.invalidateQueries({ queryKey: ["profile", user.id] });
+        
+        // Manually update field arrays to ensure they're properly displayed
+        if (savedProfile) {
+          if (Array.isArray(savedProfile.education)) {
+            form.setValue("education", [...savedProfile.education], { shouldDirty: false });
+          }
+          
+          if (Array.isArray(savedProfile.experience)) {
+            form.setValue("experience", [...savedProfile.experience], { shouldDirty: false });
+          }
+          
+          if (Array.isArray(savedProfile.certifications)) {
+            form.setValue("certifications", [...savedProfile.certifications], { shouldDirty: false });
+          }
+          
+          if (Array.isArray(savedProfile.projects)) {
+            form.setValue("projects", [...savedProfile.projects], { shouldDirty: false });
+          }
+          
+          if (Array.isArray(savedProfile.languages)) {
+            form.setValue("languages", [...savedProfile.languages], { shouldDirty: false });
+          }
+          
+          if (Array.isArray(savedProfile.publications)) {
+            form.setValue("publications", [...savedProfile.publications], { shouldDirty: false });
+          }
+        }
       }
     });
   };
@@ -1752,6 +1840,33 @@ export default function ProfilePage() {
     );
   }, []);
 
+  // Add a function to refresh field arrays when tabs change
+  const handleTabChange = (value: string) => {
+    // Force refresh the field arrays when tab changes to ensure they're properly displayed
+    const formValues = form.getValues();
+    
+    // Based on which tab was selected, refresh the appropriate field arrays
+    if (value === "education" && Array.isArray(formValues.education)) {
+      form.setValue("education", [...formValues.education], { shouldDirty: false });
+    }
+    
+    if (value === "experience" && Array.isArray(formValues.experience)) {
+      form.setValue("experience", [...formValues.experience], { shouldDirty: false });
+    }
+    
+    if (value === "certifications" && Array.isArray(formValues.certifications)) {
+      form.setValue("certifications", [...formValues.certifications], { shouldDirty: false });
+    }
+    
+    if (value === "projects" && Array.isArray(formValues.projects)) {
+      form.setValue("projects", [...formValues.projects], { shouldDirty: false });
+    }
+    
+    if (value === "skills" && Array.isArray(formValues.languages)) {
+      form.setValue("languages", [...formValues.languages], { shouldDirty: false });
+    }
+  };
+
   if (isLoading) {
     return <div className="flex justify-center items-center h-screen"><Loader2 className="animate-spin" /></div>;
   }
@@ -1792,7 +1907,7 @@ export default function ProfilePage() {
               delay: 0.2
             }}
           >
-            <Tabs defaultValue="personal" className="w-full">
+            <Tabs defaultValue="personal" className="w-full" onValueChange={handleTabChange}>
               <TabsList className="mb-4 flex flex-wrap justify-start gap-2 border-b pb-2 w-full">
                 <TabsTrigger value="personal" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Personal Info</TabsTrigger>
                 <TabsTrigger value="education" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Education</TabsTrigger>
