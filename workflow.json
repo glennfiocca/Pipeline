@@ -1,0 +1,10 @@
+{
+  "name": "Start application",
+  "tasks": [
+    {
+      "task": "shell.exec",
+      "args": "npm run dev",
+      "waitForPort": 3000
+    }
+  ]
+}
