@@ -112,16 +112,6 @@ export function JobModal({
           <DialogHeader>
             <motion.div variants={itemVariants}>
               <DialogTitle className="text-2xl">{job.title}</DialogTitle>
-              <DialogDescription className="flex items-center mt-1">
-                <Building2 className="h-4 w-4 mr-1.5 text-muted-foreground" />
-                {job.company} {job.location && (
-                  <>
-                    <span className="mx-1.5 text-muted-foreground">•</span>
-                    <MapPin className="h-4 w-4 mr-1.5 text-muted-foreground" />
-                    {job.location}
-                  </>
-                )}
-              </DialogDescription>
             </motion.div>
           </DialogHeader>
 
@@ -129,7 +119,7 @@ export function JobModal({
             <div className="flex justify-between items-center">
               <motion.div className="flex flex-wrap gap-2" variants={itemVariants}>
                 <Badge variant="secondary" className="flex items-center">
-                  <AtSign className="mr-2 h-3 w-3" />
+                  <Building2 className="mr-2 h-3 w-3" />
                   {job.company}
                 </Badge>
                 <Badge variant="secondary" className="flex items-center">

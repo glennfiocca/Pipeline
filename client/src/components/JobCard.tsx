@@ -1,7 +1,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { MapPin, DollarSign, Loader2, CheckCircle2, AtSign, Bookmark, BookmarkCheck, Flag, Building } from "lucide-react";
+import { MapPin, DollarSign, Loader2, CheckCircle2, AtSign, Bookmark, BookmarkCheck, Flag, Building, Building2 } from "lucide-react";
 import { Link } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import type { Job } from "@shared/schema";
@@ -172,7 +172,7 @@ export function JobCard({
           {/* Second line: Company and Location */}
           <div className="flex flex-wrap gap-2 mb-2">
             <Badge variant="secondary" className="flex items-center text-xs">
-              <Building className="mr-1 h-3 w-3" />
+              <Building2 className="mr-1 h-3 w-3" />
               {job.company}
             </Badge>
             <Badge variant="secondary" className="flex items-center text-xs">
