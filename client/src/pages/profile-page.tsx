@@ -27,6 +27,422 @@ interface FileState {
   transcript?: File;
 }
 
+// Add this interface outside of all components
+interface University {
+  code: string;
+  name: string;
+}
+
+// Add a constant array of universities that can be used throughout the component
+const UNIVERSITIES: University[] = [
+  { code: "none", name: "-- Select university/college --" },
+  // Ivy League
+  { code: "harvard", name: "Harvard University" },
+  { code: "yale", name: "Yale University" },
+  { code: "princeton", name: "Princeton University" },
+  { code: "upenn", name: "University of Pennsylvania" },
+  { code: "columbia", name: "Columbia University" },
+  { code: "brown", name: "Brown University" },
+  { code: "dartmouth", name: "Dartmouth College" },
+  { code: "cornell", name: "Cornell University" },
+  
+  // Top Private Research Universities
+  { code: "stanford", name: "Stanford University" },
+  { code: "mit", name: "Massachusetts Institute of Technology" },
+  { code: "caltech", name: "California Institute of Technology" },
+  { code: "uchicago", name: "University of Chicago" },
+  { code: "jhu", name: "Johns Hopkins University" },
+  { code: "northwestern", name: "Northwestern University" },
+  { code: "duke", name: "Duke University" },
+  { code: "vanderbilt", name: "Vanderbilt University" },
+  { code: "rice", name: "Rice University" },
+  { code: "wustl", name: "Washington University in St. Louis" },
+  { code: "emory", name: "Emory University" },
+  { code: "usc", name: "University of Southern California" },
+  { code: "nyu", name: "New York University" },
+  { code: "georgetown", name: "Georgetown University" },
+  { code: "nd", name: "University of Notre Dame" },
+  { code: "bu", name: "Boston University" },
+  { code: "tufts", name: "Tufts University" },
+  { code: "bc", name: "Boston College" },
+  { code: "brandeis", name: "Brandeis University" },
+  { code: "carnegie", name: "Carnegie Mellon University" },
+  { code: "case", name: "Case Western Reserve University" },
+  { code: "tulane", name: "Tulane University" },
+  { code: "northeastern", name: "Northeastern University" },
+  { code: "gwu", name: "George Washington University" },
+  { code: "american", name: "American University" },
+  { code: "syracuse", name: "Syracuse University" },
+  { code: "fordham", name: "Fordham University" },
+  { code: "pepperdine", name: "Pepperdine University" },
+  { code: "smu", name: "Southern Methodist University" },
+  { code: "wakeforest", name: "Wake Forest University" },
+  { code: "lehigh", name: "Lehigh University" },
+  { code: "villanova", name: "Villanova University" },
+  { code: "miami", name: "University of Miami" },
+  { code: "rochester", name: "University of Rochester" },
+  { code: "marquette", name: "Marquette University" },
+  { code: "baylor", name: "Baylor University" },
+  { code: "slu", name: "Saint Louis University" },
+  { code: "tcu", name: "Texas Christian University" },
+  { code: "drexel", name: "Drexel University" },
+  { code: "rit", name: "Rochester Institute of Technology" },
+  { code: "elon", name: "Elon University" },
+  
+  // Top Public Universities
+  { code: "berkeley", name: "University of California, Berkeley" },
+  { code: "ucla", name: "University of California, Los Angeles" },
+  { code: "umich", name: "University of Michigan" },
+  { code: "uva", name: "University of Virginia" },
+  { code: "unc", name: "University of North Carolina at Chapel Hill" },
+  { code: "ucsd", name: "University of California, San Diego" },
+  { code: "ucdavis", name: "University of California, Davis" },
+  { code: "ucsb", name: "University of California, Santa Barbara" },
+  { code: "ucsc", name: "University of California, Santa Cruz" },
+  { code: "uci", name: "University of California, Irvine" },
+  { code: "ucr", name: "University of California, Riverside" },
+  { code: "ucm", name: "University of California, Merced" },
+  { code: "ucsf", name: "University of California, San Francisco" },
+  { code: "gatech", name: "Georgia Institute of Technology" },
+  { code: "utaustin", name: "University of Texas at Austin" },
+  { code: "illinois", name: "University of Illinois Urbana-Champaign" },
+  { code: "wisc", name: "University of Wisconsin-Madison" },
+  { code: "uw", name: "University of Washington" },
+  { code: "osu", name: "Ohio State University" },
+  { code: "psu", name: "Pennsylvania State University" },
+  { code: "purdue", name: "Purdue University" },
+  { code: "umd", name: "University of Maryland" },
+  { code: "ufl", name: "University of Florida" },
+  { code: "uga", name: "University of Georgia" },
+  { code: "umn", name: "University of Minnesota" },
+  { code: "rutgers", name: "Rutgers University" },
+  { code: "indiana", name: "Indiana University Bloomington" },
+  { code: "iowau", name: "University of Iowa" },
+  { code: "tamu", name: "Texas A&M University" },
+  { code: "uconn", name: "University of Connecticut" },
+  { code: "msu", name: "Michigan State University" },
+  { code: "vt", name: "Virginia Tech" },
+  { code: "asu", name: "Arizona State University" },
+  { code: "colostate", name: "Colorado State University" },
+  { code: "cudenver", name: "University of Colorado Denver" },
+  { code: "cuboulder", name: "University of Colorado Boulder" },
+  { code: "fsu", name: "Florida State University" },
+  { code: "ucf", name: "University of Central Florida" },
+  { code: "usf", name: "University of South Florida" },
+  { code: "ncstate", name: "North Carolina State University" },
+  
+  // Liberal Arts Colleges
+  { code: "williams", name: "Williams College" },
+  { code: "amherst", name: "Amherst College" },
+  { code: "swarthmore", name: "Swarthmore College" },
+  { code: "pomona", name: "Pomona College" },
+  { code: "wellesley", name: "Wellesley College" },
+  { code: "bowdoin", name: "Bowdoin College" },
+  { code: "middlebury", name: "Middlebury College" },
+  { code: "carleton", name: "Carleton College" },
+  { code: "claremont", name: "Claremont McKenna College" },
+  { code: "davidson", name: "Davidson College" },
+  { code: "haverford", name: "Haverford College" },
+  { code: "washington", name: "Washington and Lee University" },
+  { code: "vassar", name: "Vassar College" },
+  { code: "colgate", name: "Colgate University" },
+  { code: "colby", name: "Colby College" },
+  { code: "wesleyan", name: "Wesleyan University" },
+  { code: "hamilton", name: "Hamilton College" },
+  { code: "grinnell", name: "Grinnell College" },
+  { code: "barnard", name: "Barnard College" },
+  { code: "bates", name: "Bates College" },
+  { code: "kenyon", name: "Kenyon College" },
+  { code: "macalester", name: "Macalester College" },
+  { code: "oberlin", name: "Oberlin College" },
+  { code: "bucknell", name: "Bucknell University" },
+  { code: "lafayette", name: "Lafayette College" },
+  { code: "bryn", name: "Bryn Mawr College" },
+  { code: "smith", name: "Smith College" },
+  { code: "mount", name: "Mount Holyoke College" },
+  { code: "trinity", name: "Trinity College" },
+  { code: "gettysburg", name: "Gettysburg College" },
+  { code: "occidental", name: "Occidental College" },
+  { code: "dickinson", name: "Dickinson College" },
+  { code: "reed", name: "Reed College" },
+  { code: "skidmore", name: "Skidmore College" },
+  { code: "colby-sawyer", name: "Colby-Sawyer College" },
+  { code: "soka", name: "Soka University of America" },
+  { code: "scripps", name: "Scripps College" },
+  { code: "pitzer", name: "Pitzer College" },
+  { code: "whitman", name: "Whitman College" },
+  { code: "connection", name: "Connecticut College" },
+  
+  // Technical Institutes
+  { code: "rpi", name: "Rensselaer Polytechnic Institute" },
+  { code: "wpi", name: "Worcester Polytechnic Institute" },
+  { code: "stevens", name: "Stevens Institute of Technology" },
+  { code: "njit", name: "New Jersey Institute of Technology" },
+  { code: "fit", name: "Florida Institute of Technology" },
+  { code: "kettering", name: "Kettering University" },
+  { code: "mines", name: "Colorado School of Mines" },
+  { code: "rose-hulman", name: "Rose-Hulman Institute of Technology" },
+  { code: "harvey", name: "Harvey Mudd College" },
+  { code: "msoe", name: "Milwaukee School of Engineering" },
+  { code: "lawrence", name: "Lawrence Technological University" },
+  { code: "poly", name: "SUNY Polytechnic Institute" },
+  
+  // HBCUs and Minority-Serving Institutions
+  { code: "howard", name: "Howard University" },
+  { code: "spelman", name: "Spelman College" },
+  { code: "morehouse", name: "Morehouse College" },
+  { code: "xavier", name: "Xavier University of Louisiana" },
+  { code: "hampton", name: "Hampton University" },
+  { code: "famu", name: "Florida A&M University" },
+  { code: "nca&t", name: "North Carolina A&T State University" },
+  { code: "tuskegee", name: "Tuskegee University" },
+  { code: "claflin", name: "Claflin University" },
+  { code: "dillard", name: "Dillard University" },
+  { code: "clark", name: "Clark Atlanta University" },
+  { code: "morgan", name: "Morgan State University" },
+  { code: "alcorn", name: "Alcorn State University" },
+  { code: "fisk", name: "Fisk University" },
+  { code: "morris", name: "Morris College" },
+  { code: "huston", name: "Huston-Tillotson University" },
+  { code: "unm", name: "University of New Mexico" },
+  { code: "nmsu", name: "New Mexico State University" },
+  { code: "utep", name: "University of Texas at El Paso" },
+  { code: "fiu", name: "Florida International University" },
+  
+  // State Universities (Additional)
+  { code: "iowa-state", name: "Iowa State University" },
+  { code: "ksu", name: "Kansas State University" },
+  { code: "ku", name: "University of Kansas" },
+  { code: "okstate", name: "Oklahoma State University" },
+  { code: "ou", name: "University of Oklahoma" },
+  { code: "uark", name: "University of Arkansas" },
+  { code: "ky", name: "University of Kentucky" },
+  { code: "louisville", name: "University of Louisville" },
+  { code: "lsu", name: "Louisiana State University" },
+  { code: "ole-miss", name: "University of Mississippi" },
+  { code: "msstate", name: "Mississippi State University" },
+  { code: "alabama", name: "University of Alabama" },
+  { code: "auburn", name: "Auburn University" },
+  { code: "usc-columbia", name: "University of South Carolina" },
+  { code: "clemson", name: "Clemson University" },
+  { code: "tennessee", name: "University of Tennessee" },
+  { code: "wvu", name: "West Virginia University" },
+  { code: "maine", name: "University of Maine" },
+  { code: "unh", name: "University of New Hampshire" },
+  { code: "uvt", name: "University of Vermont" },
+  { code: "uri", name: "University of Rhode Island" },
+  { code: "udel", name: "University of Delaware" },
+  { code: "umassamherst", name: "University of Massachusetts Amherst" },
+  { code: "umassboston", name: "University of Massachusetts Boston" },
+  { code: "umasslowell", name: "University of Massachusetts Lowell" },
+  { code: "suny-albany", name: "SUNY Albany" },
+  { code: "suny-binghamton", name: "SUNY Binghamton" },
+  { code: "suny-buffalo", name: "SUNY Buffalo" },
+  { code: "suny-stony", name: "SUNY Stony Brook" },
+  { code: "temple", name: "Temple University" },
+  { code: "pitt", name: "University of Pittsburgh" },
+  { code: "duquesne", name: "Duquesne University" },
+  { code: "gmu", name: "George Mason University" },
+  { code: "vcu", name: "Virginia Commonwealth University" },
+  { code: "wm", name: "College of William & Mary" },
+  { code: "jmu", name: "James Madison University" },
+  { code: "odu", name: "Old Dominion University" },
+  { code: "ull", name: "University of Louisiana at Lafayette" },
+  { code: "utah", name: "University of Utah" },
+  { code: "usu", name: "Utah State University" },
+  { code: "unlv", name: "University of Nevada, Las Vegas" },
+  { code: "unr", name: "University of Nevada, Reno" },
+  { code: "ua", name: "University of Arizona" },
+  { code: "nau", name: "Northern Arizona University" },
+  { code: "unm", name: "University of New Mexico" },
+  { code: "hawaii", name: "University of Hawaii" },
+  { code: "wwu", name: "Western Washington University" },
+  { code: "cwu", name: "Central Washington University" },
+  { code: "ewu", name: "Eastern Washington University" },
+  { code: "wsu", name: "Washington State University" },
+  { code: "ui", name: "University of Idaho" },
+  { code: "mtu", name: "Michigan Technological University" },
+  { code: "wayne", name: "Wayne State University" },
+  { code: "cmu-mi", name: "Central Michigan University" },
+  { code: "wmu", name: "Western Michigan University" },
+  { code: "emu", name: "Eastern Michigan University" },
+  { code: "uic", name: "University of Illinois Chicago" },
+  { code: "siu", name: "Southern Illinois University" },
+  { code: "niu", name: "Northern Illinois University" },
+  { code: "eiu", name: "Eastern Illinois University" },
+  { code: "wiu", name: "Western Illinois University" },
+  { code: "ohio", name: "Ohio University" },
+  { code: "kent", name: "Kent State University" },
+  { code: "bgsu", name: "Bowling Green State University" },
+  { code: "miami-oh", name: "Miami University (Ohio)" },
+  { code: "uc", name: "University of Cincinnati" },
+  { code: "toledo", name: "University of Toledo" },
+  { code: "uakron", name: "University of Akron" },
+  { code: "missouri", name: "University of Missouri" },
+  { code: "mizzou", name: "University of Missouri-Columbia" },
+  { code: "umkc", name: "University of Missouri-Kansas City" },
+  { code: "umsl", name: "University of Missouri-St. Louis" },
+  { code: "semo", name: "Southeast Missouri State University" },
+  { code: "ucr", name: "University of California, Riverside" },
+  { code: "ucm", name: "University of California, Merced" },
+  { code: "sdsu", name: "San Diego State University" },
+  { code: "sfsu", name: "San Francisco State University" },
+  { code: "fullerton", name: "California State University, Fullerton" },
+  { code: "csula", name: "California State University, Los Angeles" },
+  { code: "csun", name: "California State University, Northridge" },
+  { code: "csulb", name: "California State University, Long Beach" },
+  { code: "sjsu", name: "San Jose State University" },
+  { code: "chico", name: "California State University, Chico" },
+  { code: "csusb", name: "California State University, San Bernardino" },
+  { code: "uvm", name: "University of Vermont" },
+  { code: "csu", name: "Colorado State University" },
+  { code: "ucdavis", name: "University of California, Davis" },
+  { code: "ucsc", name: "University of California, Santa Cruz" },
+  { code: "fresno", name: "California State University, Fresno" },
+  { code: "cpp", name: "California State Polytechnic University, Pomona" },
+  { code: "calpoly", name: "California Polytechnic State University" },
+  { code: "montana", name: "University of Montana" },
+  { code: "oregonstate", name: "Oregon State University" },
+  { code: "uoregon", name: "University of Oregon" },
+  { code: "psu-up", name: "Penn State University Park" },
+  { code: "bsu", name: "Boise State University" },
+  { code: "txst", name: "Texas State University" },
+  { code: "unt", name: "University of North Texas" },
+  { code: "uh", name: "University of Houston" },
+  { code: "ttu", name: "Texas Tech University" },
+  { code: "uwyo", name: "University of Wyoming" },
+  { code: "fgcu", name: "Florida Gulf Coast University" },
+  { code: "fau", name: "Florida Atlantic University" },
+  { code: "unf", name: "University of North Florida" },
+  { code: "aum", name: "Auburn University at Montgomery" },
+  { code: "uab", name: "University of Alabama at Birmingham" },
+  { code: "ua-huntsville", name: "University of Alabama in Huntsville" },
+  { code: "uta", name: "University of Texas at Arlington" },
+  { code: "utd", name: "University of Texas at Dallas" },
+  { code: "umaine", name: "University of Maine" },
+  { code: "uwm", name: "University of Wisconsin-Milwaukee" },
+  
+  // Community Colleges and City Universities
+  { code: "cuny-baruch", name: "CUNY Baruch College" },
+  { code: "cuny-hunter", name: "CUNY Hunter College" },
+  { code: "cuny-city", name: "CUNY City College" },
+  { code: "cuny-brooklyn", name: "CUNY Brooklyn College" },
+  { code: "cuny-queens", name: "CUNY Queens College" },
+  { code: "cuny-john-jay", name: "CUNY John Jay College" },
+  { code: "cuny-lehman", name: "CUNY Lehman College" },
+  { code: "cuny-csi", name: "CUNY College of Staten Island" },
+  { code: "cuny-bmcc", name: "CUNY Borough of Manhattan Community College" },
+  { code: "cuny-laguardia", name: "CUNY LaGuardia Community College" },
+  { code: "santa-monica", name: "Santa Monica College" },
+  { code: "de-anza", name: "De Anza College" },
+  { code: "foothill", name: "Foothill College" },
+  { code: "pasadena", name: "Pasadena City College" },
+  { code: "valencia", name: "Valencia College" },
+  { code: "miami-dade", name: "Miami Dade College" },
+  { code: "broward", name: "Broward College" },
+  { code: "northern-virginia", name: "Northern Virginia Community College" },
+  { code: "houston-cc", name: "Houston Community College" },
+  { code: "austin-cc", name: "Austin Community College" },
+  { code: "columbus-state", name: "Columbus State Community College" },
+  { code: "seattle-central", name: "Seattle Central College" },
+  { code: "bellevue", name: "Bellevue College" },
+  { code: "portland-cc", name: "Portland Community College" },
+  { code: "montgomery", name: "Montgomery College" },
+  { code: "monroe", name: "Monroe Community College" },
+  { code: "oakton", name: "Oakton Community College" },
+  { code: "harper", name: "Harper College" },
+  { code: "ccp", name: "Community College of Philadelphia" },
+  { code: "saddleback", name: "Saddleback College" },
+  { code: "irvine-valley", name: "Irvine Valley College" },
+  { code: "mira-costa", name: "MiraCosta College" },
+  { code: "phoenix", name: "Phoenix College" },
+  { code: "maricopa", name: "Maricopa Community Colleges" },
+  
+  // Faith-Based and Religious Colleges
+  { code: "byu", name: "Brigham Young University" },
+  { code: "liberty", name: "Liberty University" },
+  { code: "plu", name: "Pacific Lutheran University" },
+  { code: "spu", name: "Seattle Pacific University" },
+  { code: "luc", name: "Loyola University Chicago" },
+  { code: "pepperdine", name: "Pepperdine University" },
+  { code: "smu", name: "Southern Methodist University" },
+  { code: "baylor", name: "Baylor University" },
+  { code: "tcu", name: "Texas Christian University" },
+  { code: "gonzaga", name: "Gonzaga University" },
+  { code: "creighton", name: "Creighton University" },
+  { code: "lmu", name: "Loyola Marymount University" },
+  { code: "duquesne", name: "Duquesne University" },
+  { code: "villanova", name: "Villanova University" },
+  { code: "seton-hall", name: "Seton Hall University" },
+  { code: "providence", name: "Providence College" },
+  { code: "fairfield", name: "Fairfield University" },
+  { code: "calvin", name: "Calvin University" },
+  { code: "wheaton", name: "Wheaton College" },
+  { code: "biola", name: "Biola University" },
+  { code: "regent", name: "Regent University" },
+  { code: "oral-roberts", name: "Oral Roberts University" },
+  { code: "samford", name: "Samford University" },
+  
+  // Art, Music, and Design Schools
+  { code: "risd", name: "Rhode Island School of Design" },
+  { code: "parsons", name: "Parsons School of Design" },
+  { code: "pratt", name: "Pratt Institute" },
+  { code: "saic", name: "School of the Art Institute of Chicago" },
+  { code: "calarts", name: "California Institute of the Arts" },
+  { code: "cca", name: "California College of the Arts" },
+  { code: "scad", name: "Savannah College of Art and Design" },
+  { code: "ringling", name: "Ringling College of Art and Design" },
+  { code: "otis", name: "Otis College of Art and Design" },
+  { code: "juilliard", name: "The Juilliard School" },
+  { code: "berklee", name: "Berklee College of Music" },
+  { code: "eastman", name: "Eastman School of Music" },
+  { code: "manhattan", name: "Manhattan School of Music" },
+  { code: "peabody", name: "Peabody Institute" },
+  { code: "oberlin-con", name: "Oberlin Conservatory of Music" },
+  
+  // Business, Law, and Medical Schools (as standalone institutions)
+  { code: "wharton", name: "Wharton School - University of Pennsylvania" },
+  { code: "harvard-business", name: "Harvard Business School" },
+  { code: "harvard-law", name: "Harvard Law School" },
+  { code: "harvard-medical", name: "Harvard Medical School" },
+  { code: "stanford-gsb", name: "Stanford Graduate School of Business" },
+  { code: "booth", name: "University of Chicago Booth School of Business" },
+  { code: "kellogg", name: "Northwestern Kellogg School of Management" },
+  { code: "yale-law", name: "Yale Law School" },
+  { code: "columbia-business", name: "Columbia Business School" },
+  { code: "sloan", name: "MIT Sloan School of Management" },
+  { code: "tuck", name: "Dartmouth Tuck School of Business" },
+  { code: "haas", name: "Berkeley Haas School of Business" },
+  { code: "stern", name: "NYU Stern School of Business" },
+  { code: "ross", name: "Michigan Ross School of Business" },
+  { code: "darden", name: "UVA Darden School of Business" },
+  { code: "anderson", name: "UCLA Anderson School of Management" },
+  
+  // International Universities (for students who studied abroad)
+  { code: "oxford", name: "University of Oxford" },
+  { code: "cambridge", name: "University of Cambridge" },
+  { code: "lse", name: "London School of Economics" },
+  { code: "imperial", name: "Imperial College London" },
+  { code: "ucl", name: "University College London" },
+  { code: "edinburgh", name: "University of Edinburgh" },
+  { code: "toronto", name: "University of Toronto" },
+  { code: "mcgill", name: "McGill University" },
+  { code: "ubc", name: "University of British Columbia" },
+  { code: "anu", name: "Australian National University" },
+  { code: "melbourne", name: "University of Melbourne" },
+  { code: "sydney", name: "University of Sydney" },
+  { code: "ntu", name: "Nanyang Technological University" },
+  { code: "nus", name: "National University of Singapore" },
+  { code: "hku", name: "University of Hong Kong" },
+  { code: "eth", name: "ETH Zurich" },
+  { code: "tsinghua", name: "Tsinghua University" },
+  { code: "peking", name: "Peking University" },
+  { code: "tokyo", name: "University of Tokyo" },
+  
+  // Special Option
+  { code: "other", name: "Other (not listed)" }
+];
+
 // Update the fetchOrCreateProfile function with better error handling
 const fetchOrCreateProfile = async (userId: number) => {
   try {
@@ -786,6 +1202,215 @@ const WorkLocationSelect = React.forwardRef<
 
 WorkLocationSelect.displayName = 'WorkLocationSelect';
 
+// Add this UniversitiesSelect component after the WorkLocationSelect component
+const UniversitiesSelect = React.forwardRef<
+  HTMLSelectElement, 
+  { 
+    value: string, 
+    onChange: (value: string) => void,
+    placeholder?: string
+  }
+>(({ value, onChange, placeholder = "Select university/college" }, ref) => {
+  const [searchTerm, setSearchTerm] = useState("");
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Current selected university name
+  const selectedUniversity = UNIVERSITIES.find(university => university.code === value)?.name || placeholder;
+
+  // Filter universities based on search term (ignoring spaces)
+  const filteredUniversities = UNIVERSITIES.filter(university => 
+    university.name.toLowerCase().replace(/\s+/g, '').includes(searchTerm.toLowerCase().replace(/\s+/g, ''))
+  );
+
+  // Always ensure "Other" and "None" options are available
+  const otherOption = UNIVERSITIES.find(university => university.code === "other");
+  const noneOption = UNIVERSITIES.find(university => university.code === "none");
+  
+  // Add "Other" to filtered results if it's not already there
+  if (otherOption && !filteredUniversities.some(uni => uni.code === "other")) {
+    filteredUniversities.push(otherOption);
+  }
+  
+  // Make sure "None" is at the beginning if we're showing all options
+  if (noneOption && !searchTerm && !filteredUniversities.some(uni => uni.code === "none")) {
+    filteredUniversities.unshift(noneOption);
+  }
+
+  // Handle selection of an item
+  const handleItemSelect = (itemValue: string) => {
+    onChange(itemValue);
+    setIsOpen(false);
+    setSearchTerm("");
+  };
+
+  // Handle keyboard navigation
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      if (isOpen && filteredUniversities.length > 0) {
+        onChange(filteredUniversities[0].code);
+        setIsOpen(false);
+        setSearchTerm("");
+      } else {
+        setIsOpen(true);
+      }
+    } else if (e.key === 'Escape') {
+      setIsOpen(false);
+      setSearchTerm("");
+    } else if (isOpen && e.key === 'ArrowDown') {
+      // Focus the first item in the dropdown
+      const dropdownItem = containerRef.current?.querySelector('[role="option"]') as HTMLElement;
+      if (dropdownItem) dropdownItem.focus();
+    } else if (/^[a-zA-Z0-9\s]$/.test(e.key)) {
+      if (!isOpen) {
+        setIsOpen(true);
+      }
+      setSearchTerm(prev => prev + e.key);
+    } else if (e.key === 'Backspace') {
+      setSearchTerm(prev => prev.slice(0, -1));
+    }
+  };
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+        setSearchTerm("");
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  return (
+    <div className="relative w-full" ref={containerRef}>
+      <div 
+        className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+        tabIndex={0}
+        role="combobox"
+        aria-expanded={isOpen}
+        onClick={() => {
+          setIsOpen(!isOpen);
+          if (!isOpen) setSearchTerm("");
+        }}
+        onKeyDown={handleKeyDown}
+      >
+        <span className={`${value === "none" ? "text-muted-foreground" : ""}`}>
+          {searchTerm ? searchTerm : selectedUniversity}
+        </span>
+        <svg 
+          xmlns="http://www.w3.org/2000/svg" 
+          width="24" 
+          height="24" 
+          viewBox="0 0 24 24" 
+          fill="none" 
+          stroke="currentColor" 
+          strokeWidth="2" 
+          strokeLinecap="round" 
+          strokeLinejoin="round" 
+          className="h-4 w-4 opacity-50"
+        >
+          <path d="m6 9 6 6 6-6"/>
+        </svg>
+      </div>
+      
+      {isOpen && (
+        <div className="absolute z-50 mt-1 max-h-60 w-full overflow-auto rounded-md border bg-popover text-popover-foreground shadow-md">
+          <div className="p-1">
+            {filteredUniversities.length > 0 ? (
+              <>
+                {/* Render the main list of universities */}
+                {filteredUniversities
+                  // Put "Other" option at the end of the list, and "None" at the beginning
+                  .sort((a, b) => {
+                    if (a.code === "none") return -1;
+                    if (b.code === "none") return 1;
+                    if (a.code === "other") return 1;
+                    if (b.code === "other") return -1;
+                    return a.name.localeCompare(b.name);
+                  })
+                  .filter(university => university.code !== "other") // Remove "other" from the main list
+                  .map(university => {
+                    return (
+                      <div
+                        key={university.code}
+                        className={`relative flex cursor-default select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-sm outline-none hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground ${
+                          university.code === value ? 'bg-accent text-accent-foreground' : ''
+                        }`}
+                        onClick={() => handleItemSelect(university.code)}
+                        role="option"
+                        aria-selected={university.code === value}
+                        tabIndex={0}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            handleItemSelect(university.code);
+                          }
+                        }}
+                      >
+                        {university.code === value && (
+                          <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
+                              <polyline points="20 6 9 17 4 12"/>
+                            </svg>
+                          </span>
+                        )}
+                        {university.name}
+                      </div>
+                    );
+                  })}
+                
+                {/* Add a separate "Other" button at the bottom */}
+                <button
+                  className="w-full mt-2 p-2 border-t pt-2 text-primary font-medium flex items-center justify-center hover:bg-primary hover:text-primary-foreground rounded-sm"
+                  onClick={() => {
+                    handleItemSelect("other");
+                  }}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 mr-2">
+                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                  </svg>
+                  Add Other Institution
+                </button>
+              </>
+            ) : (
+              <>
+                <div className="text-center py-2 text-sm text-muted-foreground">No results found</div>
+                {/* Add option to add custom institution when no results found */}
+                <button
+                  className="w-full mt-2 p-2 border-t pt-2 text-primary font-medium flex items-center justify-center hover:bg-primary hover:text-primary-foreground rounded-sm"
+                  onClick={() => {
+                    // Set the search term as the custom value
+                    if (searchTerm) {
+                      onChange(searchTerm);
+                    } else {
+                      onChange("other");
+                    }
+                    setIsOpen(false);
+                    setSearchTerm("");
+                  }}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 mr-2">
+                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                  </svg>
+                  {searchTerm ? `Add "${searchTerm}"` : "Add Other Institution"}
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+});
+
+UniversitiesSelect.displayName = 'UniversitiesSelect';
+
 export default function ProfilePage() {
   const { toast } = useToast();
   const { user } = useAuth();
@@ -816,7 +1441,8 @@ export default function ProfilePage() {
       country: "",
       workAuthorization: "US Citizen",
       availability: "2 Weeks",
-      citizenshipStatus: "US Citizen",
+      citizenshipStatus: "",
+      userId: user?.id,
       resumeUrl: "",
       transcriptUrl: ""
     }
@@ -1092,6 +1718,39 @@ export default function ProfilePage() {
       }
     }
   };
+
+  // Update getUniversityName to use the UNIVERSITIES constant
+  const getUniversityName = (code: string) => {
+    // If the code is empty, return empty string
+    if (!code) return "";
+    
+    // Find university by code
+    const university = UNIVERSITIES.find(uni => uni.code === code);
+    
+    // Return the name if found, otherwise the code itself is the custom institution name
+    return university ? university.name : code;
+  };
+
+  // Modify the education card to use getUniversityName for displaying institution
+  const getEducationCard = useCallback((edu: any, index: number) => {
+    // Only render if we have a degree and institution
+    if (!edu.degree && !edu.institution) return null;
+    
+    return (
+      <div key={index} className="border rounded-lg p-4 mb-2 relative">
+        <div className="flex flex-col">
+          <span className="font-medium">{edu.degree || "Degree not specified"}</span>
+          <span>{getUniversityName(edu.institution) || "Institution not specified"}</span>
+          <div className="flex items-center text-sm text-gray-500 mt-1">
+            <Calendar className="h-4 w-4 mr-1" />
+            <span>
+              {edu.startDate || "Start date not specified"} - {edu.endDate || "End date not specified"}
+            </span>
+          </div>
+        </div>
+      </div>
+    );
+  }, []);
 
   if (isLoading) {
     return <div className="flex justify-center items-center h-screen"><Loader2 className="animate-spin" /></div>;
@@ -1400,15 +2059,86 @@ export default function ProfilePage() {
                             <FormField
                               control={form.control}
                               name={`education.${index}.institution`}
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Institution</FormLabel>
-                                  <FormControl>
-                                    <Input {...field} placeholder="University or school name" />
-                                  </FormControl>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
+                              render={({ field }) => {
+                                // Track whether to show the custom input field
+                                const [showCustomInput, setShowCustomInput] = useState(false);
+                                
+                                // Initialize and update showCustomInput based on field value
+                                useEffect(() => {
+                                  const isCustomValue = !!field.value && !UNIVERSITIES.some(uni => uni.code === field.value);
+                                  console.log('Field value changed:', field.value, 'isCustomValue:', isCustomValue);
+                                  setShowCustomInput(isCustomValue);
+                                }, [field.value]);
+                                
+                                // Handle selection from dropdown
+                                const handleSelectChange = (value: string) => {
+                                  console.log("Selected university:", value);
+                                  
+                                  if (value === "other") {
+                                    // Show custom input when "Other" is selected
+                                    console.log("Other selected, showing custom input");
+                                    setShowCustomInput(true);
+                                    
+                                    // If coming from a predefined value, clear it
+                                    if (UNIVERSITIES.some(uni => uni.code === field.value)) {
+                                      field.onChange("");
+                                    }
+                                  } else {
+                                    // Hide custom input for predefined values
+                                    console.log("University selected, hiding custom input");
+                                    setShowCustomInput(false);
+                                    field.onChange(value === "none" ? "" : value);
+                                  }
+                                };
+                                
+                                // Handle change in custom input
+                                const handleCustomInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+                                  console.log("Custom input changed:", e.target.value);
+                                  field.onChange(e.target.value);
+                                };
+                                
+                                // Determine dropdown display value
+                                const selectValue = field.value && UNIVERSITIES.some(uni => uni.code === field.value)
+                                  ? field.value
+                                  : showCustomInput ? "other" : field.value ? "other" : "none";
+                                
+                                console.log('Rendering institution field:', { 
+                                  fieldValue: field.value, 
+                                  selectValue, 
+                                  showCustomInput
+                                });
+                                
+                                return (
+                                  <FormItem className="space-y-4">
+                                    <FormLabel>Institution</FormLabel>
+                                    <FormControl>
+                                      <div className="space-y-3">
+                                        <UniversitiesSelect 
+                                          value={selectValue}
+                                          onChange={handleSelectChange}
+                                          placeholder="Select university/college"
+                                        />
+                                        
+                                        {showCustomInput && (
+                                          <div className="mt-3 p-3 border border-primary rounded-md space-y-2">
+                                            <div className="text-sm text-muted-foreground">
+                                              Please enter the name of your institution below. This helps us improve our database.
+                                            </div>
+                                            <Input 
+                                              placeholder="Enter institution name" 
+                                              value={field.value || ""}
+                                              onChange={handleCustomInputChange}
+                                              className="border-primary focus-visible:ring-primary"
+                                              autoFocus
+                                            />
+                                          </div>
+                                        )}
+                                      </div>
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                );
+                              }}
                             />
 
                             <FormField
