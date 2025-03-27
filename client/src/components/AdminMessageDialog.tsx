@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { apiRequest, queryClient, getQueryFn } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { format, parseISO, isValid } from "date-fns";
 import { Send, Loader2, Minimize2, Maximize2, X, Users, Paperclip, Mail, MessageSquare } from "lucide-react";
@@ -59,6 +59,8 @@ export function AdminMessageDialog({
     queryKey,
     enabled: isOpen && applicationId > 0,
     refetchInterval: isOpen && !isMinimized ? 5000 : false,
+    // Add on401 option to handle unauthorized responses
+    queryFn: getQueryFn({ on401: "throw" }),
   });
 
   // Mark messages as read

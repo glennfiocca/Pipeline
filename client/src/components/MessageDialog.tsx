@@ -6,7 +6,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { Message } from "@shared/schema";
 import { format } from "date-fns";
 import { Mail, Loader2, Minimize2, Maximize2, X, Users, Paperclip, Send } from "lucide-react";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { apiRequest, queryClient, getQueryFn } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
@@ -67,6 +67,7 @@ export function MessageDialog({
     queryKey,
     enabled: isOpen && applicationId > 0,
     refetchInterval: isOpen && !isMinimized ? 5000 : false,
+    queryFn: getQueryFn({ on401: "throw" }),
   });
 
   // Mark messages as read
