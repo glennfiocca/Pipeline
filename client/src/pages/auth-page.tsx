@@ -5,7 +5,8 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { AnimatedTabs, AnimatedTabsContent } from "@/components/ui/animated-tabs";
 import { useToast } from "@/hooks/use-toast";
 import { insertUserSchema, type InsertUser } from "@shared/schema";
 import { useAuth } from "@/hooks/use-auth";
@@ -236,7 +237,11 @@ export default function AuthPage() {
 
         {/* Right column with auth form */}
         <Card>
-          <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'login' | 'register')} className="w-full">
+          <AnimatedTabs
+            value={activeTab}
+            onValueChange={(value) => setActiveTab(value as 'login' | 'register')}
+            className="w-full"
+          >
             <CardHeader>
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="login">Login</TabsTrigger>
@@ -245,7 +250,7 @@ export default function AuthPage() {
             </CardHeader>
 
             <CardContent>
-              <TabsContent value="login" className="space-y-4">
+              <AnimatedTabsContent value="login" activeValue={activeTab} className="space-y-4">
                 {!isResettingPassword ? (
                   <Form {...loginForm}>
                     <form onSubmit={loginForm.handleSubmit(onLogin)} className="space-y-4">
@@ -327,9 +332,9 @@ export default function AuthPage() {
                     </form>
                   </Form>
                 )}
-              </TabsContent>
+              </AnimatedTabsContent>
 
-              <TabsContent value="register" className="space-y-4">
+              <AnimatedTabsContent value="register" activeValue={activeTab} className="space-y-4">
                 <Form {...registerForm}>
                   <form onSubmit={registerForm.handleSubmit(onSubmit)} className="space-y-4">
                     <FormField
@@ -406,9 +411,9 @@ export default function AuthPage() {
                     </Button>
                   </form>
                 </Form>
-              </TabsContent>
+              </AnimatedTabsContent>
             </CardContent>
-          </Tabs>
+          </AnimatedTabs>
         </Card>
       </div>
     </div>

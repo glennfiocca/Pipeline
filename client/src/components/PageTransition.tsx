@@ -11,7 +11,7 @@ export function PageTransition({ children, isAuth = false }: PageTransitionProps
   const authVariants = {
     initial: { 
       opacity: 0,
-      y: 20,
+      y: 12,
       scale: 0.98
     },
     animate: { 
@@ -19,17 +19,17 @@ export function PageTransition({ children, isAuth = false }: PageTransitionProps
       y: 0,
       scale: 1,
       transition: {
-        duration: 0.7,
-        ease: [0.16, 1, 0.3, 1],
-        staggerChildren: 0.15,
-        delayChildren: 0.3
+        duration: 0.35, // Faster initial animation
+        ease: [0.25, 0.1, 0.25, 1.0], // More natural ease curve
+        staggerChildren: 0.08, // Slightly faster staggering
+        delayChildren: 0.1 // Reduced delay to start children animations sooner
       }
     },
     exit: {
       opacity: 0,
-      y: -10,
+      y: -8,
       transition: {
-        duration: 0.4
+        duration: 0.2 // Faster exit for smoother page transitions
       }
     }
   };
@@ -39,13 +39,14 @@ export function PageTransition({ children, isAuth = false }: PageTransitionProps
     animate: { 
       opacity: 1,
       transition: { 
-        duration: 0.3 
+        duration: 0.25, // Slightly faster for better responsiveness
+        ease: [0.25, 0.1, 0.25, 1.0] // More natural ease curve
       }
     },
     exit: { 
       opacity: 0,
       transition: { 
-        duration: 0.2 
+        duration: 0.15 // Faster exit for smoother transitions
       }
     }
   };
@@ -78,13 +79,13 @@ export function TransitionChild({
   return (
     <motion.div
       variants={{
-        initial: { opacity: 0, y: 15 },
+        initial: { opacity: 0, y: 12 }, // Reduced distance for smoother animations
         animate: { 
           opacity: 1, 
           y: 0,
           transition: {
-            duration: 0.6,
-            ease: [0.16, 1, 0.3, 1],
+            duration: 0.4, // Slightly faster animation
+            ease: [0.25, 0.1, 0.25, 1.0], // Consistent easing curve
             delay
           }
         }

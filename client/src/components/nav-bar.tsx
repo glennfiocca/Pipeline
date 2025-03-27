@@ -24,20 +24,24 @@ export function NavBar() {
   const isAuthPath = (path: string) => authPaths.includes(path);
   
   const handleNavigation = (path: string) => {
+    // Start the navigation process immediately
     setIsNavigating(true);
     setNavigatingTo(path);
     
-    // Use a longer delay for auth pages to allow for smoother transitions
-    const delay = isAuthPath(path) ? 600 : 300;
+    // Define animation durations for consistent experience
+    const isAuth = isAuthPath(path);
+    const overlayFadeInDuration = isAuth ? 250 : 200;
+    const navigationDelay = isAuth ? 220 : 180;
     
+    // Begin navigating almost immediately, but give the overlay animation time to start
     setTimeout(() => {
       setLocation(path);
       
-      // Keep the overlay visible a bit longer to match with the page transition
+      // Keep overlay visible briefly during the destination page transition
       setTimeout(() => {
         setIsNavigating(false);
-      }, isAuthPath(path) ? 100 : 0);
-    }, delay);
+      }, isAuth ? 250 : 150);
+    }, navigationDelay);
   };
 
   const NavLinks = () => (
@@ -163,18 +167,18 @@ export function NavBar() {
           <motion.div 
             initial={{ opacity: 0 }}
             animate={{ 
-              opacity: isAuthPath(navigatingTo) ? 0.7 : 0.5 
+              opacity: isAuthPath(navigatingTo) ? 0.5 : 0.3 
             }}
             exit={{ 
               opacity: 0,
               transition: { 
-                duration: isAuthPath(navigatingTo) ? 0.5 : 0.3,
+                duration: 0.25,
                 ease: "easeInOut"
               } 
             }}
             transition={{ 
-              duration: isAuthPath(navigatingTo) ? 0.4 : 0.3,
-              ease: "easeOut" 
+              duration: 0.18,
+              ease: [0.22, 1, 0.36, 1]
             }}
             className="fixed inset-0 bg-background z-50"
           />
