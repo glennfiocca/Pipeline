@@ -49,7 +49,7 @@ if (app.get("env") === "development") {
   serveStatic(app);
 }
 
-const PORT = process.env.PORT || 3000;
-server.listen(PORT, "0.0.0.0", () => {
+const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 5000;
+server.listen(PORT, () => {
   log(`serving on port ${PORT}`);
 });
