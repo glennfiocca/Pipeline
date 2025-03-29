@@ -7,21 +7,11 @@ import {
   CardTitle 
 } from "@/components/ui/card";
 import { format } from "date-fns";
-import { Star, Archive, ArchiveX, MessageSquarePlus, Trash2 } from "lucide-react";
+import { Star, Archive, ArchiveX, MessageSquarePlus, Trash2, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { 
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  DialogFooter,
-  DialogDescription
-} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { 
@@ -35,6 +25,16 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger 
 } from "@/components/ui/alert-dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { 
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+  DialogDescription
+} from "@/components/ui/dialog";
 
 export function FeedbackManagement() {
   const { toast } = useToast();
@@ -42,10 +42,115 @@ export function FeedbackManagement() {
   const [internalNote, setInternalNote] = useState("");
   const [showNoteDialog, setShowNoteDialog] = useState(false);
   const [feedbackToDelete, setFeedbackToDelete] = useState<Feedback | null>(null);
+  const [activeTab, setActiveTab] = useState<"active" | "archived">("active");
+  
+  // References for the intersection observers
+  const activeObserverRef = useRef<IntersectionObserver | null>(null);
+  const archivedObserverRef = useRef<IntersectionObserver | null>(null);
+  const activeLoadMoreRef = useRef<HTMLDivElement>(null);
+  const archivedLoadMoreRef = useRef<HTMLDivElement>(null);
+  
+  // State for pagination
+  const [activePageSize, setActivePageSize] = useState(10);
+  const [archivedPageSize, setArchivedPageSize] = useState(10);
+  const [isActiveLoading, setIsActiveLoading] = useState(false);
+  const [isArchivedLoading, setIsArchivedLoading] = useState(false);
 
   const { data: feedbackList = [] } = useQuery<Feedback[]>({
     queryKey: ["/api/feedback"],
   });
+
+  const activeFeedback = feedbackList.filter(f => !f.archived);
+  const archivedFeedback = feedbackList.filter(f => f.archived);
+  
+  // Sort feedback by date (newest first)
+  const sortedActiveFeedback = [...activeFeedback].sort((a, b) => 
+    new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  );
+  
+  const sortedArchivedFeedback = [...archivedFeedback].sort((a, b) => 
+    new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  );
+
+  // Paginated feedback
+  const paginatedActiveFeedback = sortedActiveFeedback.slice(0, activePageSize);
+  const paginatedArchivedFeedback = sortedArchivedFeedback.slice(0, archivedPageSize);
+  
+  // Has more items
+  const hasMoreActive = paginatedActiveFeedback.length < sortedActiveFeedback.length;
+  const hasMoreArchived = paginatedArchivedFeedback.length < sortedArchivedFeedback.length;
+
+  // Set up intersection observers for infinite scroll
+  useEffect(() => {
+    // Active feedback observer
+    if (activeObserverRef.current) {
+      activeObserverRef.current.disconnect();
+    }
+    
+    activeObserverRef.current = new IntersectionObserver(entries => {
+      const [entry] = entries;
+      if (entry.isIntersecting && hasMoreActive && !isActiveLoading) {
+        loadMoreActive();
+      }
+    }, { threshold: 0.5 });
+    
+    if (activeLoadMoreRef.current) {
+      activeObserverRef.current.observe(activeLoadMoreRef.current);
+    }
+    
+    // Archived feedback observer
+    if (archivedObserverRef.current) {
+      archivedObserverRef.current.disconnect();
+    }
+    
+    archivedObserverRef.current = new IntersectionObserver(entries => {
+      const [entry] = entries;
+      if (entry.isIntersecting && hasMoreArchived && !isArchivedLoading) {
+        loadMoreArchived();
+      }
+    }, { threshold: 0.5 });
+    
+    if (archivedLoadMoreRef.current) {
+      archivedObserverRef.current.observe(archivedLoadMoreRef.current);
+    }
+    
+    return () => {
+      if (activeObserverRef.current) {
+        activeObserverRef.current.disconnect();
+      }
+      if (archivedObserverRef.current) {
+        archivedObserverRef.current.disconnect();
+      }
+    };
+  }, [
+    activePageSize, 
+    archivedPageSize, 
+    hasMoreActive, 
+    hasMoreArchived, 
+    isActiveLoading, 
+    isArchivedLoading, 
+    sortedActiveFeedback.length, 
+    sortedArchivedFeedback.length
+  ]);
+  
+  // Functions to load more feedback
+  const loadMoreActive = () => {
+    setIsActiveLoading(true);
+    // Simulate loading delay
+    setTimeout(() => {
+      setActivePageSize(prev => prev + 10);
+      setIsActiveLoading(false);
+    }, 500);
+  };
+  
+  const loadMoreArchived = () => {
+    setIsArchivedLoading(true);
+    // Simulate loading delay
+    setTimeout(() => {
+      setArchivedPageSize(prev => prev + 10);
+      setIsArchivedLoading(false);
+    }, 500);
+  };
 
   const updateFeedbackMutation = useMutation({
     mutationFn: async ({ id, updates }: { id: number; updates: Partial<Feedback> }) => {
@@ -154,270 +259,187 @@ export function FeedbackManagement() {
     }
   };
 
-  const activeFeedback = feedbackList.filter(f => !f.archived);
-  const archivedFeedback = feedbackList.filter(f => f.archived);
-  
-  // Split active feedback into new and commented
-  const newFeedback = activeFeedback.filter(f => !f.internalNotes || f.internalNotes.trim() === '');
-  const commentedFeedback = activeFeedback.filter(f => f.internalNotes && f.internalNotes.trim() !== '');
+  // Render feedback card function for reuse
+  const renderFeedbackCard = (feedback: Feedback, isArchived: boolean = false) => (
+    <Card key={feedback.id} className={`p-4 ${isArchived ? 'bg-muted/50' : ''}`}>
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="flex gap-1">
+              {[1, 2, 3, 4, 5].map((star) => (
+                <Star
+                  key={star}
+                  className={`h-4 w-4 ${
+                    star <= feedback.rating
+                      ? "fill-primary text-primary"
+                      : "text-muted-foreground"
+                  }`}
+                />
+              ))}
+            </div>
+            <Badge variant="outline" className={getStatusColor(feedback.status)}>
+              {feedback.status}
+            </Badge>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => handleAddNote(feedback)}
+            >
+              <MessageSquarePlus className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => handleToggleArchive(feedback)}
+            >
+              {isArchived ? <ArchiveX className="h-4 w-4" /> : <Archive className="h-4 w-4" />}
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-red-500 hover:text-red-600"
+              onClick={() => handleDelete(feedback)}
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+        <div>
+          <Badge variant="outline" className="mb-2">
+            {feedback.category}
+          </Badge>
+          <h3 className="text-base font-semibold mb-1">{feedback.subject || "No Subject"}</h3>
+          <p className="text-sm text-muted-foreground mb-2">{feedback.comment}</p>
+          {feedback.internalNotes && (
+            <div className={`mt-2 p-2 ${isArchived ? 'bg-background' : 'bg-muted'} rounded-md`}>
+              <p className="text-xs font-medium">Internal Notes:</p>
+              <p className="text-sm text-muted-foreground">{feedback.internalNotes}</p>
+            </div>
+          )}
+          <div className="text-xs text-muted-foreground mt-2">
+            {format(new Date(feedback.createdAt), "MMM d, yyyy")}
+          </div>
+        </div>
+      </div>
+    </Card>
+  );
 
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>
-            New Feedback
-            <span className="ml-2 text-sm font-normal text-muted-foreground">
-              ({newFeedback.length})
-            </span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ScrollArea className="h-[400px] pr-4">
-            <div className="space-y-4">
-              {newFeedback.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  No new feedback submissions.
-                </div>
-              ) : (
-                newFeedback.map((feedback) => (
-                  <Card key={feedback.id} className="p-4">
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <div className="flex gap-1">
-                            {[1, 2, 3, 4, 5].map((star) => (
-                              <Star
-                                key={star}
-                                className={`h-4 w-4 ${
-                                  star <= feedback.rating
-                                    ? "fill-primary text-primary"
-                                    : "text-muted-foreground"
-                                }`}
-                              />
-                            ))}
-                          </div>
-                          <Badge variant="outline" className={getStatusColor(feedback.status)}>
-                            {feedback.status}
-                          </Badge>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => handleAddNote(feedback)}
-                          >
-                            <MessageSquarePlus className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => handleToggleArchive(feedback)}
-                          >
-                            <Archive className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-red-500 hover:text-red-600"
-                            onClick={() => handleDelete(feedback)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                      <div>
-                        <Badge variant="outline" className="mb-2">
-                          {feedback.category}
-                        </Badge>
-                        <h3 className="text-base font-semibold mb-1">{feedback.subject || "No Subject"}</h3>
-                        <p className="text-sm text-muted-foreground mb-2">{feedback.comment}</p>
-                        <div className="text-xs text-muted-foreground mt-2">
-                          {format(new Date(feedback.createdAt), "MMM d, yyyy")}
-                        </div>
-                      </div>
+      <Tabs 
+        defaultValue="active" 
+        className="w-full"
+        onValueChange={(value) => setActiveTab(value as "active" | "archived")}
+      >
+        <TabsList className="mb-4 w-full justify-start">
+          <TabsTrigger value="active">Active Feedback ({activeFeedback.length})</TabsTrigger>
+          <TabsTrigger value="archived">Archived Feedback ({archivedFeedback.length})</TabsTrigger>
+        </TabsList>
+      
+        <TabsContent value="active">
+          <div className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>
+                  Active Feedback
+                  <span className="ml-2 text-sm font-normal text-muted-foreground">
+                    ({sortedActiveFeedback.length})
+                  </span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {paginatedActiveFeedback.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      No active feedback submissions.
                     </div>
-                  </Card>
-                ))
-              )}
-            </div>
-          </ScrollArea>
-        </CardContent>
-      </Card>
+                  ) : (
+                    <>
+                      {paginatedActiveFeedback.map((feedback) => renderFeedbackCard(feedback))}
+                      
+                      {hasMoreActive && (
+                        <div 
+                          ref={activeLoadMoreRef} 
+                          className="py-4 flex justify-center"
+                        >
+                          {isActiveLoading ? (
+                            <div className="flex items-center gap-2">
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                              <span className="text-sm text-muted-foreground">Loading more feedback...</span>
+                            </div>
+                          ) : (
+                            <Button 
+                              variant="outline" 
+                              onClick={loadMoreActive}
+                              className="text-sm"
+                            >
+                              Load more
+                            </Button>
+                          )}
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>
-            Commented Feedback
-            <span className="ml-2 text-sm font-normal text-muted-foreground">
-              ({commentedFeedback.length})
-            </span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ScrollArea className="h-[400px] pr-4">
-            <div className="space-y-4">
-              {commentedFeedback.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  No commented feedback submissions.
-                </div>
-              ) : (
-                commentedFeedback.map((feedback) => (
-                  <Card key={feedback.id} className="p-4">
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <div className="flex gap-1">
-                            {[1, 2, 3, 4, 5].map((star) => (
-                              <Star
-                                key={star}
-                                className={`h-4 w-4 ${
-                                  star <= feedback.rating
-                                    ? "fill-primary text-primary"
-                                    : "text-muted-foreground"
-                                }`}
-                              />
-                            ))}
-                          </div>
-                          <Badge variant="outline" className={getStatusColor(feedback.status)}>
-                            {feedback.status}
-                          </Badge>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => handleAddNote(feedback)}
-                          >
-                            <MessageSquarePlus className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => handleToggleArchive(feedback)}
-                          >
-                            <Archive className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-red-500 hover:text-red-600"
-                            onClick={() => handleDelete(feedback)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                      <div>
-                        <Badge variant="outline" className="mb-2">
-                          {feedback.category}
-                        </Badge>
-                        <h3 className="text-base font-semibold mb-1">{feedback.subject || "No Subject"}</h3>
-                        <p className="text-sm text-muted-foreground mb-2">{feedback.comment}</p>
-                        {feedback.internalNotes && (
-                          <div className="mt-2 p-2 bg-muted rounded-md">
-                            <p className="text-xs font-medium">Internal Notes:</p>
-                            <p className="text-sm text-muted-foreground">{feedback.internalNotes}</p>
-                          </div>
-                        )}
-                        <div className="text-xs text-muted-foreground mt-2">
-                          {format(new Date(feedback.createdAt), "MMM d, yyyy")}
-                        </div>
-                      </div>
+        <TabsContent value="archived">
+          <div className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>
+                  Archived Feedback
+                  <span className="ml-2 text-sm font-normal text-muted-foreground">
+                    ({sortedArchivedFeedback.length})
+                  </span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {paginatedArchivedFeedback.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      No archived feedback.
                     </div>
-                  </Card>
-                ))
-              )}
-            </div>
-          </ScrollArea>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>
-            Archived Feedback
-            <span className="ml-2 text-sm font-normal text-muted-foreground">
-              ({archivedFeedback.length})
-            </span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ScrollArea className="h-[300px] pr-4">
-            <div className="space-y-4">
-              {archivedFeedback.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  No archived feedback.
+                  ) : (
+                    <>
+                      {paginatedArchivedFeedback.map((feedback) => renderFeedbackCard(feedback, true))}
+                      
+                      {hasMoreArchived && (
+                        <div 
+                          ref={archivedLoadMoreRef} 
+                          className="py-4 flex justify-center"
+                        >
+                          {isArchivedLoading ? (
+                            <div className="flex items-center gap-2">
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                              <span className="text-sm text-muted-foreground">Loading more feedback...</span>
+                            </div>
+                          ) : (
+                            <Button 
+                              variant="outline" 
+                              onClick={loadMoreArchived}
+                              className="text-sm"
+                            >
+                              Load more
+                            </Button>
+                          )}
+                        </div>
+                      )}
+                    </>
+                  )}
                 </div>
-              ) : (
-                archivedFeedback.map((feedback) => (
-                  <Card key={feedback.id} className="p-4 bg-muted/50">
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <div className="flex gap-1">
-                            {[1, 2, 3, 4, 5].map((star) => (
-                              <Star
-                                key={star}
-                                className={`h-4 w-4 ${
-                                  star <= feedback.rating
-                                    ? "fill-primary text-primary"
-                                    : "text-muted-foreground"
-                                }`}
-                              />
-                            ))}
-                          </div>
-                          <Badge variant="outline" className={getStatusColor(feedback.status)}>
-                            {feedback.status}
-                          </Badge>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => handleToggleArchive(feedback)}
-                          >
-                            <ArchiveX className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-red-500 hover:text-red-600"
-                            onClick={() => handleDelete(feedback)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                      <div>
-                        <Badge variant="outline" className="mb-2">
-                          {feedback.category}
-                        </Badge>
-                        <h3 className="text-base font-semibold mb-1">{feedback.subject}</h3>
-                        <p className="text-sm text-muted-foreground mb-2">{feedback.comment}</p>
-                        {feedback.internalNotes && (
-                          <div className="mt-2 p-2 bg-background rounded-md">
-                            <p className="text-xs font-medium">Internal Notes:</p>
-                            <p className="text-sm text-muted-foreground">{feedback.internalNotes}</p>
-                          </div>
-                        )}
-                        <div className="text-xs text-muted-foreground mt-2">
-                          {format(new Date(feedback.createdAt), "MMM d, yyyy")}
-                        </div>
-                      </div>
-                    </div>
-                  </Card>
-                ))
-              )}
-            </div>
-          </ScrollArea>
-        </CardContent>
-      </Card>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+      </Tabs>
 
       <Dialog open={showNoteDialog} onOpenChange={setShowNoteDialog}>
         <DialogContent>
